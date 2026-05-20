@@ -1,0 +1,8 @@
+build/
+logs/
+*.json
+*.ll
+*.log
+system-prompt-extraction/
+.cache/
+compile_flags.txt
