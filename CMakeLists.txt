@@ -14,6 +14,7 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # ── LLVM Pass (shared library) ────────────────────────────
 add_library(LoopAnnotatedTrace MODULE
+    src/IrHelpers.cpp
     src/LoopAnalysisPass.cpp
 )
 target_include_directories(LoopAnnotatedTrace PRIVATE ${CMAKE_SOURCE_DIR}/include)
