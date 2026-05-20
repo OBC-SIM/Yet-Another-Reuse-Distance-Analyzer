@@ -2,13 +2,16 @@
 #include <map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -24,15 +27,39 @@ using namespace lat;
 
 namespace {
 
+using NameMap = std::unordered_map<const Value*, std::string>;
+
+static NameMap buildDebugNameMap(Function& F) {
+    NameMap names;
+    for (BasicBlock& BB : F)
+        for (Instruction& I : BB)
+            if (auto* DVI = dyn_cast<DbgValueInst>(&I))
+                if (Value* V = DVI->getValue())
+                    if (DILocalVariable* Var = DVI->getVariable())
+                        if (!Var->getName().empty())
+                            names.emplace(V, Var->getName().str());
+    return names;
+}
+
 // ── 헬퍼 함수 ─────────────────────────────────────────────
 
-static std::string getInductionVarName(Loop* L, ScalarEvolution& SE) {
-    if (PHINode* IV = L->getInductionVariable(SE))
-        return IV->hasName() ? IV->getName().str() : "iv";
+static std::string getInductionVarName(Loop* L, ScalarEvolution& SE,
+                                        const NameMap& names) {
+    auto lookup = [&](Value* V) -> std::string {
+        auto it = names.find(V);
+        if (it != names.end()) return it->second;
+        return V->hasName() ? V->getName().str() : "";
+    };
+
+    if (PHINode* IV = L->getInductionVariable(SE)) {
+        std::string n = lookup(IV);
+        return n.empty() ? "iv" : n;
+    }
     for (PHINode& PN : L->getHeader()->phis()) {
-        if (SE.isSCEVable(PN.getType()) &&
-            isa<SCEVAddRecExpr>(SE.getSCEV(&PN)))
-            return PN.hasName() ? PN.getName().str() : "iv";
+        if (SE.isSCEVable(PN.getType()) && isa<SCEVAddRecExpr>(SE.getSCEV(&PN))) {
+            std::string n = lookup(&PN);
+            return n.empty() ? "iv" : n;
+        }
     }
     return "iv";
 }
@@ -68,7 +95,8 @@ static void collectAddRecLoops(const SCEV* S, std::vector<const Loop*>& out) {
  * @param SE   ScalarEvolution 분석 결과
  * @return     식별된 인덱스 변수 이름 목록 (없으면 빈 벡터)
  */
-static std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE) {
+static std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
+                                              const NameMap& names) {
     if (!SE.isSCEVable(Idx->getType())) return {"?"};
 
     const SCEV* S = SE.getSCEV(Idx);
@@ -79,12 +107,17 @@ static std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE) {
         return {std::to_string(val)};
     }
 
-    if (auto* AR = dyn_cast<SCEVAddRecExpr>(S)) {
-        const Loop* L = AR->getLoop();
-        if (PHINode* IV = L->getInductionVariable(SE))
-            return {IV->hasName() ? IV->getName().str() : "iv"};
-        return {"iv"};
-    }
+    auto ivName = [&](const Loop* L) -> std::string {
+        if (PHINode* IV = L->getInductionVariable(SE)) {
+            auto it = names.find(IV);
+            if (it != names.end()) return it->second;
+            if (IV->hasName()) return IV->getName().str();
+        }
+        return "iv";
+    };
+
+    if (auto* AR = dyn_cast<SCEVAddRecExpr>(S))
+        return {ivName(AR->getLoop())};
 
     // 복합 SCEV (e.g. i*N + j): AddRec 루프를 깊이 순으로 정렬
     std::vector<const Loop*> loops;
@@ -96,37 +129,37 @@ static std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE) {
     });
     loops.erase(std::unique(loops.begin(), loops.end()), loops.end());
 
-    std::vector<std::string> names;
-    for (const Loop* L : loops) {
-        if (PHINode* IV = L->getInductionVariable(SE))
-            names.push_back(IV->hasName() ? IV->getName().str() : "iv");
-        else
-            names.push_back("iv");
-    }
-    return names;
-}
-
-static std::vector<std::string> getIndexVars(GetElementPtrInst* GEP,
-                                              ScalarEvolution& SE) {
     std::vector<std::string> result;
-    bool first = true;
-    for (auto it = GEP->idx_begin(); it != GEP->idx_end(); ++it, first = false) {
-        if (first) continue;  // 첫 번째 인덱스는 포인터 역참조 오프셋 — 생략
-        for (auto& name : resolveIndex(*it, SE))
-            result.push_back(std::move(name));
-    }
+    for (const Loop* L : loops)
+        result.push_back(ivName(L));
     return result;
 }
 
-static std::string getBaseName(Value* Base) {
-    Base = Base->stripPointerCasts();
-    return Base->hasName() ? Base->getName().str() : "arr";
+static std::vector<std::string> getIndexVars(GetElementPtrInst* GEP,
+                                              ScalarEvolution& SE,
+                                              const NameMap& names) {
+    std::vector<std::string> result;
+    for (auto it = GEP->idx_begin(); it != GEP->idx_end(); ++it)
+        for (auto& name : resolveIndex(*it, SE, names))
+            result.push_back(std::move(name));
+    return result;
+}
+
+static std::string getBaseName(Value* Ptr, const NameMap& names) {
+    Value* Base = Ptr->stripPointerCasts();
+    auto it = names.find(Base);
+    if (it != names.end()) return it->second;
+    if (Base->hasName()) return Base->getName().str();
+    if (auto* Arg = dyn_cast<Argument>(Base))
+        return "arg" + std::to_string(Arg->getArgNo());
+    return "arr";
 }
 
 // ── 트리 빌더 ─────────────────────────────────────────────
 
 static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE,
-                                                     unsigned depth);
+                                                     unsigned depth,
+                                                     const NameMap& names);
 
 /**
  * @brief 루프 바디의 직접 Basic Block에서 메모리 접근 Statement를 수집한다.
@@ -138,9 +171,10 @@ static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE
  * @param SE    ScalarEvolution 분석 결과
  * @param depth 현재 루프 깊이
  * @param nest  Statement를 추가할 대상 LoopNest
+ * @param names llvm.dbg.value에서 구축한 Value → 변수명 맵
  */
 static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
-                         lat::LoopNest& nest) {
+                         lat::LoopNest& nest, const NameMap& names) {
     std::set<BasicBlock*> subLoopBlocks;
     std::map<BasicBlock*, Loop*> subLoopHeaders;
     for (Loop* Sub : L->getSubLoops()) {
@@ -156,7 +190,7 @@ static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
         if (hIt != subLoopHeaders.end()) {
             if (!processed.count(hIt->second)) {
                 processed.insert(hIt->second);
-                nest.addChild(buildLoopNest(hIt->second, SE, depth + 1));
+                nest.addChild(buildLoopNest(hIt->second, SE, depth + 1, names));
             }
             continue;
         }
@@ -170,8 +204,8 @@ static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
                 GEP = dyn_cast<GetElementPtrInst>(Store->getPointerOperand());
             if (!GEP) continue;
 
-            auto indices = getIndexVars(GEP, SE);
-            std::string base = getBaseName(GEP->getPointerOperand());
+            auto indices = getIndexVars(GEP, SE, names);
+            std::string base = getBaseName(GEP->getPointerOperand(), names);
 
             if (indices.empty())
                 nest.addChild(std::make_unique<ScalarAccess>(base));
@@ -182,11 +216,12 @@ static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
 }
 
 static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE,
-                                                     unsigned depth) {
-    std::string iv    = getInductionVarName(L, SE);
+                                                     unsigned depth,
+                                                     const NameMap& names) {
+    std::string iv    = getInductionVarName(L, SE, names);
     int64_t     bound = getTripCount(L, SE);
     auto nest = std::make_unique<lat::LoopNest>(iv, bound, depth);
-    populateBody(L, SE, depth, *nest);
+    populateBody(L, SE, depth, *nest, names);
     return nest;
 }
 
@@ -197,10 +232,12 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
         auto& LI = AM.getResult<LoopAnalysis>(F);
         auto& SE = AM.getResult<ScalarEvolutionAnalysis>(F);
 
+        NameMap names = buildDebugNameMap(F);
+
         llvm::json::Array loops;
         for (Loop* L : LI) {
             if (getTripCount(L, SE) == 0) continue;  // 상수 바운드가 아닌 루프 생략
-            auto nest = buildLoopNest(L, SE, 1);
+            auto nest = buildLoopNest(L, SE, 1, names);
             JsonExportVisitor vis;
             nest->accept(vis);
             loops.push_back(vis.getResult());
