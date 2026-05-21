@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
@@ -32,6 +33,40 @@ using lat::getIndexVars;
 using lat::getBaseName;
 
 namespace {
+
+// ── 명령어 → Statement 변환 ───────────────────────────────
+
+/**
+ * @brief Load/Store 명령어 하나에서 Statement를 생성한다.
+ *
+ * GEP 있으면 ArrayAccess/ScalarAccess, GEP 없으면 Argument/Global/Alloca에
+ * 한해 ScalarAccess로 처리한다. 해당 없으면 nullptr 반환.
+ *
+ * @param I      분석할 명령어
+ * @param SE     ScalarEvolution 분석 결과
+ * @param names  llvm.dbg.value 기반 Value → 변수명 맵
+ */
+static std::unique_ptr<Statement> makeAccessFromInstr(Instruction& I,
+                                                       ScalarEvolution& SE,
+                                                       const NameMap& names) {
+    Value* ptr = nullptr;
+    if (auto* Load  = dyn_cast<LoadInst>(&I))  ptr = Load->getPointerOperand();
+    else if (auto* Store = dyn_cast<StoreInst>(&I)) ptr = Store->getPointerOperand();
+    if (!ptr) return nullptr;
+
+    if (auto* GEP = dyn_cast<GetElementPtrInst>(ptr)) {
+        auto indices = getIndexVars(GEP, SE, names);
+        std::string base = getBaseName(GEP->getPointerOperand(), names);
+        if (indices.empty()) return std::make_unique<ScalarAccess>(base);
+        return std::make_unique<ArrayAccess>(base, indices);
+    }
+
+    // GEP 없는 직접 포인터 접근 (e.g. arr[0]이 base pointer로 최적화된 경우)
+    Value* base = ptr->stripPointerCasts();
+    if (!isa<Argument>(base) && !isa<GlobalVariable>(base) && !isa<AllocaInst>(base))
+        return nullptr;
+    return std::make_unique<ScalarAccess>(getBaseName(ptr, names));
+}
 
 // ── 트리 빌더 ─────────────────────────────────────────────
 
@@ -71,21 +106,9 @@ static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
         }
         if (subLoopBlocks.count(BB)) continue;
 
-        for (Instruction& I : *BB) {
-            GetElementPtrInst* GEP = nullptr;
-            if (auto* Load = dyn_cast<LoadInst>(&I))
-                GEP = dyn_cast<GetElementPtrInst>(Load->getPointerOperand());
-            else if (auto* Store = dyn_cast<StoreInst>(&I))
-                GEP = dyn_cast<GetElementPtrInst>(Store->getPointerOperand());
-            if (!GEP) continue;
-
-            auto indices = getIndexVars(GEP, SE, names);
-            std::string base = getBaseName(GEP->getPointerOperand(), names);
-            if (indices.empty())
-                nest.addChild(std::make_unique<ScalarAccess>(base));
-            else
-                nest.addChild(std::make_unique<ArrayAccess>(base, indices));
-        }
+        for (Instruction& I : *BB)
+            if (auto stmt = makeAccessFromInstr(I, SE, names))
+                nest.addChild(std::move(stmt));
     }
 }
 
@@ -97,6 +120,51 @@ static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE
     return nest;
 }
 
+// ── 루트 Statement 빌더 ───────────────────────────────────
+
+/**
+ * @brief 함수 전체 BB를 RPO(Reverse Post-Order)로 순회해 최상위 Statement 목록을 구성한다.
+ *
+ * RPO는 CFG 흐름 순서를 따르므로 루프 전/후 코드가 올바른 순서로 출력된다.
+ * 최상위 루프 헤더 BB → LoopNest, 루프 외부 BB → Scalar/Array 노드 삽입.
+ * 루프 내부 BB는 buildLoopNest가 처리하므로 건너뛴다.
+ *
+ * @param F     분석 대상 함수
+ * @param LI    LoopInfo 분석 결과
+ * @param SE    ScalarEvolution 분석 결과
+ * @param names llvm.dbg.value 기반 Value → 변수명 맵
+ * @param root  결과를 추가할 최상위 Statement 벡터
+ */
+static void buildRootStatements(Function& F, LoopInfo& LI, ScalarEvolution& SE,
+                                 const NameMap& names,
+                                 std::vector<std::unique_ptr<Statement>>& root) {
+    std::map<BasicBlock*, Loop*> topLoopHeaders;
+    std::set<BasicBlock*>        topLoopBlocks;
+    for (Loop* L : LI) {
+        if (getTripCount(L, SE) == 0) continue;
+        topLoopHeaders[L->getHeader()] = L;
+        for (BasicBlock* BB : L->blocks())
+            topLoopBlocks.insert(BB);
+    }
+
+    std::set<Loop*> processed;
+    for (BasicBlock* BB : llvm::ReversePostOrderTraversal<Function*>(&F)) {
+        auto hIt = topLoopHeaders.find(BB);
+        if (hIt != topLoopHeaders.end()) {
+            if (!processed.count(hIt->second)) {
+                processed.insert(hIt->second);
+                root.push_back(buildLoopNest(hIt->second, SE, 1, names));
+            }
+            continue;
+        }
+        if (topLoopBlocks.count(BB)) continue;
+
+        for (Instruction& I : *BB)
+            if (auto stmt = makeAccessFromInstr(I, SE, names))
+                root.push_back(std::move(stmt));
+    }
+}
+
 // ── Pass ──────────────────────────────────────────────────
 
 struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
@@ -105,12 +173,13 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
         auto& SE    = AM.getResult<ScalarEvolutionAnalysis>(F);
         NameMap names = buildDebugNameMap(F);
 
+        std::vector<std::unique_ptr<Statement>> root;
+        buildRootStatements(F, LI, SE, names, root);
+
         lat::JsonExportVisitor vis;
         llvm::json::Array rootJson;
-        for (Loop* L : LI) {
-            if (getTripCount(L, SE) == 0) continue;
-            auto nest = buildLoopNest(L, SE, 1, names);
-            nest->accept(vis);
+        for (auto& stmt : root) {
+            stmt->accept(vis);
             rootJson.push_back(vis.getResult());
         }
 
