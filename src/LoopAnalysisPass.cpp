@@ -9,6 +9,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -54,18 +55,24 @@ static std::unique_ptr<Statement> makeAccessFromInstr(Instruction& I,
     else if (auto* Store = dyn_cast<StoreInst>(&I)) ptr = Store->getPointerOperand();
     if (!ptr) return nullptr;
 
-    if (auto* GEP = dyn_cast<GetElementPtrInst>(ptr)) {
+    // GetElementPtrInst(명령어)와 ConstantExpr GEP(전역 배열 상수 접근) 모두 처리
+    if (auto* GEP = dyn_cast<GEPOperator>(ptr)) {
         auto indices = getIndexVars(GEP, SE, names);
         std::string base = getBaseName(GEP->getPointerOperand(), names);
         if (indices.empty()) return std::make_unique<ScalarAccess>(base);
         return std::make_unique<ArrayAccess>(base, indices);
     }
 
-    // GEP 없는 직접 포인터 접근 (e.g. arr[0]이 base pointer로 최적화된 경우)
+    // GEP 없는 직접 포인터 접근 (e.g. -O1에서 arr[0]이 base pointer로 최적화된 경우)
     Value* base = ptr->stripPointerCasts();
     if (!isa<Argument>(base) && !isa<GlobalVariable>(base) && !isa<AllocaInst>(base))
         return nullptr;
-    return std::make_unique<ScalarAccess>(getBaseName(ptr, names));
+    std::string name = getBaseName(ptr, names);
+    // base가 다른 GEP의 포인터 피연산자로도 쓰이면 배열의 index-0 접근으로 처리
+    for (const User* U : base->users())
+        if (isa<GetElementPtrInst>(U))
+            return std::make_unique<ArrayAccess>(name, std::vector<std::string>{"0"});
+    return std::make_unique<ScalarAccess>(name);
 }
 
 // ── 트리 빌더 ─────────────────────────────────────────────

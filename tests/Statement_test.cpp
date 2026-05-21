@@ -81,6 +81,61 @@ TEST(ArrayAccess, JsonOneDimensional) {
     EXPECT_EQ(indices->size(), 1u);
 }
 
+// ConstantExpr GEP / index-0 heuristic 수정 이후 생성되는 패턴 검증:
+// 상수 인덱스 접근은 ArrayAccess(name, {"0"}), ArrayAccess(name, {"1"}) 등으로 출력돼야 한다.
+
+TEST(ArrayAccess, ConstantIndexZero) {
+    ArrayAccess a("array", {"0"});
+    JsonExportVisitor vis;
+    a.accept(vis);
+    auto result = vis.getResult();
+    auto* obj = toObj(result);
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(str(obj->getString("type")), "Array");
+    EXPECT_EQ(str(obj->getString("name")), "array");
+    auto* indices = obj->getArray("indices");
+    ASSERT_NE(indices, nullptr);
+    ASSERT_EQ(indices->size(), 1u);
+    EXPECT_EQ(str((*indices)[0].getAsString()), "0");
+}
+
+TEST(ArrayAccess, ConstantIndexNonZero) {
+    // 상수 인덱스 1~5가 각각 구분된 ArrayAccess로 직렬화되는지 확인
+    for (int idx = 1; idx <= 5; ++idx) {
+        ArrayAccess a("array", {std::to_string(idx)});
+        JsonExportVisitor vis;
+        a.accept(vis);
+        auto result = vis.getResult();
+        auto* obj = toObj(result);
+        ASSERT_NE(obj, nullptr);
+        auto* indices = obj->getArray("indices");
+        ASSERT_NE(indices, nullptr);
+        ASSERT_EQ(indices->size(), 1u);
+        EXPECT_EQ(str((*indices)[0].getAsString()), std::to_string(idx));
+    }
+}
+
+TEST(ArrayAccess, ConstantIndexDistinct) {
+    // array[0]과 array[1]은 동일한 name이지만 indices로 구분돼야 한다
+    ArrayAccess a0("array", {"0"});
+    ArrayAccess a1("array", {"1"});
+    JsonExportVisitor vis0, vis1;
+    a0.accept(vis0);
+    a1.accept(vis1);
+    auto r0 = vis0.getResult();
+    auto r1 = vis1.getResult();
+    auto* obj0 = toObj(r0);
+    auto* obj1 = toObj(r1);
+    ASSERT_NE(obj0, nullptr);
+    ASSERT_NE(obj1, nullptr);
+    EXPECT_EQ(str(obj0->getString("name")), str(obj1->getString("name")));
+    auto idx0 = str((*obj0->getArray("indices"))[0].getAsString());
+    auto idx1 = str((*obj1->getArray("indices"))[0].getAsString());
+    EXPECT_NE(idx0, idx1);
+    EXPECT_EQ(idx0, "0");
+    EXPECT_EQ(idx1, "1");
+}
+
 // ============================================================
 // LoopNest
 // ============================================================

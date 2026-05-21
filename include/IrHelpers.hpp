@@ -8,6 +8,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 
 namespace lat {
 
@@ -60,13 +61,17 @@ std::vector<std::string> resolveIndex(llvm::Value* Idx, llvm::ScalarEvolution& S
                                       const NameMap& names);
 
 /**
- * @brief GEP 명령어의 모든 인덱스를 변수 이름 목록으로 변환한다.
+ * @brief GEP 연산의 모든 인덱스를 변수 이름 목록으로 변환한다.
  *
- * @param GEP    분석할 GetElementPtrInst
+ * GetElementPtrInst(명령어 GEP)와 ConstantExpr GEP(전역 배열 상수 접근)를
+ * 모두 처리하기 위해 GEPOperator를 인자로 받는다.
+ * 소스 타입이 배열([N x T]*)이면 첫 번째 인덱스(포인터 역참조 0)를 건너뛴다.
+ *
+ * @param GEP    분석할 GEPOperator (GetElementPtrInst 또는 ConstantExpr GEP)
  * @param SE     ScalarEvolution 분석 결과
  * @param names  buildDebugNameMap 결과
  */
-std::vector<std::string> getIndexVars(llvm::GetElementPtrInst* GEP,
+std::vector<std::string> getIndexVars(llvm::GEPOperator* GEP,
                                       llvm::ScalarEvolution& SE,
                                       const NameMap& names);
 

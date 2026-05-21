@@ -6,6 +6,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Operator.h"
 
 #include "../include/IrHelpers.hpp"
 
@@ -69,11 +70,8 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
 
     const SCEV* S = SE.getSCEV(Idx);
 
-    if (auto* C = dyn_cast<SCEVConstant>(S)) {
-        int64_t val = C->getValue()->getSExtValue();
-        if (val == 0) return {};  // 구조체/배열 첫 번째 오프셋 — 생략
-        return {std::to_string(val)};
-    }
+    if (auto* C = dyn_cast<SCEVConstant>(S))
+        return {std::to_string(C->getValue()->getSExtValue())};
 
     auto ivName = [&](const Loop* L) -> std::string {
         if (PHINode* IV = L->getInductionVariable(SE)) {
@@ -102,10 +100,14 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
     return result;
 }
 
-std::vector<std::string> getIndexVars(GetElementPtrInst* GEP, ScalarEvolution& SE,
+std::vector<std::string> getIndexVars(GEPOperator* GEP, ScalarEvolution& SE,
                                       const NameMap& names) {
     std::vector<std::string> result;
-    for (auto it = GEP->idx_begin(); it != GEP->idx_end(); ++it)
+    auto it = GEP->idx_begin();
+    // [N x T]* 소스 타입이면 첫 번째 인덱스는 포인터 역참조(항상 0) — 스킵
+    if (GEP->getSourceElementType()->isArrayTy())
+        ++it;
+    for (; it != GEP->idx_end(); ++it)
         for (auto& name : resolveIndex(*it, SE, names))
             result.push_back(std::move(name));
     return result;
