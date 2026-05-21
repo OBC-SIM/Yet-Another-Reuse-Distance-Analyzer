@@ -9,6 +9,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -176,23 +177,35 @@ static void buildRootStatements(Function& F, LoopInfo& LI, ScalarEvolution& SE,
 // ── Pass ──────────────────────────────────────────────────
 
 struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
-    PreservedAnalyses run(Function& F, FunctionAnalysisManager& AM) {
-        auto& LI    = AM.getResult<LoopAnalysis>(F);
-        auto& SE    = AM.getResult<ScalarEvolutionAnalysis>(F);
-        NameMap names = buildDebugNameMap(F);
+    PreservedAnalyses run(Module& M, ModuleAnalysisManager& MAM) {
+        auto& FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-        std::vector<std::unique_ptr<Statement>> root;
-        buildRootStatements(F, LI, SE, names, root);
+        llvm::json::Array moduleFuncs;
+        for (Function& F : M) {
+            if (F.isDeclaration()) continue;
 
-        lat::JsonExportVisitor vis;
-        llvm::json::Array rootJson;
-        for (auto& stmt : root) {
-            stmt->accept(vis);
-            rootJson.push_back(vis.getResult());
+            auto& LI  = FAM.getResult<LoopAnalysis>(F);
+            auto& SE  = FAM.getResult<ScalarEvolutionAnalysis>(F);
+            NameMap names = buildDebugNameMap(F);
+
+            std::vector<std::unique_ptr<Statement>> root;
+            buildRootStatements(F, LI, SE, names, root);
+
+            lat::JsonExportVisitor vis;
+            llvm::json::Array bodyJson;
+            for (auto& stmt : root) {
+                stmt->accept(vis);
+                bodyJson.push_back(vis.getResult());
+            }
+
+            llvm::json::Object funcEntry;
+            funcEntry["function"] = F.getName().str();
+            funcEntry["body"]     = std::move(bodyJson);
+            moduleFuncs.push_back(std::move(funcEntry));
         }
 
-        llvm::StringRef stem = llvm::sys::path::stem(F.getParent()->getModuleIdentifier());
-        std::string filename = stem.str() + "_loop_annotated_trace.json";
+        llvm::StringRef stem = llvm::sys::path::stem(M.getModuleIdentifier());
+        std::string filename = stem.str() + "_lat.json";
         std::error_code EC;
         raw_fd_ostream OS(filename, EC, sys::fs::OF_Text);
         if (EC) {
@@ -200,7 +213,7 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
                    << EC.message() << "\n";
             return PreservedAnalyses::all();
         }
-        OS << llvm::json::Value(std::move(rootJson));
+        OS << llvm::json::Value(std::move(moduleFuncs));
         errs() << "[LoopAnnotatedTrace] wrote " << filename << "\n";
         return PreservedAnalyses::all();
     }
@@ -212,10 +225,10 @@ llvm::PassPluginLibraryInfo getLoopAnnotatedTracePluginInfo() {
     return {LLVM_PLUGIN_API_VERSION, "LoopAnnotatedTrace", LLVM_VERSION_STRING,
             [](PassBuilder& PB) {
                 PB.registerPipelineParsingCallback(
-                    [](StringRef Name, FunctionPassManager& FPM,
+                    [](StringRef Name, ModulePassManager& MPM,
                        ArrayRef<PassBuilder::PipelineElement>) {
                         if (Name == "loop-annotated-trace") {
-                            FPM.addPass(LoopAnnotatedTracePass());
+                            MPM.addPass(LoopAnnotatedTracePass());
                             return true;
                         }
                         return false;

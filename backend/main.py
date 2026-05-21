@@ -135,11 +135,12 @@ def analyze(json_path: str) -> ReuseProfile:
         raw = json.load(f)
 
     merger = BlockMerger()
-    for node in raw:
-        if node["type"] == "Loop":
-            block_profile, block_trace = _predict_loop_block(node)
-            merger.merge_block(block_profile, block_trace)
-        else:
-            merger.adjust_cold_misses({node["name"]})
+    for func_entry in raw:
+        for node in func_entry["body"]:
+            if node["type"] == "Loop":
+                block_profile, block_trace = _predict_loop_block(node)
+                merger.merge_block(block_profile, block_trace)
+            else:
+                merger.adjust_cold_misses({node["name"]})
 
     return merger.global_profile

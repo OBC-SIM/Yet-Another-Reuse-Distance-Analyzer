@@ -4,21 +4,21 @@ from main import analyze
 from lru_sim import ReuseProfile
 
 
-LOOP_1D = [
+LOOP_1D = [{"function": "test_1d", "body": [
     {"type": "Loop", "var": "i", "bound": 100, "depth": 1, "body": [
         {"type": "Array", "name": "arr", "indices": ["i"]}
     ]}
-]
+]}]
 
-LOOP_2D = [
+LOOP_2D = [{"function": "test_2d", "body": [
     {"type": "Loop", "var": "j", "bound": 8, "depth": 1, "body": [
         {"type": "Loop", "var": "k", "bound": 8, "depth": 2, "body": [
             {"type": "Array", "name": "A", "indices": ["j", "k"]}
         ]}
     ]}
-]
+]}]
 
-MATMUL_3D = [
+MATMUL_3D = [{"function": "matmul", "body": [
     {"type": "Loop", "var": "i", "bound": 32, "depth": 1, "body": [
         {"type": "Loop", "var": "j", "bound": 32, "depth": 2, "body": [
             {"type": "Loop", "var": "k", "bound": 64, "depth": 3, "body": [
@@ -29,7 +29,7 @@ MATMUL_3D = [
             ]}
         ]}
     ]}
-]
+]}]
 
 
 def write_json(tmp_path, data, name="trace.json"):
@@ -70,6 +70,6 @@ class TestAnalyze3DMatmul:
 
 class TestAnalyzeScalarTopLevel:
     def test_scalar_recorded_as_cold_miss(self, tmp_path):
-        data = [{"type": "Scalar", "name": "n"}]
+        data = [{"function": "test_scalar", "body": [{"type": "Scalar", "name": "n"}]}]
         path = write_json(tmp_path, data)
         assert "n" in analyze(path).cold_misses
