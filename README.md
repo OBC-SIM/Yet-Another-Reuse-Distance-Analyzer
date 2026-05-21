@@ -2,7 +2,7 @@
 
 "Static Estimation of Reuse Profiles for Arrays in Nested Loops" 논문의 **Alternative Static Analyzer** C++ 재현 프로젝트입니다.
 
-프로그램을 실행하거나 메모리 트레이스를 수집하지 않고, **LLVM 정적 분석만으로** 중첩 루프 내 배열 접근의 재사용 거리 히스토그램(RDH)과 캐시 히트율을 예측합니다.
+프로그램을 실행하거나 메모리 트레이스를 수집하지 않고, **LLVM 정적 분석만으로** 중첩 루프 내 배열 접근의 재사용 거리 히스토그램(RDH)을 정적으로 예측합니다.
 
 ---
 
@@ -21,7 +21,7 @@ Loop Annotated Trace (JSON)
     │
     │  python3 backend/main.py          ← Commit 5 구현 중
     ▼
-RDH / 캐시 히트율 예측
+RDH (Reuse Distance Histogram)
 ```
 
 **C++ 프론트엔드** (`src/`, `include/`)가 LLVM Pass로 IR을 분석해 루프 구조와 배열 접근 패턴을 JSON으로 출력합니다. **Python 백엔드** (`backend/`)는 이 JSON을 받아 소규모 LRU 시뮬레이션으로 Dilation Equation 계수를 도출하고, 실제 바운드에서의 RDH를 정적으로 예측합니다.
