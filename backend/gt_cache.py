@@ -5,7 +5,7 @@ from time import perf_counter
 from typing import Dict, List, Set, Tuple
 
 from lru_sim import LRUProfiler, ReuseProfile
-from main import _apply_sim_bounds
+from predictor import _apply_sim_bounds
 from parser import LoopBlockNode, parse_trace
 
 

@@ -1,6 +1,6 @@
 import json
 import pytest
-from main import analyze
+from predictor import analyze
 from lru_sim import ReuseProfile
 
 

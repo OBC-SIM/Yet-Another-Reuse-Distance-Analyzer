@@ -1,182 +1,220 @@
-import json
-from itertools import product
-from typing import Dict, List, Tuple
+"""
+main.py — C/LLVM IR → 재사용 거리 히스토그램 출력.
 
-from dilation import DilationContextBuilder, DilationPredictor
-from lru_sim import LRUProfiler, ReuseProfile
-from merger import BlockMerger
-from parser import LoopBlockNode, parse_trace
-from volatile import predict_volatile_diagonal
+Usage:
+    python backend/main.py [--plugin PATH] [--plot] [--save PATH] FILE [FILE ...]
 
-def _get_loop_depth(raw_node: dict) -> int:
-    if raw_node["type"] != "Loop":
-        return 0
-    max_depth = 0
-    for child in raw_node["body"]:
-        if child["type"] == "Loop":
-            max_depth = max(max_depth, _get_loop_depth(child))
-    return 1 + max_depth
+    FILE: .c 또는 .ll 파일. .c 는 clang-14 로 컴파일 후 파이프라인 실행.
 
-def _apply_sim_bounds(loop: LoopBlockNode, sim_bounds: List[int], level: int = 0) -> None:
-    loop.sim_bound = sim_bounds[level]
-    if level + 1 < len(sim_bounds):
-        for child in loop.body:
-            if isinstance(child, LoopBlockNode):
-                _apply_sim_bounds(child, sim_bounds, level + 1)
-                break
+Options:
+    --plugin PATH   libLoopAnnotatedTrace.so 경로
+                    (기본값: <repo_root>/build/libLoopAnnotatedTrace.so)
+    --plot          seaborn 히스토그램 창 표시
+    --save PATH     플롯을 파일로 저장 (PNG/PDF/SVG 등)
+"""
 
-def _run_sim(raw_node: dict, sim_bounds: List[int]) -> Tuple[ReuseProfile, List[str]]:
-    nodes = parse_trace([raw_node], sim_bound=2)
-    _apply_sim_bounds(nodes[0], sim_bounds)
-    trace = nodes[0].unroll({})
-    return LRUProfiler.calculate(trace), trace
-def _diff(a: Dict[int, int], b: Dict[int, int], rds) -> Dict[int, int]:
-    return {rd: a.get(rd, 0) - b.get(rd, 0) for rd in rds}
-def _collect_bounds(raw_node: dict, bounds: Dict[str, int] | None = None) -> Dict[str, int]:
-    bounds = {} if bounds is None else bounds
-    if raw_node["type"] == "Loop":
-        bounds[raw_node["var"]] = raw_node["bound"]
-        for child in raw_node["body"]:
-            _collect_bounds(child, bounds)
-    return bounds
-def _predict_cold_misses(raw_node: dict) -> set[str]:
-    bounds = _collect_bounds(raw_node)
-    cold: set[str] = set()
-    def visit(node: dict) -> None:
-        if node["type"] == "Loop":
-            for child in node["body"]:
-                visit(child)
-        elif node["type"] == "Scalar":
-            cold.add(node["name"])
-        elif node["type"] == "Array":
-            vars_seen = []
-            for idx in node["indices"]:
-                if idx in bounds and idx not in vars_seen:
-                    vars_seen.append(idx)
-            ranges = [range(bounds[var]) for var in vars_seen]
-            for values in product(*ranges) if ranges else [()]:
-                env = dict(zip(vars_seen, values))
-                indices = [str(env[idx]) if idx in env else idx for idx in node["indices"]]
-                cold.add(node["name"] + "-" + "-".join(indices))
+import argparse
+import subprocess
+import sys
+from pathlib import Path
+from typing import List, Tuple
 
-    visit(raw_node)
-    return cold
-def _predict_1d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    predicted, trace = _run_sim(raw_node, [2])
-    predicted.cold_misses = _predict_cold_misses(raw_node)
-    return predicted, trace
+sys.path.insert(0, str(Path(__file__).parent))
 
-def _predict_2d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    b22, trace = _run_sim(raw_node, [2, 2])
-    b32, _     = _run_sim(raw_node, [3, 2])
-    b23, _     = _run_sim(raw_node, [2, 3])
-    b33, _     = _run_sim(raw_node, [3, 3])
+from lru_sim import ReuseProfile
+from predictor import analyze
 
-    stable_rds = (set(b22.histogram) & set(b32.histogram)
-                  & set(b23.histogram) & set(b33.histogram))
-    stable_b22 = ReuseProfile()
-    stable_b22.histogram = {rd: v for rd, v in b22.histogram.items() if rd in stable_rds}
-    stable_b22.cold_misses = b22.cold_misses
+_REPO_ROOT = Path(__file__).parent.parent.resolve()
+_DEFAULT_PLUGIN = _REPO_ROOT / "build" / "libLoopAnnotatedTrace.so"
 
-    rds = set(b22.histogram) | set(b32.histogram) | set(b23.histogram) | set(b33.histogram)
-    incr_j  = _diff(b32.histogram, b22.histogram, rds)
-    incr_k  = _diff(b23.histogram, b22.histogram, rds)
-    coff_jk = {
-        rd: b33.histogram.get(rd, 0) - b22.histogram.get(rd, 0)
-            - incr_j.get(rd, 0) - incr_k.get(rd, 0)
-        for rd in rds
-    }
-    nodes = parse_trace([raw_node], sim_bound=2)
-    outer = nodes[0]
-    inner = next(n for n in outer.body if isinstance(n, LoopBlockNode))
 
-    predicted = DilationPredictor(2).execute(
-        DilationContextBuilder()
-        .set_target_bounds({"j": outer.actual_bound, "k": inner.actual_bound})
-        .set_base_profile(stable_b22)
-        .add_coefficient("Incr_J", incr_j)
-        .add_coefficient("Incr_K", incr_k)
-        .add_coefficient("Coff_JK", coff_jk)
+def compile_c(c_path: Path) -> Path:
+    """clang-14로 .c → _g.ll 컴파일 후 .ll 경로 반환."""
+    abs_c = c_path.resolve()
+    out_ll = abs_c.parent / (abs_c.stem + "_g.ll")
+    subprocess.run(
+        ["clang-14", "-O1", "-g", "-emit-llvm", "-S", "-o", str(out_ll), str(abs_c)],
+        check=True,
+        stderr=subprocess.PIPE,
+        cwd=abs_c.parent,
     )
-    predicted.cold_misses = _predict_cold_misses(raw_node)
-    return predicted, trace
+    return out_ll
 
-def _predict_3d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    sims = {
-        (i, j, k): _run_sim(raw_node, [i, j, k])
-        for i in (2, 3) for j in (2, 3) for k in (2, 3)
-    }
-    def h(key: tuple) -> Dict[int, int]:
-        return sims[key][0].histogram
-    b222  = sims[(2, 2, 2)][0]
-    trace = sims[(2, 2, 2)][1]
-    rds   = set().union(*(set(p.histogram) for p, _ in sims.values()))
-    stable_rds = set.intersection(*(set(p.histogram) for p, _ in sims.values()))
-    stable_b222 = ReuseProfile()
-    stable_b222.histogram = {rd: v for rd, v in b222.histogram.items() if rd in stable_rds}
-    stable_b222.cold_misses = b222.cold_misses
 
-    incr_i  = _diff(h((3,2,2)), h((2,2,2)), rds)
-    incr_j  = _diff(h((2,3,2)), h((2,2,2)), rds)
-    incr_k  = _diff(h((2,2,3)), h((2,2,2)), rds)
-    coff_ij = {rd: h((3,3,2)).get(rd,0) - h((2,2,2)).get(rd,0) - incr_i.get(rd,0) - incr_j.get(rd,0) for rd in rds}
-    coff_jk = {rd: h((2,3,3)).get(rd,0) - h((2,2,2)).get(rd,0) - incr_j.get(rd,0) - incr_k.get(rd,0) for rd in rds}
-    coff_ik = {rd: h((3,2,3)).get(rd,0) - h((2,2,2)).get(rd,0) - incr_i.get(rd,0) - incr_k.get(rd,0) for rd in rds}
-    coff_ijk = {
-        rd: h((3,3,3)).get(rd,0) - h((2,2,2)).get(rd,0)
-            - incr_i.get(rd,0) - incr_j.get(rd,0) - incr_k.get(rd,0)
-            - coff_ij.get(rd,0) - coff_jk.get(rd,0) - coff_ik.get(rd,0)
-        for rd in rds
-    }
-    nodes = parse_trace([raw_node], sim_bound=2)
-    outer = nodes[0]
-    mid   = next(n for n in outer.body if isinstance(n, LoopBlockNode))
-    inner = next(n for n in mid.body   if isinstance(n, LoopBlockNode))
+def _to_ll(path: Path) -> Path:
+    """입력이 .c면 컴파일, .ll이면 그대로 반환."""
+    if path.suffix == ".c":
+        print(f"  [0/2] clang-14 컴파일 중...", end=" ", flush=True)
+        ll = compile_c(path)
+        print(f"완료 → {ll.name}")
+        return ll
+    return path
 
-    predicted = DilationPredictor(3).execute(
-        DilationContextBuilder()
-        .set_target_bounds({"i": outer.actual_bound, "j": mid.actual_bound, "k": inner.actual_bound})
-        .set_base_profile(stable_b222)
-        .add_coefficient("Incr_I",   incr_i)
-        .add_coefficient("Incr_J",   incr_j)
-        .add_coefficient("Incr_K",   incr_k)
-        .add_coefficient("Coff_IJ",  coff_ij)
-        .add_coefficient("Coff_JK",  coff_jk)
-        .add_coefficient("Coff_IK",  coff_ik)
-        .add_coefficient("Coff_IJK", coff_ijk)
+
+def _lat_path(ll_path: Path) -> Path:
+    """foo_g.ll → foo_g_lat.json"""
+    return ll_path.with_suffix("").parent / (ll_path.stem + "_lat.json")
+
+
+def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
+    """opt-14 실행하여 _lat.json을 생성하고 그 경로를 반환."""
+    abs_ll = ll_path.resolve()
+    out_json = _lat_path(abs_ll)
+    subprocess.run(
+        [
+            "opt-14",
+            f"-load-pass-plugin={plugin_path.resolve()}",
+            "-passes=loop-annotated-trace",
+            str(abs_ll),
+            "-o", "/dev/null",
+        ],
+        check=True,
+        stderr=subprocess.PIPE,
+        cwd=abs_ll.parent,
     )
-    if stable_rds != rds:
-        bounds = {outer.actual_bound, mid.actual_bound, inner.actual_bound}
-        volatile = None
-        if len(bounds) == 1:
-            volatile = predict_volatile_diagonal(raw_node, stable_rds, outer.actual_bound, _run_sim)
-        if volatile is not None:
-            predicted.histogram.update(volatile.histogram)
+    if not out_json.exists():
+        raise FileNotFoundError(f"opt-14 실행 후 {out_json} 가 생성되지 않았습니다.")
+    return out_json
 
-    predicted.cold_misses = _predict_cold_misses(raw_node)
-    return predicted, trace
 
-def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    depth = _get_loop_depth(raw_node)
-    if depth == 1:
-        return _predict_1d(raw_node)
-    if depth == 2:
-        return _predict_2d(raw_node)
-    if depth == 3:
-        return _predict_3d(raw_node)
-    raise NotImplementedError(f"{depth}D loop not supported")
+def _print_histogram(profile: ReuseProfile) -> None:
+    hist = profile.histogram
+    if not hist:
+        print("  (재사용 없음 — 모든 접근이 cold miss)")
+        return
 
-def analyze(json_path: str) -> ReuseProfile:
-    with open(json_path) as f:
-        raw = json.load(f)
+    all_rds = sorted(hist)
+    total = sum(hist.values())
+    max_count = max(hist.values())
+    bar_width = 30
 
-    merger = BlockMerger()
-    for func_entry in raw:
-        for node in func_entry["body"]:
-            if node["type"] == "Loop":
-                block_profile, block_trace = _predict_loop_block(node)
-                merger.merge_block(block_profile, block_trace)
-            else:
-                merger.adjust_cold_misses({node["name"]})
+    print(f"  {'RD':>6}  {'count':>10}  {'%':>6}  bar")
+    print(f"  {'-'*6}  {'-'*10}  {'-'*6}  {'-'*bar_width}")
+    for rd in all_rds:
+        count = hist[rd]
+        pct = count / total * 100
+        bar_len = int(count / max_count * bar_width)
+        bar = "█" * bar_len
+        print(f"  {rd:>6}  {count:>10}  {pct:>5.1f}%  {bar}")
+    print(f"  {'total':>6}  {total:>10}")
+    print(f"  cold misses: {len(profile.cold_misses)}")
 
-    return merger.global_profile
+
+def plot_histograms(
+    results: List[Tuple[str, ReuseProfile]],
+    save_path: Path | None,
+) -> None:
+    import os
+    os.environ.setdefault("MPLBACKEND", "Agg")
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    sns.set_theme(style="ticks", context="paper", font_scale=1.2)
+    palette = sns.color_palette("muted")
+
+    n = len(results)
+    fig, axes = plt.subplots(1, n, figsize=(5 * n, 4), squeeze=False)
+
+    for ax, (label, profile) in zip(axes[0], results):
+        hist = profile.histogram
+        if not hist:
+            ax.text(0.5, 0.5, "no reuse", ha="center", va="center", transform=ax.transAxes)
+            ax.set_title(label)
+            continue
+
+        rds = sorted(hist)
+        counts = [hist[rd] for rd in rds]
+
+        ax.bar(rds, counts, color=palette[0], width=max(1, (rds[-1] - rds[0]) / len(rds) * 0.8))
+        ax.set_xlabel("Reuse Distance")
+        ax.set_ylabel("Access Count")
+        ax.set_title(label, fontsize=10)
+        sns.despine(ax=ax)
+
+    fig.suptitle("Reuse Distance Histogram", y=1.02, fontweight="bold")
+    plt.tight_layout()
+
+    fig.savefig(save_path, dpi=300, bbox_inches="tight")
+    print(f"\n  플롯 저장됨: {save_path}")
+
+
+def analyze_file(path: Path, plugin_path: Path) -> ReuseProfile:
+    print(f"\n{'='*62}")
+    print(f"  {path.name}")
+    print(f"{'='*62}")
+
+    ll_path = _to_ll(path)
+
+    print("  [1/2] opt-14 실행 중...", end=" ", flush=True)
+    lat_json = run_llvm_pass(ll_path, plugin_path)
+    print(f"완료 → {lat_json.name}")
+
+    print("  [2/2] 재사용 거리 예측 중...", end=" ", flush=True)
+    profile = analyze(str(lat_json))
+    print("완료")
+
+    print()
+    _print_histogram(profile)
+    return profile
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="LLVM IR → 재사용 거리 히스토그램"
+    )
+    parser.add_argument("files", nargs="+", metavar="FILE", help=".c 또는 .ll 파일")
+    parser.add_argument(
+        "--plugin",
+        default=str(_DEFAULT_PLUGIN),
+        metavar="PATH",
+        help=f"플러그인 .so 경로 (기본값: {_DEFAULT_PLUGIN})",
+    )
+    parser.add_argument(
+        "--plot",
+        action="store_true",
+        help="seaborn 히스토그램 저장 (figs/<stem>.png). --save와 함께 쓰면 --save 경로 우선",
+    )
+    parser.add_argument(
+        "--save",
+        metavar="PATH",
+        help="플롯을 지정 경로에 저장 (PNG/PDF/SVG 등)",
+    )
+    args = parser.parse_args()
+
+    plugin = Path(args.plugin)
+    if not plugin.exists():
+        print(f"오류: 플러그인을 찾을 수 없습니다: {plugin}", file=sys.stderr)
+        print("  빌드 후 다시 시도하거나 --plugin 으로 경로를 지정하세요.", file=sys.stderr)
+        sys.exit(1)
+
+    results: List[Tuple[str, ReuseProfile]] = []
+    for file_str in args.files:
+        path = Path(file_str)
+        if not path.exists():
+            print(f"오류: 파일 없음: {path}", file=sys.stderr)
+            continue
+        if path.suffix not in (".c", ".ll"):
+            print(f"오류: .c 또는 .ll 파일만 지원합니다: {path}", file=sys.stderr)
+            continue
+        try:
+            profile = analyze_file(path, plugin)
+            results.append((path.stem, profile))
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode(errors="replace") if e.stderr else ""
+            print(f"\n오류: {e.args[0][0]} 실패\n{stderr}", file=sys.stderr)
+        except Exception as e:
+            print(f"\n오류: {e}", file=sys.stderr)
+
+    if results and (args.plot or args.save):
+        if args.save:
+            save_path = Path(args.save)
+        elif args.plot:
+            figs_dir = _REPO_ROOT / "figs"
+            figs_dir.mkdir(exist_ok=True)
+            stem = "_".join(label for label, _ in results)
+            save_path = figs_dir / f"{stem}.png"
+        plot_histograms(results, save_path)
+
+
+if __name__ == "__main__":
+    main()
