@@ -1,6 +1,9 @@
 import json
+from pathlib import Path
 import pytest
 from parser import ScalarNode, ArrayNode, LoopBlockNode, parse_trace
+
+TASKS_DIR = Path(__file__).resolve().parent.parent.parent / "tasks"
 
 
 class TestScalarNode:
@@ -77,7 +80,7 @@ class TestParseTrace:
             parse_trace(data)
 
     def test_parse_matmul_json(self):
-        with open("tasks/matmul_loop_annotated_trace.json") as f:
+        with open(TASKS_DIR / "matmul_loop_annotated_trace.json") as f:
             data = json.load(f)
         nodes = parse_trace(data)
         assert len(nodes) == 1
