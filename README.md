@@ -17,14 +17,14 @@ LLVM IR (.ll)
     │
     │  opt-14 -passes=loop-annotated-trace
     ▼
-Loop Annotated Trace (JSON)        ← 현재 구현 범위
+Loop Annotated Trace (JSON)
     │
-    │  Python 백엔드 (예정)
+    │  python3 backend/main.py          ← Commit 5 구현 중
     ▼
 RDH / 캐시 히트율 예측
 ```
 
-**C++ 프론트엔드** (`src/`, `include/`)가 LLVM Pass로 IR을 분석해 루프 구조와 배열 접근 패턴을 JSON으로 출력합니다. **Python 백엔드**는 이 JSON을 입력으로 받아 Dilation Equation으로 대규모 바운드에서의 캐시 성능을 예측합니다 (미구현).
+**C++ 프론트엔드** (`src/`, `include/`)가 LLVM Pass로 IR을 분석해 루프 구조와 배열 접근 패턴을 JSON으로 출력합니다. **Python 백엔드** (`backend/`)는 이 JSON을 받아 소규모 LRU 시뮬레이션으로 Dilation Equation 계수를 도출하고, 실제 바운드에서의 RDH를 정적으로 예측합니다.
 
 ---
 
@@ -66,14 +66,18 @@ void matmul(float A[32][64], float B[64][32], float C[32][32]) {
 
 ## 빌드
 
-**요구 사항:** LLVM 14, CMake ≥ 3.20, GCC ≥ 11, GTest
+**요구 사항:** LLVM 14, CMake ≥ 3.20, GCC ≥ 11, GTest, Python ≥ 3.10, pytest
 
 ```bash
 git clone <repo>
 cd Yet-Another-Reuse-Distance-Analyzer
 
+# C++ 프론트엔드
 cmake -DLLVM_DIR=$(llvm-config-14 --cmakedir) -B build -S .
 cmake --build build
+
+# Python 백엔드 의존성
+pip install pytest
 ```
 
 빌드 산출물:
@@ -127,11 +131,13 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 
 ## 테스트
 
+### C++ (GTest)
+
 ```bash
 ./build/LoopAnnotatedTraceTests
 ```
 
-현재 19개 테스트가 포함되어 있습니다.
+19개 테스트.
 
 | 테스트 스위트 | 내용 |
 |---|---|
@@ -139,6 +145,21 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 | `ArrayAccess` | 배열 접근 생성, 상수 인덱스 구분 포함 |
 | `LoopNest` | 루프 트리 구성 및 중첩 JSON 직렬화 |
 | `GetBaseName` | `IrHelpers::getBaseName` — 무명 변수 IR 슬롯 번호 구분 |
+
+### Python (pytest)
+
+```bash
+pytest -q
+```
+
+53개 테스트.
+
+| 테스트 파일 | 내용 |
+|---|---|
+| `test_parser.py` | TraceNode AST, unroll(), parse_trace() |
+| `test_lru_sim.py` | LRU 스택 시뮬레이션, 재사용 거리 계산 |
+| `test_dilation.py` | Dilation 수식 (2D/3D), Strategy/Builder/Predictor |
+| `test_merger.py` | BlockMerger cold miss 조정, cross-block 재사용 조정 |
 
 ---
 
@@ -156,6 +177,16 @@ src/
 tests/
 ├── Statement_test.cpp    # AST / JSON 직렬화 단위 테스트
 └── IrHelpers_test.cpp    # IR 헬퍼 단위 테스트 (LLVM IR 직접 생성)
+backend/
+├── parser.py             # TraceNode AST + parse_trace()
+├── lru_sim.py            # ReuseProfile + LRUProfiler
+├── dilation.py           # Dilation Equation (Strategy/Factory/Builder/Predictor)
+├── merger.py             # BlockMerger (stateful, cross-block 재사용 조정)
+└── tests/
+    ├── test_parser.py
+    ├── test_lru_sim.py
+    ├── test_dilation.py
+    └── test_merger.py
 tasks/
 ├── test_1d.c             # 단순 1D 루프
 ├── test_2d.c             # 2D 루프
@@ -166,8 +197,7 @@ tasks/
 ├── test_local.c          # 로컬 배열
 ├── test_regular_block.c  # 루프 경계 바깥 블록 순서 검증
 └── test_constant_access.c# 상수 인덱스 접근 (A[0], array[1] 등)
-system-prompt-extraction/
-└── next_paper.md         # Python 백엔드 알고리즘 상세 (논문 §4)
+pyproject.toml            # pytest 설정
 ```
 
 ---
@@ -181,4 +211,8 @@ system-prompt-extraction/
 | 배열 접근 인덱스 추출 (루프 IV, 상수) | ✅ |
 | 전역 배열 `ConstantExpr` GEP 처리 | ✅ |
 | 무명 변수 IR 슬롯 번호 구분 | ✅ |
-| Python 백엔드 (RDH / Dilation Equation) | ⬜ |
+| JSON → TraceNode AST 역직렬화 (`parser.py`) | ✅ |
+| LRU 스택 시뮬레이션 (`lru_sim.py`) | ✅ |
+| Dilation Equation 솔버 (`dilation.py`) | ✅ |
+| 블록 간 재사용 조정 및 병합 (`merger.py`) | ✅ |
+| 파이프라인 오케스트레이터 (`main.py`) | ⬜ |
