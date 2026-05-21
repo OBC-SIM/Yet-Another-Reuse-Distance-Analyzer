@@ -19,7 +19,7 @@ LLVM IR (.ll)
     ▼
 Loop Annotated Trace (JSON)
     │
-    │  python3 backend/main.py          ← Commit 5 구현 중
+    │  python3 -c "from backend.main import analyze; analyze(...)"
     ▼
 RDH (Reuse Distance Histogram)
 ```
@@ -30,7 +30,7 @@ RDH (Reuse Distance Histogram)
 
 ## 출력 형식
 
-`loop_annotated_trace.json`의 노드는 세 가지 타입으로 구성됩니다.
+`{ll파일명}_loop_annotated_trace.json`의 노드는 세 가지 타입으로 구성됩니다.
 
 | 타입 | 필드 | 설명 |
 |------|------|------|
@@ -38,7 +38,7 @@ RDH (Reuse Distance Histogram)
 | `Array` | `name`, `indices` | 배열 접근. 인덱스는 루프 유도 변수 또는 상수 |
 | `Scalar` | `name` | 루프 인덱스와 무관한 스칼라 접근 |
 
-**예시 — 행렬 곱셈 (`matmul`)**
+**예시 — 행렬 곱셈 (`test_matmul_g.ll`)**
 
 ```c
 void matmul(float A[32][64], float B[64][32], float C[32][32]) {
@@ -103,12 +103,23 @@ opt-14 -load-pass-plugin ./build/libLoopAnnotatedTrace.so \
        -passes=loop-annotated-trace <name>_g.ll -o /dev/null
 ```
 
-현재 디렉토리에 `{함수명}_loop_annotated_trace.json`이 생성됩니다.
+현재 디렉토리에 `<name>_g_loop_annotated_trace.json`이 생성됩니다.
 
 ### 3. 결과 확인
 
 ```bash
-python3 -m json.tool <name>_loop_annotated_trace.json
+python3 -m json.tool <name>_g_loop_annotated_trace.json
+```
+
+### 4. RDH 예측
+
+```python
+import sys; sys.path.insert(0, 'backend')
+from main import analyze
+
+profile = analyze('<name>_g_loop_annotated_trace.json')
+print('histogram:', profile.histogram)
+print('cold misses:', len(profile.cold_misses))
 ```
 
 ### 실행 예시 (tasks/ 디렉토리)
@@ -152,7 +163,7 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 pytest -q
 ```
 
-53개 테스트.
+60개 테스트.
 
 | 테스트 파일 | 내용 |
 |---|---|
@@ -160,6 +171,7 @@ pytest -q
 | `test_lru_sim.py` | LRU 스택 시뮬레이션, 재사용 거리 계산 |
 | `test_dilation.py` | Dilation 수식 (2D/3D), Strategy/Builder/Predictor |
 | `test_merger.py` | BlockMerger cold miss 조정, cross-block 재사용 조정 |
+| `test_e2e.py` | 전체 파이프라인 E2E (1D/2D/3D matmul/Scalar) |
 
 ---
 
@@ -182,14 +194,17 @@ backend/
 ├── lru_sim.py            # ReuseProfile + LRUProfiler
 ├── dilation.py           # Dilation Equation (Strategy/Factory/Builder/Predictor)
 ├── merger.py             # BlockMerger (stateful, cross-block 재사용 조정)
+├── main.py               # 파이프라인 오케스트레이터: analyze(json_path) → ReuseProfile
 └── tests/
     ├── test_parser.py
     ├── test_lru_sim.py
     ├── test_dilation.py
-    └── test_merger.py
+    ├── test_merger.py
+    └── test_e2e.py       # E2E 테스트
 tasks/
 ├── test_1d.c             # 단순 1D 루프
 ├── test_2d.c             # 2D 루프
+├── test_2steps.c         # stride-2 1D 루프
 ├── test_matmul.c         # 행렬 곱셈 (3중 루프)
 ├── test_stencil.c        # 스텐실 패턴
 ├── test_multi_array.c    # 다중 배열 접근
@@ -197,7 +212,7 @@ tasks/
 ├── test_local.c          # 로컬 배열
 ├── test_regular_block.c  # 루프 경계 바깥 블록 순서 검증
 └── test_constant_access.c# 상수 인덱스 접근 (A[0], array[1] 등)
-pyproject.toml            # pytest 설정
+pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 ```
 
 ---
@@ -215,4 +230,4 @@ pyproject.toml            # pytest 설정
 | LRU 스택 시뮬레이션 (`lru_sim.py`) | ✅ |
 | Dilation Equation 솔버 (`dilation.py`) | ✅ |
 | 블록 간 재사용 조정 및 병합 (`merger.py`) | ✅ |
-| 파이프라인 오케스트레이터 (`main.py`) | ⬜ |
+| 파이프라인 오케스트레이터 (`main.py`) | ✅ |
