@@ -211,6 +211,10 @@ backend/
 ├── dilation.py           # Dilation Equation (Strategy/Factory/Builder/Predictor)
 ├── merger.py             # BlockMerger (stateful, cross-block 재사용 조정)
 ├── main.py               # 파이프라인 오케스트레이터: analyze(json_path) → ReuseProfile
+├── volatile.py           # Volatile RD 예측 (논문 §3.7.2, 대각선 케이스)
+├── gt_cache.py           # Ground-truth 계산 + SHA-256 캐시
+├── report.py             # 비교 출력 헬퍼 (timed / print_comparison)
+├── verify.py             # 픽스처 기반 ground-truth vs. 예측 비교 스크립트
 └── tests/
     ├── test_parser.py
     ├── test_lru_sim.py
@@ -227,7 +231,12 @@ tasks/
 ├── test_global.c         # 전역 배열
 ├── test_local.c          # 로컬 배열
 ├── test_regular_block.c  # 루프 경계 바깥 블록 순서 검증
-└── test_constant_access.c# 상수 인덱스 접근 (A[0], array[1] 등)
+├── test_constant_access.c# 상수 인덱스 접근 (A[0], array[1] 등)
+├── polybench_gemm.c      # PolyBench: C = α·A·B + β·C
+├── polybench_atax.c      # PolyBench: y = Aᵀ·(A·x)
+├── polybench_2mm.c       # PolyBench: D = A·B·C (2단계 행렬 곱)
+├── polybench_correlation.c # PolyBench: 상관관계 행렬
+└── polybench_jacobi.c    # PolyBench: Jacobi 2D 스텐실
 pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 ```
 
