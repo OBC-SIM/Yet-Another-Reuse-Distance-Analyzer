@@ -32,7 +32,7 @@ else()
 endif()
 
 # ── GTest 단위 테스트 ─────────────────────────────────────
-llvm_map_components_to_libnames(LLVM_SUPPORT_LIB support)
+llvm_map_components_to_libnames(LLVM_TEST_LIBS support core analysis)
 find_library(GTEST_LIB      gtest      PATHS /usr/lib/x86_64-linux-gnu)
 find_library(GTEST_MAIN_LIB gtest_main PATHS /usr/lib/x86_64-linux-gnu)
 
@@ -40,6 +40,8 @@ if(GTEST_LIB AND GTEST_MAIN_LIB)
     enable_testing()
     add_executable(LoopAnnotatedTraceTests
         tests/Statement_test.cpp
+        tests/IrHelpers_test.cpp
+        src/IrHelpers.cpp
     )
     target_include_directories(LoopAnnotatedTraceTests PRIVATE
         ${CMAKE_SOURCE_DIR}/include
@@ -48,7 +50,7 @@ if(GTEST_LIB AND GTEST_MAIN_LIB)
     target_link_libraries(LoopAnnotatedTraceTests
         ${GTEST_LIB}
         ${GTEST_MAIN_LIB}
-        ${LLVM_SUPPORT_LIB}
+        ${LLVM_TEST_LIBS}
         pthread
     )
     add_test(NAME LoopAnnotatedTraceTests COMMAND LoopAnnotatedTraceTests)

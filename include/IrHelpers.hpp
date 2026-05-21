@@ -78,7 +78,8 @@ std::vector<std::string> getIndexVars(llvm::GEPOperator* GEP,
 /**
  * @brief 포인터 피연산자에서 배열/변수의 기반 이름을 추출한다.
  *
- * NameMap → IR 이름 → "argN" → "arr" 순으로 fallback한다.
+ * NameMap → IR 이름 → "argN" → IR 슬롯 번호 순으로 fallback한다.
+ * 무명 값도 슬롯 번호(e.g. "3")로 유일하게 식별된다.
  *
  * @param Ptr    GEP의 포인터 피연산자
  * @param names  buildDebugNameMap 결과

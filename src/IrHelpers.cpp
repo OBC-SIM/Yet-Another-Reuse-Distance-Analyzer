@@ -6,13 +6,33 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "../include/IrHelpers.hpp"
 
 using namespace llvm;
 
 namespace lat {
+
+// NameMap·IR hasName 모두 실패 시 최후 식별자.
+// Module 컨텍스트를 사용해 슬롯 번호를 포함한 피연산자 표현을 반환한다.
+// 무명 로컬 → "3",  전역 변수 → "array",  무명 인자 → "0"
+static std::string irOperandName(const Value* V) {
+    const Module* M = nullptr;
+    if (auto* I = dyn_cast<Instruction>(V))      M = I->getModule();
+    else if (auto* A = dyn_cast<Argument>(V))    M = A->getParent()->getParent();
+    else if (auto* G = dyn_cast<GlobalValue>(V)) M = G->getParent();
+
+    std::string s;
+    raw_string_ostream os(s);
+    V->printAsOperand(os, /*PrintType=*/false, M);
+    os.flush();
+    if (!s.empty() && (s[0] == '%' || s[0] == '@'))
+        s = s.substr(1);
+    return s;
+}
 
 NameMap buildDebugNameMap(Function& F) {
     NameMap names;
@@ -30,7 +50,8 @@ std::string getInductionVarName(Loop* L, ScalarEvolution& SE, const NameMap& nam
     auto lookup = [&](Value* V) -> std::string {
         auto it = names.find(V);
         if (it != names.end()) return it->second;
-        return V->hasName() ? V->getName().str() : "";
+        if (V->hasName()) return V->getName().str();
+        return irOperandName(V);  // IR 슬롯 번호로 구분 (e.g. "4")
     };
 
     if (PHINode* IV = L->getInductionVariable(SE)) {
@@ -78,6 +99,8 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
             auto it = names.find(IV);
             if (it != names.end()) return it->second;
             if (IV->hasName()) return IV->getName().str();
+            std::string n = irOperandName(IV);
+            if (!n.empty()) return n;
         }
         return "iv";
     };
@@ -120,7 +143,8 @@ std::string getBaseName(Value* Ptr, const NameMap& names) {
     if (Base->hasName()) return Base->getName().str();
     if (auto* Arg = dyn_cast<Argument>(Base))
         return "arg" + std::to_string(Arg->getArgNo());
-    return "arr";
+    std::string n = irOperandName(Base);
+    return n.empty() ? "arr" : n;
 }
 
 }  // namespace lat
