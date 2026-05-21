@@ -80,9 +80,9 @@ class TestParseTrace:
             parse_trace(data)
 
     def test_parse_matmul_json(self):
-        with open(TASKS_DIR / "matmul_loop_annotated_trace.json") as f:
+        with open(TASKS_DIR / "test_matmul_g_lat.json") as f:
             data = json.load(f)
-        nodes = parse_trace(data)
+        nodes = parse_trace(data[0]["body"])
         assert len(nodes) == 1
         assert isinstance(nodes[0], LoopBlockNode)
         assert nodes[0].var == "i"
