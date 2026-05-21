@@ -44,16 +44,16 @@ class TestAdjustArrayReuses:
         assert set(merger.global_lru_stack) == {"A-0", "B-0"}
 
     def test_cross_block_reuse_detected(self):
-        # 블록1: [A-0, B-0] → global_lru = [B-0, A-0] (MRU-front)
-        # 블록2: [A-0] 재접근 → idx=1, dist=1
+        # trace: A-0 → B-0   stack: top<B-0, A-0>bot
+        # trace: A-0          stack[1]=A-0 → dist=1
         merger = BlockMerger()
         merger.adjust_array_reuses(["A-0", "B-0"])
         result = merger.adjust_array_reuses(["A-0"])
         assert result == {1: 1}
 
     def test_most_recently_used_distance_zero(self):
-        # 블록1: [A-0, B-0] → global_lru = [B-0, A-0] (B-0이 MRU, idx=0)
-        # 블록2: [B-0] 재접근 → dist=0
+        # trace: A-0 → B-0   stack: top<B-0, A-0>bot
+        # trace: B-0          stack[0]=B-0 → dist=0
         merger = BlockMerger()
         merger.adjust_array_reuses(["A-0", "B-0"])
         result = merger.adjust_array_reuses(["B-0"])
@@ -72,16 +72,19 @@ class TestAdjustArrayReuses:
         assert result == {2: 2}
 
     def test_global_lru_updated_after_cross_block_reuse(self):
-        # A-0 재접근 후 MRU 위치(index=0)로 이동해야 함
+        # trace: A-0 → B-0   stack: top<B-0, A-0>bot
+        # trace: A-0          재접근 후 stack: top<A-0, B-0>bot
         merger = BlockMerger()
         merger.adjust_array_reuses(["A-0", "B-0"])
         merger.adjust_array_reuses(["A-0"])
         assert merger.global_lru_stack[0] == "A-0"
 
     def test_new_address_in_second_block_appended(self):
+        # trace: A-0   stack: top<A-0>bot
+        # trace: B-0   stack에 없는 새 주소 → stack: top<B-0, A-0>bot
         merger = BlockMerger()
         merger.adjust_array_reuses(["A-0"])
-        merger.adjust_array_reuses(["B-0"])  # B-0은 새 주소
+        merger.adjust_array_reuses(["B-0"])
         assert "B-0" in merger.global_lru_stack
 
 
@@ -99,8 +102,8 @@ class TestMergeBlock:
         assert result.cold_misses == {"A-0", "B-0", "C-0"}
 
     def test_cross_block_reuse_added_to_histogram(self):
-        # 블록1 후 global_lru = [B-0, A-0]
-        # 블록2에서 B-0 재접근 → dist=0 이 histogram에 추가됨
+        # trace: A-0 → B-0   stack: top<B-0, A-0>bot
+        # trace: B-0          stack[0]=B-0 → dist=0, histogram에 추가
         merger = BlockMerger()
         merger.merge_block(make_profile({}, {"A-0", "B-0"}), ["A-0", "B-0"])
         result = merger.merge_block(make_profile({}, {"B-0"}), ["B-0"])
