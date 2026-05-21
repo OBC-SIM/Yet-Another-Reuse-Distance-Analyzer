@@ -15,6 +15,7 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "../include/IrHelpers.hpp"
@@ -190,7 +191,8 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
             rootJson.push_back(vis.getResult());
         }
 
-        std::string filename = F.getName().str() + "_loop_annotated_trace.json";
+        llvm::StringRef stem = llvm::sys::path::stem(F.getParent()->getModuleIdentifier());
+        std::string filename = stem.str() + "_loop_annotated_trace.json";
         std::error_code EC;
         raw_fd_ostream OS(filename, EC, sys::fs::OF_Text);
         if (EC) {
