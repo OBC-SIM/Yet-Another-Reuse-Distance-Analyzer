@@ -163,7 +163,7 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 pytest -q
 ```
 
-60개 테스트.
+59개 테스트.
 
 | 테스트 파일 | 내용 |
 |---|---|
@@ -172,6 +172,22 @@ pytest -q
 | `test_dilation.py` | Dilation 수식 (2D/3D), Strategy/Builder/Predictor |
 | `test_merger.py` | BlockMerger cold miss 조정, cross-block 재사용 조정 |
 | `test_e2e.py` | 전체 파이프라인 E2E (1D/2D/3D matmul/Scalar) |
+
+### 예측 정확도 검증 (verify.py)
+
+```bash
+python backend/verify.py
+```
+
+ground-truth(완전 언롤 LRU)와 Dilation 예측을 케이스별로 비교합니다.
+
+| 케이스 | 결과 |
+|---|---|
+| 2D loop j=8, k=8 | ✅ MATCH |
+| matmul i=3, j=3, k=3 | ✅ MATCH |
+| matmul i=4, j=4, k=4 | ✅ MATCH |
+| matmul i=8, j=8, k=8 | ✅ MATCH |
+| ATAX i=100, j=100, k=100 | ✅ MATCH |
 
 ---
 
@@ -231,3 +247,8 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | Dilation Equation 솔버 (`dilation.py`) | ✅ |
 | 블록 간 재사용 조정 및 병합 (`merger.py`) | ✅ |
 | 파이프라인 오케스트레이터 (`main.py`) | ✅ |
+| Volatile RD 예측 (논문 §3.7.2, n×n×n 대각선 케이스) | ✅ |
+| Cold miss 정확 예측 (`_predict_cold_misses`) | ✅ |
+| Ground-truth vs. 예측 비교 검증 (`verify.py`) | ✅ |
+| Rectangular 루프 (i≠j≠k) volatile 예측 | 🔲 미구현 |
+| 4중 루프 이상 지원 | 🔲 미구현 |
