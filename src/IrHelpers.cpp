@@ -95,12 +95,21 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
         return {std::to_string(C->getValue()->getSExtValue())};
 
     auto ivName = [&](const Loop* L) -> std::string {
-        if (PHINode* IV = L->getInductionVariable(SE)) {
-            auto it = names.find(IV);
+        auto tryValue = [&](Value* V) -> std::string {
+            auto it = names.find(V);
             if (it != names.end()) return it->second;
-            if (IV->hasName()) return IV->getName().str();
-            std::string n = irOperandName(IV);
+            if (V->hasName()) return V->getName().str();
+            return irOperandName(V);
+        };
+        if (PHINode* IV = L->getInductionVariable(SE)) {
+            std::string n = tryValue(IV);
             if (!n.empty()) return n;
+        }
+        for (PHINode& PN : L->getHeader()->phis()) {
+            if (SE.isSCEVable(PN.getType()) && isa<SCEVAddRecExpr>(SE.getSCEV(&PN))) {
+                std::string n = tryValue(&PN);
+                if (!n.empty()) return n;
+            }
         }
         return "iv";
     };
