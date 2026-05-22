@@ -122,23 +122,32 @@ python3 -m json.tool <name>_g_lat.json
 CLI로는 C 소스 또는 `.ll` 파일을 바로 넣을 수 있습니다.
 
 ```bash
+# Dilation 예측 (기본, 빠름)
 python backend/main.py tasks/test_stencil.c
 
-# 플롯 저장 (figs/<stem>_blocks.png, figs/<stem>_funcs.png)
+# 실제 loop unroll + LRU 시뮬레이션 (정확, 느림)
+python backend/main.py --mode unroll tasks/test_stencil.c
+
+# 플롯 저장 (figs/<stem>_blocks.png, figs/<stem>_program.png)
 python backend/main.py --plot tasks/test_stencil.c
 
-# 저장 경로 직접 지정 (_blocks / _funcs suffix 자동 추가)
+# 저장 경로 직접 지정 (_blocks / _program suffix 자동 추가)
 python backend/main.py --save figs/out.png tasks/test_matmul.c
 ```
+
+| 옵션 | 설명 |
+|------|------|
+| `--mode predict` | Dilation Equation 정적 예측 (기본값) |
+| `--mode unroll`  | 실제 loop unroll + LRU 시뮬레이션 (ground truth) |
 
 `--plot` / `--save`를 주면 두 파일이 생성됩니다.
 
 | 파일 | 내용 |
 |------|------|
-| `<stem>_blocks.png` | 루프 블록별 예측 RDH (subplot 1개 = 블록 1개) |
-| `<stem>_funcs.png`  | 함수별 집계 RDH (같은 함수의 블록을 합산) |
+| `<stem>_blocks.png`  | 루프 블록별 RDH (subplot 1개 = 블록 1개) |
+| `<stem>_program.png` | 프로그램 전체 합산 RDH |
 
-cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
+cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다. scale gap이 4배 이상이면 broken axis로 자동 분리됩니다.
 
 라이브러리처럼 사용할 때는 `backend/predictor.py`의 `analyze()` 또는 `analyze_blocks()`를 호출합니다.
 
@@ -218,7 +227,7 @@ python backend/verify.py
 # C/LLVM 파일 지정
 python backend/verify.py tasks/test_stencil.c tasks/polybench_2mm.c
 
-# GT vs. 예측 비교 플롯 생성 (figs/verify_<stem>.png)
+# GT vs. 예측 비교 플롯 생성
 python backend/verify.py --plot tasks/test_matmul.c
 
 # 저장 경로 직접 지정
@@ -227,12 +236,14 @@ python backend/verify.py --save figs/compare.png tasks/polybench_atax.c
 
 ground-truth(완전 언롤 LRU)와 Dilation 예측을 케이스별로 비교합니다. C/LLVM 입력을 주면 컴파일과 pass 실행까지 포함해 검증합니다.
 
-`--plot` / `--save` 옵션을 주면 두 파일이 생성됩니다.
+`--plot` / `--save` 옵션을 주면 파일당 4장이 생성됩니다.
 
 | 파일 | 내용 |
 |------|------|
-| `verify_<stem>_blocks.png` | 블록별 GT(파랑) vs. 예측(주황) grouped bar chart |
-| `verify_<stem>_funcs.png`  | 함수별 집계 GT vs. 예측 |
+| `verify_<stem>_blocks.png`         | 블록별 GT(파랑) vs. 예측(주황) RDH |
+| `verify_<stem>_program.png`        | 프로그램 전체 합산 GT vs. 예측 RDH |
+| `verify_<stem>_timing_blocks.png`  | 블록별 unroll 시간 vs. 예측 시간 |
+| `verify_<stem>_timing_program.png` | 프로그램 전체 합산 타이밍 |
 
 cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 
@@ -269,14 +280,16 @@ backend/
 ├── dilation.py           # Dilation Equation (Strategy/Factory/Builder/Predictor)
 ├── merger.py             # BlockMerger (stateful, cross-block 재사용 조정)
 ├── predictor.py          # LAT JSON → ReuseProfile 예측 엔진 (analyze, analyze_blocks)
-├── main.py               # CLI 파이프라인: C/LLVM IR → LAT → RDH 출력/플롯
-├── plot.py               # 시각화 유틸리티 (plot_histograms, plot_verify_comparison, aggregate_by_function)
+├── main.py               # CLI 파이프라인: C/LLVM IR → LAT → RDH 출력/플롯 (--mode predict|unroll)
+├── _plot_utils.py        # 공유 시각화 인프라 (binning, broken axis, bar helpers)
+├── plot.py               # RDH 시각화 (plot_histograms, plot_verify_comparison, aggregate_as_program)
+├── plot_timing.py        # 실행시간 비교 차트 (plot_timing_comparison, aggregate_timing_as_program)
 ├── stability.py          # stable RD 후보 검증
 ├── volatile.py           # 3D Volatile RD 예측
 ├── volatile2d.py         # 2D Volatile RD 예측
 ├── gt_cache.py           # Ground-truth 계산 + SHA-256 캐시
 ├── report.py             # 비교 출력 헬퍼 (timed / print_comparison)
-├── verify.py             # 픽스처 기반 ground-truth vs. 예측 비교 스크립트 (--plot/--save 지원)
+├── verify.py             # ground-truth vs. 예측 비교 스크립트 (--plot/--save, RDH + 타이밍 4장)
 └── tests/
     ├── test_parser.py
     ├── test_lru_sim.py
@@ -325,7 +338,9 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | Volatile RD 예측 (2D rectangular, 3D diagonal/일부 rectangular) | ✅ |
 | Cold miss 정확 예측 (`_predict_cold_misses`) | ✅ |
 | Ground-truth vs. 예측 비교 검증 (`verify.py`) | ✅ |
-| 블록별 / 함수별 RDH 시각화 (`plot.py`, `--plot`/`--save`) | ✅ |
-| GT vs. 예측 비교 시각화 (grouped bar, cold miss RD=−1 표시) | ✅ |
+| 블록별 / 프로그램 전체 RDH 시각화 (`plot.py`, `--plot`/`--save`) | ✅ |
+| GT vs. 예측 비교 시각화 (grouped bar, cold miss RD=−1, broken axis 자동) | ✅ |
+| 실행시간 비교 시각화 (`plot_timing.py`, verify `--plot`) | ✅ |
+| `--mode unroll`로 실제 LRU 시뮬 결과 출력 (`main.py`) | ✅ |
 | `polybench_correlation.c` 마지막 3D sparse/tail family | 🔲 미해결 |
 | 4중 루프 이상 지원 | 🔲 미구현 |
