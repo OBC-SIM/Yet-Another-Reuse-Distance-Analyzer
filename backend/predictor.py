@@ -257,6 +257,8 @@ def analyze(json_path: str) -> ReuseProfile:
                 block_profile, block_trace = _predict_loop_block(node)
                 merger.merge_block(block_profile, block_trace)
             else:
-                merger.adjust_cold_misses({node["name"]})
+                block_trace = parse_trace([node])[0].unroll({})
+                block_profile = LRUProfiler.calculate(block_trace)
+                merger.merge_block(block_profile, block_trace)
 
     return merger.global_profile

@@ -15,10 +15,13 @@ class BlockMerger:
 
     def adjust_array_reuses(self, block_trace: List[str]) -> Dict[int, int]:
         adjusted: Dict[int, int] = {}
+        prior_addrs = set(self.global_lru_stack)
         for addr in block_trace:
             if addr in self.global_lru_stack:
                 dist = self.global_lru_stack.index(addr)
-                adjusted[dist] = adjusted.get(dist, 0) + 1
+                if addr in prior_addrs:
+                    adjusted[dist] = adjusted.get(dist, 0) + 1
+                    prior_addrs.remove(addr)
                 self.global_lru_stack.pop(dist)
             self.global_lru_stack.insert(0, addr)
         return adjusted

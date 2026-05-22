@@ -38,6 +38,11 @@ class TestAdjustArrayReuses:
         result = merger.adjust_array_reuses(["A-0", "B-0"])
         assert result == {}
 
+    def test_intra_block_reuse_is_not_counted_as_cross_reuse(self):
+        merger = BlockMerger()
+        result = merger.adjust_array_reuses(["A-0", "A-0"])
+        assert result == {}
+
     def test_first_block_populates_global_lru(self):
         merger = BlockMerger()
         merger.adjust_array_reuses(["A-0", "B-0"])
