@@ -193,11 +193,22 @@ pytest -q
 ### 예측 정확도 검증 (verify.py)
 
 ```bash
+# 내장 케이스 5개 검증
 python backend/verify.py
+
+# C/LLVM 파일 지정
 python backend/verify.py tasks/test_stencil.c tasks/polybench_2mm.c
+
+# GT vs. 예측 비교 플롯 생성 (figs/verify_<stem>.png)
+python backend/verify.py --plot tasks/test_matmul.c
+
+# 저장 경로 직접 지정
+python backend/verify.py --save figs/compare.png tasks/polybench_atax.c
 ```
 
 ground-truth(완전 언롤 LRU)와 Dilation 예측을 케이스별로 비교합니다. C/LLVM 입력을 주면 컴파일과 pass 실행까지 포함해 검증합니다.
+
+`--plot` / `--save` 옵션을 주면 각 루프 블록을 subplot으로, Ground Truth(파랑)와 예측(주황)을 나란한 grouped bar chart로 시각화합니다.
 
 | 케이스 | 결과 |
 |---|---|
@@ -233,12 +244,13 @@ backend/
 ├── merger.py             # BlockMerger (stateful, cross-block 재사용 조정)
 ├── predictor.py          # LAT JSON → ReuseProfile 예측 엔진
 ├── main.py               # CLI 파이프라인: C/LLVM IR → LAT → RDH 출력/플롯
+├── plot.py               # 시각화 유틸리티 (plot_histograms, plot_verify_comparison)
 ├── stability.py          # stable RD 후보 검증
 ├── volatile.py           # 3D Volatile RD 예측
 ├── volatile2d.py         # 2D Volatile RD 예측
 ├── gt_cache.py           # Ground-truth 계산 + SHA-256 캐시
 ├── report.py             # 비교 출력 헬퍼 (timed / print_comparison)
-├── verify.py             # 픽스처 기반 ground-truth vs. 예측 비교 스크립트
+├── verify.py             # 픽스처 기반 ground-truth vs. 예측 비교 스크립트 (--plot/--save 지원)
 └── tests/
     ├── test_parser.py
     ├── test_lru_sim.py
