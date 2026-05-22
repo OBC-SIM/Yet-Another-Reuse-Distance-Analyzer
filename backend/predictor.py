@@ -5,10 +5,11 @@ from typing import Dict, List, Tuple
 from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
 from merger import BlockMerger
-from parser import LoopBlockNode, parse_trace
+from parser import LoopBlockNode, parse_trace, index_variable, resolve_index
 from stability import validated_stable_rds_2d
 from volatile import predict_volatile_3d_rectangular, predict_volatile_diagonal
 from volatile2d import predict_volatile_2d_rectangular
+
 
 def _get_loop_depth(raw_node: dict) -> int:
     if raw_node["type"] != "Loop":
@@ -19,6 +20,7 @@ def _get_loop_depth(raw_node: dict) -> int:
             max_depth = max(max_depth, _get_loop_depth(child))
     return 1 + max_depth
 
+
 def _apply_sim_bounds(loop: LoopBlockNode, sim_bounds: List[int], level: int = 0) -> None:
     loop.sim_bound = min(sim_bounds[level], loop.actual_bound)
     if level + 1 < len(sim_bounds):
@@ -26,13 +28,30 @@ def _apply_sim_bounds(loop: LoopBlockNode, sim_bounds: List[int], level: int = 0
             if isinstance(child, LoopBlockNode):
                 _apply_sim_bounds(child, sim_bounds, level + 1)
 
+
 def _run_sim(raw_node: dict, sim_bounds: List[int]) -> Tuple[ReuseProfile, List[str]]:
     nodes = parse_trace([raw_node], sim_bound=2)
     _apply_sim_bounds(nodes[0], sim_bounds)
     trace = nodes[0].unroll({})
     return LRUProfiler.calculate(trace), trace
+
+
+def _unroll_with_actual_bounds(raw_node: dict) -> List[str]:
+    nodes = parse_trace([raw_node], sim_bound=2)
+    def apply_actual(loop: LoopBlockNode) -> None:
+        loop.sim_bound = loop.actual_bound
+        for child in loop.body:
+            if isinstance(child, LoopBlockNode):
+                apply_actual(child)
+
+    apply_actual(nodes[0])
+    return nodes[0].unroll({})
+
+
 def _diff(a: Dict[int, int], b: Dict[int, int], rds) -> Dict[int, int]:
     return {rd: a.get(rd, 0) - b.get(rd, 0) for rd in rds}
+
+
 def _collect_bounds(raw_node: dict, bounds: Dict[str, int] | None = None) -> Dict[str, int]:
     bounds = {} if bounds is None else bounds
     if raw_node["type"] == "Loop":
@@ -40,8 +59,20 @@ def _collect_bounds(raw_node: dict, bounds: Dict[str, int] | None = None) -> Dic
         for child in raw_node["body"]:
             _collect_bounds(child, bounds)
     return bounds
+
+
+def _collect_starts(raw_node: dict, starts: Dict[str, int] | None = None) -> Dict[str, int]:
+    starts = {} if starts is None else starts
+    if raw_node["type"] == "Loop":
+        starts[raw_node["var"]] = raw_node.get("start", 0)
+        for child in raw_node["body"]:
+            _collect_starts(child, starts)
+    return starts
+
+
 def _predict_cold_misses(raw_node: dict) -> set[str]:
     bounds = _collect_bounds(raw_node)
+    starts = _collect_starts(raw_node)
     cold: set[str] = set()
     def visit(node: dict) -> None:
         if node["type"] == "Loop":
@@ -54,20 +85,40 @@ def _predict_cold_misses(raw_node: dict) -> set[str]:
         elif node["type"] == "Array":
             vars_seen = []
             for idx in node["indices"]:
-                if idx in bounds and idx not in vars_seen:
-                    vars_seen.append(idx)
-            ranges = [range(bounds[var]) for var in vars_seen]
+                var = index_variable(idx)
+                if var in bounds and var not in vars_seen:
+                    vars_seen.append(var)
+            ranges = [range(starts.get(var, 0), bounds[var]) for var in vars_seen]
             for values in product(*ranges) if ranges else [()]:
                 env = dict(zip(vars_seen, values))
-                indices = [str(env[idx]) if idx in env else idx for idx in node["indices"]]
+                indices = [resolve_index(idx, env) for idx in node["indices"]]
                 cold.add(node["name"] + "-" + "-".join(indices))
 
     visit(raw_node)
     return cold
+
+
 def _predict_1d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    predicted, trace = _run_sim(raw_node, [2])
+    actual_bound = max(0, raw_node["bound"] - raw_node.get("start", 0))
+    if actual_bound <= 1:
+        predicted, trace = _run_sim(raw_node, [actual_bound])
+        predicted.cold_misses = _predict_cold_misses(raw_node)
+        return predicted, trace
+
+    base, _ = _run_sim(raw_node, [1])
+    b2, _ = _run_sim(raw_node, [2])
+    rds = set(base.histogram) | set(b2.histogram)
+    trace = _unroll_with_actual_bounds(raw_node)
+
+    predicted = ReuseProfile()
+    for rd in rds:
+        increment = b2.histogram.get(rd, 0) - base.histogram.get(rd, 0)
+        freq = base.histogram.get(rd, 0) + (actual_bound - 1) * increment
+        if freq > 0:
+            predicted.histogram[rd] = freq
     predicted.cold_misses = _predict_cold_misses(raw_node)
     return predicted, trace
+
 
 def _predict_2d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     sims = {
@@ -117,6 +168,7 @@ def _predict_2d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
             predicted.histogram.update(volatile.histogram)
     predicted.cold_misses = _predict_cold_misses(raw_node)
     return predicted, trace
+
 
 def _predict_3d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     sims = {
@@ -182,6 +234,7 @@ def _predict_3d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     predicted.cold_misses = _predict_cold_misses(raw_node)
     return predicted, trace
 
+
 def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     depth = _get_loop_depth(raw_node)
     if depth == 1:
@@ -191,6 +244,7 @@ def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     if depth == 3:
         return _predict_3d(raw_node)
     raise NotImplementedError(f"{depth}D loop not supported")
+
 
 def analyze(json_path: str) -> ReuseProfile:
     with open(json_path) as f:
