@@ -24,12 +24,21 @@ class TestArrayNode:
     def test_unroll_mixed_constant_and_var(self):
         assert ArrayNode("A", ["i", "0"]).unroll({"i": 3}) == ["A-3-0"]
 
+    def test_unroll_affine_indices(self):
+        assert ArrayNode("A", ["i-1", "i", "i+1"]).unroll({"i": 3}) == ["A-2-3-4"]
+
 
 class TestLoopBlockNode:
     def test_unroll_iterates_sim_bound(self):
         loop = LoopBlockNode("i", actual_bound=100, sim_bound=2, depth=1,
                              body=[ArrayNode("A", ["i"])])
         assert loop.unroll({}) == ["A-0", "A-1"]
+
+    def test_unroll_respects_start(self):
+        loop = LoopBlockNode("i", actual_bound=98, sim_bound=2, depth=1,
+                             body=[ArrayNode("A", ["i-1", "i+1"])])
+        loop.start = 1
+        assert loop.unroll({}) == ["A-0-2", "A-1-3"]
 
     def test_unroll_nested_loops(self):
         inner = LoopBlockNode("j", actual_bound=100, sim_bound=2, depth=2,
@@ -68,6 +77,14 @@ class TestParseTrace:
         assert nodes[0].sim_bound == 2
         assert nodes[0].var == "i"
 
+    def test_parse_loop_start_field(self):
+        data = [{"type": "Loop", "var": "i", "start": 1, "bound": 99, "depth": 1,
+                 "body": [{"type": "Array", "name": "A", "indices": ["i-1"]}]}]
+        nodes = parse_trace(data, sim_bound=2)
+        assert nodes[0].actual_bound == 98
+        assert nodes[0].start == 1
+        assert nodes[0].unroll({}) == ["A-0", "A-1"]
+
     def test_parse_loop_body_is_parsed_recursively(self):
         data = [{"type": "Loop", "var": "i", "bound": 10, "depth": 1,
                  "body": [{"type": "Array", "name": "A", "indices": ["i"]}]}]
@@ -80,8 +97,15 @@ class TestParseTrace:
             parse_trace(data)
 
     def test_parse_matmul_json(self):
-        with open(TASKS_DIR / "test_matmul_g_lat.json") as f:
-            data = json.load(f)
+        data = [{"function": "matmul", "body": [
+            {"type": "Loop", "var": "i", "bound": 32, "depth": 1, "body": [
+                {"type": "Loop", "var": "j", "bound": 32, "depth": 2, "body": [
+                    {"type": "Loop", "var": "k", "bound": 64, "depth": 3, "body": [
+                        {"type": "Array", "name": "A", "indices": ["i", "k"]},
+                    ]}
+                ]}
+            ]}
+        ]}]
         nodes = parse_trace(data[0]["body"])
         assert len(nodes) == 1
         assert isinstance(nodes[0], LoopBlockNode)
