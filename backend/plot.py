@@ -11,8 +11,8 @@ from typing import List, Tuple
 from lru_sim import ReuseProfile
 
 
-def _bin_histogram(hist: dict) -> Tuple[List[str], List[int]]:
-    """RD 히스토그램을 2의 제곱수 단위로 binning."""
+def _bin_histogram(hist: dict, cold_miss_count: int = 0) -> Tuple[List[str], List[int]]:
+    """RD 히스토그램을 2의 제곱수 단위로 binning. cold miss는 RD=-1 bin으로 맨 앞에 추가."""
     binned: dict = defaultdict(int)
     for rd, count in hist.items():
         if rd <= 1:
@@ -22,6 +22,9 @@ def _bin_histogram(hist: dict) -> Tuple[List[str], List[int]]:
             binned[2**bin_idx] += count
 
     labels, counts = [], []
+    if cold_miss_count > 0:
+        labels.append("-1\n(cold)")
+        counts.append(cold_miss_count)
     for k in sorted(binned.keys()):
         if k == 0:
             labels.append("0")
@@ -70,7 +73,7 @@ def plot_histograms(
             ax.set_title(label)
             continue
 
-        labels, counts = _bin_histogram(hist)
+        labels, counts = _bin_histogram(hist, len(profile.cold_misses))
         x_pos = range(len(labels))
 
         ax.bar(x_pos, counts, color="#4C72B0", edgecolor="black", linewidth=0.5, width=0.8)
@@ -135,10 +138,18 @@ def plot_verify_comparison(
             else:
                 bin_labels.append(f"{k}-{k*2-1}")
 
-        gt_vals = [merged_gt[k] for k in bin_keys]
-        pred_vals = [merged_pred[k] for k in bin_keys]
+        # cold miss를 RD=-1 bin으로 맨 앞에 추가
+        gt_cold = len(gt.cold_misses)
+        pred_cold = len(pred.cold_misses)
+        if gt_cold or pred_cold:
+            bin_labels = ["-1\n(cold)"] + bin_labels
+            gt_vals = [gt_cold] + [merged_gt[k] for k in bin_keys]
+            pred_vals = [pred_cold] + [merged_pred[k] for k in bin_keys]
+        else:
+            gt_vals = [merged_gt[k] for k in bin_keys]
+            pred_vals = [merged_pred[k] for k in bin_keys]
 
-        x = np.arange(len(bin_keys))
+        x = np.arange(len(bin_labels))
         w = 0.38
 
         ax.bar(x - w/2, gt_vals, width=w, label="Ground Truth",
