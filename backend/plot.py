@@ -174,3 +174,25 @@ def plot_verify_comparison(
     if save_path:
         fig.savefig(save_path, dpi=300, bbox_inches="tight", transparent=True)
         print(f"  플롯 저장 → {save_path}")
+
+
+def aggregate_by_function(results: list) -> list:
+    """블록별 결과를 함수명으로 묶어 ReuseProfile을 합산한다.
+
+    @param results  (name, p1[, p2, ...]) 튜플 리스트.
+                    name은 "func  ..." 형태여야 한다.
+    @return         (func_name, merged_p1[, merged_p2, ...]) 리스트.
+    """
+    groups: dict = {}
+    order: List[str] = []
+    for entry in results:
+        name, profiles = entry[0], entry[1:]
+        func_name = name.split("  ")[0]
+        if func_name not in groups:
+            groups[func_name] = tuple(ReuseProfile() for _ in profiles)
+            order.append(func_name)
+        for merged, src in zip(groups[func_name], profiles):
+            for rd, cnt in src.histogram.items():
+                merged.histogram[rd] = merged.histogram.get(rd, 0) + cnt
+            merged.cold_misses |= src.cold_misses
+    return [(fn,) + groups[fn] for fn in order]
