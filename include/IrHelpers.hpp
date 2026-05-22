@@ -44,6 +44,15 @@ std::string getInductionVarName(llvm::Loop* L, llvm::ScalarEvolution& SE,
  */
 int64_t getTripCount(llvm::Loop* L, llvm::ScalarEvolution& SE);
 
+/**
+ * @brief 루프의 상수 시작 값을 반환한다.
+ *
+ * @param L  대상 루프
+ * @param SE ScalarEvolution 분석 결과
+ * @return 상수 시작 값이면 해당 값, 동적 시작 값이면 0
+ */
+int64_t getLoopStart(llvm::Loop* L, llvm::ScalarEvolution& SE);
+
 /// 복합 SCEV에서 SCEVAddRecExpr 루프를 재귀적으로 수집한다.
 void collectAddRecLoops(const llvm::SCEV* S, std::vector<const llvm::Loop*>& out);
 

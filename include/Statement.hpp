@@ -66,13 +66,14 @@ private:
  * @brief LoopInfo + SCEV에서 추출한 루프 하나를 나타내는 내부 노드.
  *
  * @param induction_var  유도 변수 이름
- * @param bound          루프 트립 카운트 (컴파일 타임 상수)
+ * @param start          루프 시작 값 (컴파일 타임 상수)
+ * @param bound          루프 종료 값 (exclusive, 컴파일 타임 상수)
  * @param depth          루프 중첩 깊이 (1-based)
  */
 class LoopNest : public Statement {
 public:
-    LoopNest(std::string induction_var, int64_t bound, unsigned depth)
-        : induction_var_(std::move(induction_var)), bound_(bound), depth_(depth) {}
+    LoopNest(std::string induction_var, int64_t start, int64_t bound, unsigned depth)
+        : induction_var_(std::move(induction_var)), start_(start), bound_(bound), depth_(depth) {}
 
     void accept(Visitor& v) override { v.visit(*this); }
 
@@ -85,12 +86,14 @@ public:
     }
 
     const std::string&                             getInductionVar() const { return induction_var_; }
+    int64_t                                        getStart()        const { return start_; }
     int64_t                                        getBound()        const { return bound_; }
     unsigned                                       getDepth()        const { return depth_; }
     const std::vector<std::unique_ptr<Statement>>& getBody()         const { return body_; }
 
 private:
     std::string                            induction_var_;
+    int64_t                                start_;
     int64_t                                bound_;
     unsigned                               depth_;
     std::vector<std::unique_ptr<Statement>> body_;

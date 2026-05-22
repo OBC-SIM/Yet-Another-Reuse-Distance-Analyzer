@@ -44,6 +44,7 @@ public:
         Result_ = llvm::json::Object{
             {"type",  "Loop"},
             {"var",   node.getInductionVar()},
+            {"start", node.getStart()},
             {"bound", node.getBound()},
             {"depth", static_cast<int64_t>(node.getDepth())},
             {"body",  std::move(body)}

@@ -141,22 +141,23 @@ TEST(ArrayAccess, ConstantIndexDistinct) {
 // ============================================================
 
 TEST(LoopNest, Getters) {
-    LoopNest loop("i", 100, 1);
+    LoopNest loop("i", 0, 100, 1);
     EXPECT_EQ(loop.getInductionVar(), "i");
+    EXPECT_EQ(loop.getStart(), 0);
     EXPECT_EQ(loop.getBound(), 100);
     EXPECT_EQ(loop.getDepth(), 1u);
     EXPECT_TRUE(loop.getBody().empty());
 }
 
 TEST(LoopNest, AddChild) {
-    LoopNest loop("i", 100, 1);
+    LoopNest loop("i", 0, 100, 1);
     loop.addChild(std::make_unique<ScalarAccess>("s"));
     loop.addChild(std::make_unique<ArrayAccess>("arr", std::vector<std::string>{"i"}));
     EXPECT_EQ(loop.getBody().size(), 2u);
 }
 
 TEST(LoopNest, JsonFlatLoop) {
-    LoopNest loop("i", 100, 1);
+    LoopNest loop("i", 0, 100, 1);
     loop.addChild(std::make_unique<ArrayAccess>("arr", std::vector<std::string>{"i"}));
 
     JsonExportVisitor vis;
@@ -165,6 +166,7 @@ TEST(LoopNest, JsonFlatLoop) {
     ASSERT_NE(obj, nullptr);
     EXPECT_EQ(str(obj->getString("type")), "Loop");
     EXPECT_EQ(str(obj->getString("var")),  "i");
+    EXPECT_EQ(i64(obj->getInteger("start")), 0);
     EXPECT_EQ(i64(obj->getInteger("bound")), 100);
     EXPECT_EQ(i64(obj->getInteger("depth")), 1);
     auto* body = obj->getArray("body");
@@ -176,10 +178,10 @@ TEST(LoopNest, JsonFlatLoop) {
 // ── 2중 중첩 루프: for i { for j { arr[i][j] } } ──────────
 
 TEST(LoopNest, JsonNestedLoop) {
-    auto inner = std::make_unique<LoopNest>("j", 200, 2);
+    auto inner = std::make_unique<LoopNest>("j", 0, 200, 2);
     inner->addChild(std::make_unique<ArrayAccess>("arr", std::vector<std::string>{"i", "j"}));
 
-    LoopNest outer("i", 100, 1);
+    LoopNest outer("i", 0, 100, 1);
     outer.addChild(std::move(inner));
 
     JsonExportVisitor vis;
@@ -207,7 +209,7 @@ TEST(LoopNest, JsonNestedLoop) {
 }
 
 TEST(LoopNest, EmptyBodyJson) {
-    LoopNest loop("k", 50, 3);
+    LoopNest loop("k", 0, 50, 3);
     JsonExportVisitor vis;
     loop.accept(vis);
     auto* obj = toObj(vis.getResult());

@@ -91,6 +91,23 @@ int64_t getTripCount(Loop* L, ScalarEvolution& SE) {
     return 0;
 }
 
+int64_t getLoopStart(Loop* L, ScalarEvolution& SE) {
+    if (PHINode* IV = L->getInductionVariable(SE)) {
+        if (auto* AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(IV))) {
+            if (auto* C = dyn_cast<SCEVConstant>(AR->getStart()))
+                return C->getValue()->getSExtValue();
+        }
+    }
+    for (PHINode& PN : L->getHeader()->phis()) {
+        if (!SE.isSCEVable(PN.getType())) continue;
+        if (auto* AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(&PN))) {
+            if (auto* C = dyn_cast<SCEVConstant>(AR->getStart()))
+                return C->getValue()->getSExtValue();
+        }
+    }
+    return 0;
+}
+
 void collectAddRecLoops(const SCEV* S, std::vector<const Loop*>& out) {
     if (auto* AR = dyn_cast<SCEVAddRecExpr>(S)) {
         out.push_back(AR->getLoop());
@@ -131,8 +148,19 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
         return "iv";
     };
 
-    if (auto* AR = dyn_cast<SCEVAddRecExpr>(S))
-        return {ivName(AR->getLoop())};
+    auto formatAffine = [&](const Loop* L, int64_t offset) -> std::string {
+        std::string name = ivName(L);
+        if (offset == 0) return name;
+        if (offset > 0) return name + "+" + std::to_string(offset);
+        return name + std::to_string(offset);
+    };
+
+    if (auto* AR = dyn_cast<SCEVAddRecExpr>(S)) {
+        int64_t offset = 0;
+        if (auto* C = dyn_cast<SCEVConstant>(AR->getStart()))
+            offset = C->getValue()->getSExtValue() - getLoopStart(const_cast<Loop*>(AR->getLoop()), SE);
+        return {formatAffine(AR->getLoop(), offset)};
+    }
 
     std::vector<const Loop*> loops;
     collectAddRecLoops(S, loops);

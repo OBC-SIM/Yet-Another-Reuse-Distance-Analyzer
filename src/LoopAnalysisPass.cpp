@@ -32,6 +32,7 @@ using lat::ArrayAccess;
 using lat::buildDebugNameMap;
 using lat::getInductionVarName;
 using lat::getTripCount;
+using lat::getLoopStart;
 using lat::getIndexVars;
 using lat::getBaseName;
 
@@ -124,7 +125,7 @@ static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
 static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE,
                                                 unsigned depth, const NameMap& names) {
     auto nest = std::make_unique<lat::LoopNest>(getInductionVarName(L, SE, names),
-                                           getTripCount(L, SE), depth);
+                                           getLoopStart(L, SE), getTripCount(L, SE), depth);
     populateBody(L, SE, depth, *nest, names);
     return nest;
 }
