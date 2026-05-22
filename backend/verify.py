@@ -96,7 +96,7 @@ def _verify_node(name: str, raw: dict) -> Tuple[ReuseProfile, ReuseProfile]:
     return gt, pred
 
 
-def _verify_flat(func_name: str, body: list) -> None:
+def _verify_flat(func_name: str, body: list) -> Tuple[str, ReuseProfile, ReuseProfile] | None:
     """루프 없는 flat 접근 시퀀스를 LRU로 직접 검증."""
     trace = []
     for node in body:
@@ -105,10 +105,11 @@ def _verify_flat(func_name: str, body: list) -> None:
         elif node["type"] == "Scalar":
             trace.append(node["name"])
     if not trace:
-        return
+        return None
     profile = LRUProfiler.calculate(trace)
     name = f"{func_name}  (flat, {len(trace)} accesses)"
     print_comparison(name, profile, profile, 0.0, 0.0, False, 0.0)
+    return name, profile, profile
 
 
 def verify_json(json_path: Path) -> List[Tuple[str, ReuseProfile, ReuseProfile]]:
@@ -129,7 +130,9 @@ def verify_json(json_path: Path) -> List[Tuple[str, ReuseProfile, ReuseProfile]]
             results.append((name, gt, pred))
 
         if not loops and non_loops:
-            _verify_flat(func_entry["function"], non_loops)
+            flat = _verify_flat(func_entry["function"], non_loops)
+            if flat:
+                results.append(flat)
 
     return results
 
