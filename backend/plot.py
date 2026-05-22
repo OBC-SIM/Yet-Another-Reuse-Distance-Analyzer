@@ -68,7 +68,7 @@ def plot_histograms(
 
     for ax, (label, profile) in zip(axes[0], results):
         hist = profile.histogram
-        if not hist:
+        if not hist and not profile.cold_misses:
             ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
             ax.set_title(label)
             continue
@@ -112,7 +112,9 @@ def plot_verify_comparison(
 
     for ax, (label, gt, pred) in zip(axes[0], results):
         all_rds = sorted(set(gt.histogram) | set(pred.histogram))
-        if not all_rds:
+        gt_cold = len(gt.cold_misses)
+        pred_cold = len(pred.cold_misses)
+        if not all_rds and not gt_cold and not pred_cold:
             ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
             ax.set_title(label, fontsize=9)
             continue
@@ -139,8 +141,6 @@ def plot_verify_comparison(
                 bin_labels.append(f"{k}-{k*2-1}")
 
         # cold miss를 RD=-1 bin으로 맨 앞에 추가
-        gt_cold = len(gt.cold_misses)
-        pred_cold = len(pred.cold_misses)
         if gt_cold or pred_cold:
             bin_labels = ["-1\n(cold)"] + bin_labels
             gt_vals = [gt_cold] + [merged_gt[k] for k in bin_keys]
