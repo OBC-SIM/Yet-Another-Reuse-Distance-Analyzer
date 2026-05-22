@@ -2,18 +2,21 @@
 main.py — C/LLVM IR → 재사용 거리 히스토그램 출력.
 
 Usage:
-    python backend/main.py [--plugin PATH] [--plot] [--save PATH] FILE [FILE ...]
+    python backend/main.py [--plugin PATH] [--mode predict|unroll]
+                           [--plot] [--save PATH] FILE [FILE ...]
 
     FILE: .c 또는 .ll 파일. .c 는 clang-14 로 컴파일 후 파이프라인 실행.
 
 Options:
-    --plugin PATH   libLoopAnnotatedTrace.so 경로
-                    (기본값: <repo_root>/build/libLoopAnnotatedTrace.so)
-    --plot          seaborn 히스토그램 창 표시
-    --save PATH     플롯을 파일로 저장 (PNG/PDF/SVG 등)
+    --plugin PATH          libLoopAnnotatedTrace.so 경로
+    --mode predict|unroll  predict(기본): Dilation 예측 (빠름)
+                           unroll: 실제 loop unroll + LRU 시뮬 (정확)
+    --plot                 seaborn 히스토그램 저장
+    --save PATH            플롯 저장 경로 (PNG/PDF/SVG 등)
 """
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -21,7 +24,9 @@ from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lru_sim import ReuseProfile
+from gt_cache import ground_truth
+from lru_sim import LRUProfiler, ReuseProfile
+from parser import parse_trace
 from plot import aggregate_as_program, plot_histograms
 from predictor import analyze, analyze_blocks
 
@@ -89,6 +94,39 @@ def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
     return out_json
 
 
+def _unroll_blocks(lat_json: Path) -> List[Tuple[str, ReuseProfile]]:
+    """LAT JSON 블록을 실제 unroll + LRU 시뮬레이션으로 정확히 계산."""
+    with open(lat_json) as f:
+        raw = json.load(f)
+    results: List[Tuple[str, ReuseProfile]] = []
+    for func_entry in raw:
+        func_name = func_entry["function"]
+        loops = [n for n in func_entry["body"] if n["type"] == "Loop"]
+        non_loops = [n for n in func_entry["body"] if n["type"] != "Loop"]
+        for node in loops:
+            profile = ground_truth(node)
+            name = f"{func_name}  {node['var']}-loop (bound={node['bound']})"
+            results.append((name, profile))
+        if not loops and non_loops:
+            trace: List[str] = []
+            for node in non_loops:
+                trace.extend(parse_trace([node])[0].unroll({}))
+            if trace:
+                profile = LRUProfiler.calculate(trace)
+                name = f"{func_name}  (flat, {len(trace)} accesses)"
+                results.append((name, profile))
+    return results
+
+
+def _merge_blocks(blocks: List[Tuple[str, ReuseProfile]]) -> ReuseProfile:
+    merged = ReuseProfile()
+    for _, p in blocks:
+        for rd, cnt in p.histogram.items():
+            merged.histogram[rd] = merged.histogram.get(rd, 0) + cnt
+        merged.cold_misses |= p.cold_misses
+    return merged
+
+
 def _print_histogram(profile: ReuseProfile) -> None:
     hist = profile.histogram
     if not hist:
@@ -114,11 +152,11 @@ def _print_histogram(profile: ReuseProfile) -> None:
 
 
 def analyze_file(
-    path: Path, plugin_path: Path
+    path: Path, plugin_path: Path, mode: str = "predict"
 ) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
     """파이프라인 실행 후 (합산 프로파일, 블록별 프로파일 리스트) 반환."""
     print(f"\n{'='*62}")
-    print(f"  {path.name}")
+    print(f"  {path.name}  [mode={mode}]")
     print(f"{'='*62}")
 
     ll_path = _to_ll(path)
@@ -127,9 +165,14 @@ def analyze_file(
     lat_json = run_llvm_pass(ll_path, plugin_path)
     print(f"완료 → {lat_json.name}")
 
-    print("  [2/2] 재사용 거리 예측 중...", end=" ", flush=True)
-    profile = analyze(str(lat_json))
-    blocks = analyze_blocks(str(lat_json))
+    action = "예측" if mode == "predict" else "unrolling"
+    print(f"  [2/2] 재사용 거리 {action} 중...", end=" ", flush=True)
+    if mode == "predict":
+        profile = analyze(str(lat_json))
+        blocks = analyze_blocks(str(lat_json))
+    else:
+        blocks = _unroll_blocks(lat_json)
+        profile = _merge_blocks(blocks)
     print("완료")
 
     print()
@@ -147,6 +190,12 @@ def main() -> None:
         default=str(_DEFAULT_PLUGIN),
         metavar="PATH",
         help=f"플러그인 .so 경로 (기본값: {_DEFAULT_PLUGIN})",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["predict", "unroll"],
+        default="predict",
+        help="predict: Dilation 예측 (기본), unroll: 실제 LRU 시뮬레이션",
     )
     parser.add_argument(
         "--plot",
@@ -176,7 +225,7 @@ def main() -> None:
             print(f"오류: .c 또는 .ll 파일만 지원합니다: {path}", file=sys.stderr)
             continue
         try:
-            _, blocks = analyze_file(path, plugin)
+            _, blocks = analyze_file(path, plugin, args.mode)
             block_results.extend(blocks)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode(errors="replace") if e.stderr else ""
