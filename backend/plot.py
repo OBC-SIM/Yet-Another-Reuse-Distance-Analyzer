@@ -163,10 +163,14 @@ def plot_verify_comparison(
         ax.set_ylabel("Frequency")
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_title(label, fontsize=9)
-        ax.legend(fontsize=8)
         sns.despine(ax=ax)
 
-    plt.tight_layout()
+    # 축 안에 legend를 두면 bar와 겹치므로 figure 하단에 공유 legend 배치
+    handles, leg_labels = axes[0][0].get_legend_handles_labels()
+    if handles:
+        fig.legend(handles, leg_labels, loc="lower center", ncol=2,
+                   fontsize=9, frameon=False, bbox_to_anchor=(0.5, 0))
+    plt.tight_layout(rect=[0, 0.08, 1, 1])
     if save_path:
         fig.savefig(save_path, dpi=300, bbox_inches="tight", transparent=True)
         print(f"  플롯 저장 → {save_path}")
