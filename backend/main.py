@@ -22,7 +22,7 @@ from typing import List, Tuple
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lru_sim import ReuseProfile
-from plot import aggregate_by_function, plot_histograms
+from plot import aggregate_as_program, plot_histograms
 from predictor import analyze, analyze_blocks
 
 _REPO_ROOT = Path(__file__).parent.parent.resolve()
@@ -194,7 +194,18 @@ def main() -> None:
             base = figs_dir / f"{stems}.png"
 
         plot_histograms(block_results, base.with_stem(base.stem + "_blocks"))
-        plot_histograms(aggregate_by_function(block_results), base.with_stem(base.stem + "_funcs"))
+        reusable_results = [
+            row for row in block_results
+            if any(profile.histogram for profile in row[1:])
+        ]
+        program_label = (
+            Path(args.files[0]).name
+            if len(args.files) == 1
+            else ", ".join(Path(f).name for f in args.files)
+        )
+        program_results = aggregate_as_program(reusable_results, label=program_label)
+        if program_results:
+            plot_histograms(program_results, base.with_stem(base.stem + "_program"))
 
 
 if __name__ == "__main__":
