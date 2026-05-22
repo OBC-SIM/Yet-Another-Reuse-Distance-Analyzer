@@ -123,18 +123,37 @@ CLI로는 C 소스 또는 `.ll` 파일을 바로 넣을 수 있습니다.
 
 ```bash
 python backend/main.py tasks/test_stencil.c
+
+# 플롯 저장 (figs/<stem>_blocks.png, figs/<stem>_funcs.png)
 python backend/main.py --plot tasks/test_stencil.c
+
+# 저장 경로 직접 지정 (_blocks / _funcs suffix 자동 추가)
+python backend/main.py --save figs/out.png tasks/test_matmul.c
 ```
 
-라이브러리처럼 사용할 때는 `backend/predictor.py`의 `analyze()`를 호출합니다.
+`--plot` / `--save`를 주면 두 파일이 생성됩니다.
+
+| 파일 | 내용 |
+|------|------|
+| `<stem>_blocks.png` | 루프 블록별 예측 RDH (subplot 1개 = 블록 1개) |
+| `<stem>_funcs.png`  | 함수별 집계 RDH (같은 함수의 블록을 합산) |
+
+cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
+
+라이브러리처럼 사용할 때는 `backend/predictor.py`의 `analyze()` 또는 `analyze_blocks()`를 호출합니다.
 
 ```python
 import sys; sys.path.insert(0, 'backend')
-from predictor import analyze
+from predictor import analyze, analyze_blocks
 
+# 함수 전체 합산 프로파일
 profile = analyze('<name>_g_lat.json')
 print('histogram:', profile.histogram)
 print('cold misses:', len(profile.cold_misses))
+
+# 블록별 프로파일 리스트
+for name, block_profile in analyze_blocks('<name>_g_lat.json'):
+    print(name, block_profile.histogram)
 ```
 
 ### 실행 예시 (tasks/ 디렉토리)
@@ -208,7 +227,14 @@ python backend/verify.py --save figs/compare.png tasks/polybench_atax.c
 
 ground-truth(완전 언롤 LRU)와 Dilation 예측을 케이스별로 비교합니다. C/LLVM 입력을 주면 컴파일과 pass 실행까지 포함해 검증합니다.
 
-`--plot` / `--save` 옵션을 주면 각 루프 블록을 subplot으로, Ground Truth(파랑)와 예측(주황)을 나란한 grouped bar chart로 시각화합니다.
+`--plot` / `--save` 옵션을 주면 두 파일이 생성됩니다.
+
+| 파일 | 내용 |
+|------|------|
+| `verify_<stem>_blocks.png` | 블록별 GT(파랑) vs. 예측(주황) grouped bar chart |
+| `verify_<stem>_funcs.png`  | 함수별 집계 GT vs. 예측 |
+
+cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 
 | 케이스 | 결과 |
 |---|---|
@@ -242,9 +268,9 @@ backend/
 ├── lru_sim.py            # ReuseProfile + LRUProfiler
 ├── dilation.py           # Dilation Equation (Strategy/Factory/Builder/Predictor)
 ├── merger.py             # BlockMerger (stateful, cross-block 재사용 조정)
-├── predictor.py          # LAT JSON → ReuseProfile 예측 엔진
+├── predictor.py          # LAT JSON → ReuseProfile 예측 엔진 (analyze, analyze_blocks)
 ├── main.py               # CLI 파이프라인: C/LLVM IR → LAT → RDH 출력/플롯
-├── plot.py               # 시각화 유틸리티 (plot_histograms, plot_verify_comparison)
+├── plot.py               # 시각화 유틸리티 (plot_histograms, plot_verify_comparison, aggregate_by_function)
 ├── stability.py          # stable RD 후보 검증
 ├── volatile.py           # 3D Volatile RD 예측
 ├── volatile2d.py         # 2D Volatile RD 예측
@@ -299,5 +325,7 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | Volatile RD 예측 (2D rectangular, 3D diagonal/일부 rectangular) | ✅ |
 | Cold miss 정확 예측 (`_predict_cold_misses`) | ✅ |
 | Ground-truth vs. 예측 비교 검증 (`verify.py`) | ✅ |
+| 블록별 / 함수별 RDH 시각화 (`plot.py`, `--plot`/`--save`) | ✅ |
+| GT vs. 예측 비교 시각화 (grouped bar, cold miss RD=−1 표시) | ✅ |
 | `polybench_correlation.c` 마지막 3D sparse/tail family | 🔲 미해결 |
 | 4중 루프 이상 지원 | 🔲 미구현 |
