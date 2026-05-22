@@ -68,6 +68,23 @@ std::string getInductionVarName(Loop* L, ScalarEvolution& SE, const NameMap& nam
 }
 
 int64_t getTripCount(Loop* L, ScalarEvolution& SE) {
+    if (BasicBlock* H = L->getHeader()) {
+        if (auto* Br = dyn_cast<BranchInst>(H->getTerminator())) {
+            if (Br->isConditional()) {
+                if (auto* Cmp = dyn_cast<ICmpInst>(Br->getCondition())) {
+                    if (auto* C = dyn_cast<ConstantInt>(Cmp->getOperand(1))) {
+                        int64_t bound = C->getSExtValue();
+                        if (Cmp->getPredicate() == ICmpInst::ICMP_SLT ||
+                            Cmp->getPredicate() == ICmpInst::ICMP_ULT)
+                            return bound;
+                        if (Cmp->getPredicate() == ICmpInst::ICMP_SLE ||
+                            Cmp->getPredicate() == ICmpInst::ICMP_ULE)
+                            return bound + 1;
+                    }
+                }
+            }
+        }
+    }
     const SCEV* BTC = SE.getBackedgeTakenCount(L);
     if (auto* C = dyn_cast<SCEVConstant>(BTC))
         return C->getValue()->getSExtValue() + 1;
@@ -135,6 +152,10 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
 std::vector<std::string> getIndexVars(GEPOperator* GEP, ScalarEvolution& SE,
                                       const NameMap& names) {
     std::vector<std::string> result;
+    if (auto* Parent = dyn_cast<GEPOperator>(GEP->getPointerOperand()->stripPointerCasts())) {
+        auto parentIndices = getIndexVars(Parent, SE, names);
+        result.insert(result.end(), parentIndices.begin(), parentIndices.end());
+    }
     auto it = GEP->idx_begin();
     // [N x T]* 소스 타입이면 첫 번째 인덱스는 포인터 역참조(항상 0) — 스킵
     if (GEP->getSourceElementType()->isArrayTy())
@@ -147,6 +168,8 @@ std::vector<std::string> getIndexVars(GEPOperator* GEP, ScalarEvolution& SE,
 
 std::string getBaseName(Value* Ptr, const NameMap& names) {
     Value* Base = Ptr->stripPointerCasts();
+    while (auto* GEP = dyn_cast<GEPOperator>(Base))
+        Base = GEP->getPointerOperand()->stripPointerCasts();
     auto it = names.find(Base);
     if (it != names.end()) return it->second;
     if (Base->hasName()) return Base->getName().str();

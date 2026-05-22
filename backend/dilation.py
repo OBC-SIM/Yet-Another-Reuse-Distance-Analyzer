@@ -27,7 +27,7 @@ class Predict2DStrategy(DilationStrategy):
                 + dist_k * coeffs["Incr_K"].get(rd, 0)
                 + coeffs["Coff_JK"].get(rd, 0) * dist_j * dist_k
             )
-            predicted.histogram[rd] = freq
+            predicted.histogram[rd] = max(0, freq)
         return predicted
 
 
@@ -53,7 +53,7 @@ class Predict3DStrategy(DilationStrategy):
                 + coeffs["Coff_IK"].get(rd, 0) * dist_i * dist_k
                 + coeffs["Coff_IJK"].get(rd, 0) * dist_i * dist_j * dist_k
             )
-            predicted.histogram[rd] = freq
+            predicted.histogram[rd] = max(0, freq)
         return predicted
 
 

@@ -6,7 +6,9 @@ from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
 from merger import BlockMerger
 from parser import LoopBlockNode, parse_trace
-from volatile import predict_volatile_diagonal
+from stability import validated_stable_rds_2d
+from volatile import predict_volatile_3d_rectangular, predict_volatile_diagonal
+from volatile2d import predict_volatile_2d_rectangular
 
 def _get_loop_depth(raw_node: dict) -> int:
     if raw_node["type"] != "Loop":
@@ -18,12 +20,11 @@ def _get_loop_depth(raw_node: dict) -> int:
     return 1 + max_depth
 
 def _apply_sim_bounds(loop: LoopBlockNode, sim_bounds: List[int], level: int = 0) -> None:
-    loop.sim_bound = sim_bounds[level]
+    loop.sim_bound = min(sim_bounds[level], loop.actual_bound)
     if level + 1 < len(sim_bounds):
         for child in loop.body:
             if isinstance(child, LoopBlockNode):
                 _apply_sim_bounds(child, sim_bounds, level + 1)
-                break
 
 def _run_sim(raw_node: dict, sim_bounds: List[int]) -> Tuple[ReuseProfile, List[str]]:
     nodes = parse_trace([raw_node], sim_bound=2)
@@ -44,6 +45,8 @@ def _predict_cold_misses(raw_node: dict) -> set[str]:
     cold: set[str] = set()
     def visit(node: dict) -> None:
         if node["type"] == "Loop":
+            if node["bound"] <= 0:
+                return
             for child in node["body"]:
                 visit(child)
         elif node["type"] == "Scalar":
@@ -67,13 +70,17 @@ def _predict_1d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     return predicted, trace
 
 def _predict_2d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    b22, trace = _run_sim(raw_node, [2, 2])
-    b32, _     = _run_sim(raw_node, [3, 2])
-    b23, _     = _run_sim(raw_node, [2, 3])
-    b33, _     = _run_sim(raw_node, [3, 3])
+    sims = {
+        (j, k): _run_sim(raw_node, [j, k])
+        for j, k in ((2, 2), (3, 2), (2, 3), (3, 3), (4, 4))
+    }
+    b22, trace = sims[(2, 2)]
+    b32, _     = sims[(3, 2)]
+    b23, _     = sims[(2, 3)]
+    b33, _     = sims[(3, 3)]
+    hist_by_bound = {bound: profile.histogram for bound, (profile, _) in sims.items()}
 
-    stable_rds = (set(b22.histogram) & set(b32.histogram)
-                  & set(b23.histogram) & set(b33.histogram))
+    stable_rds = validated_stable_rds_2d(hist_by_bound)
     stable_b22 = ReuseProfile()
     stable_b22.histogram = {rd: v for rd, v in b22.histogram.items() if rd in stable_rds}
     stable_b22.cold_misses = b22.cold_misses
@@ -98,6 +105,16 @@ def _predict_2d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
         .add_coefficient("Incr_K", incr_k)
         .add_coefficient("Coff_JK", coff_jk)
     )
+    if stable_rds != rds:
+        volatile = predict_volatile_2d_rectangular(
+            raw_node,
+            stable_rds,
+            outer.actual_bound,
+            inner.actual_bound,
+            _run_sim,
+        )
+        if volatile is not None:
+            predicted.histogram.update(volatile.histogram)
     predicted.cold_misses = _predict_cold_misses(raw_node)
     return predicted, trace
 
@@ -150,6 +167,15 @@ def _predict_3d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
         volatile = None
         if len(bounds) == 1:
             volatile = predict_volatile_diagonal(raw_node, stable_rds, outer.actual_bound, _run_sim)
+        if volatile is None:
+            volatile = predict_volatile_3d_rectangular(
+                raw_node,
+                stable_rds,
+                outer.actual_bound,
+                mid.actual_bound,
+                inner.actual_bound,
+                _run_sim,
+            )
         if volatile is not None:
             predicted.histogram.update(volatile.histogram)
 

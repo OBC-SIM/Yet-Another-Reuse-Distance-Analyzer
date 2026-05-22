@@ -9,7 +9,7 @@ from predictor import _apply_sim_bounds
 from parser import LoopBlockNode, parse_trace
 
 
-GT_CACHE_VERSION = 1
+GT_CACHE_VERSION = 2
 GT_CACHE_PATH = os.environ.get(
     "VERIFY_GT_CACHE",
     os.path.join(os.path.dirname(__file__), ".verify_gt_cache.json"),
@@ -32,7 +32,7 @@ def _load_gt_cache() -> Dict[str, dict]:
 def _save_gt_cache() -> None:
     if _GT_CACHE is None:
         return
-    tmp_path = GT_CACHE_PATH + ".tmp"
+    tmp_path = f"{GT_CACHE_PATH}.{os.getpid()}.tmp"
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(_GT_CACHE, f, sort_keys=True)
     os.replace(tmp_path, GT_CACHE_PATH)

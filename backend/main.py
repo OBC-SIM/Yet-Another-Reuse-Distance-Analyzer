@@ -33,7 +33,18 @@ def compile_c(c_path: Path) -> Path:
     abs_c = c_path.resolve()
     out_ll = abs_c.parent / (abs_c.stem + "_g.ll")
     subprocess.run(
-        ["clang-14", "-O1", "-g", "-emit-llvm", "-S", "-o", str(out_ll), str(abs_c)],
+        [
+            "clang-14",
+            "-O0",
+            "-Xclang",
+            "-disable-O0-optnone",
+            "-g",
+            "-emit-llvm",
+            "-S",
+            "-o",
+            str(out_ll),
+            str(abs_c),
+        ],
         check=True,
         stderr=subprocess.PIPE,
         cwd=abs_c.parent,
@@ -64,7 +75,7 @@ def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
         [
             "opt-14",
             f"-load-pass-plugin={plugin_path.resolve()}",
-            "-passes=loop-annotated-trace",
+            "-passes=function(mem2reg),loop-simplify,loop-annotated-trace",
             str(abs_ll),
             "-o", "/dev/null",
         ],
