@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from gt_cache import ground_truth_cached
 from lru_sim import LRUProfiler, ReuseProfile
 from main import _DEFAULT_PLUGIN, _REPO_ROOT, _to_ll, run_llvm_pass
-from plot import plot_verify_comparison
+from plot import aggregate_by_function, plot_verify_comparison
 from predictor import _predict_loop_block
 from report import print_comparison, timed
 
@@ -199,15 +199,17 @@ def main() -> None:
 
     if plot_results and (args.plot or args.save):
         if args.save:
-            save_path = Path(args.save)
+            base = Path(args.save)
         else:
             figs_dir = _REPO_ROOT / "figs"
             figs_dir.mkdir(exist_ok=True)
-            stems = "_".join(
-                Path(f).stem for f in args.files
-            ) if args.files else "builtin"
-            save_path = figs_dir / f"verify_{stems}.png"
-        plot_verify_comparison(plot_results, save_path)
+            stems = "_".join(Path(f).stem for f in args.files) if args.files else "builtin"
+            base = figs_dir / f"verify_{stems}.png"
+
+        blocks_path = base.with_stem(base.stem + "_blocks")
+        funcs_path  = base.with_stem(base.stem + "_funcs")
+        plot_verify_comparison(plot_results, blocks_path)
+        plot_verify_comparison(aggregate_by_function(plot_results), funcs_path)
 
 
 if __name__ == "__main__":
