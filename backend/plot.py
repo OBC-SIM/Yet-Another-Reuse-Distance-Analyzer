@@ -9,76 +9,39 @@ from pathlib import Path
 from typing import List, Tuple
 
 from lru_sim import ReuseProfile
-
-
-def _bin_histogram(hist: dict) -> Tuple[List[str], List[int]]:
-    """RD 히스토그램을 2의 제곱수 단위로 binning."""
-    binned: dict = defaultdict(int)
-    for rd, count in hist.items():
-        if rd <= 1:
-            binned[rd] += count
-        else:
-            bin_idx = int(math.log2(rd))
-            binned[2**bin_idx] += count
-    labels, counts = [], []
-    for k in sorted(binned.keys()):
-        if k == 0:
-            labels.append("0")
-        elif k == 1:
-            labels.append("1")
-        else:
-            labels.append(f"{k}-{k*2-1}")
-        counts.append(binned[k])
-    return labels, counts
-
-
-def _setup_theme():
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-
-    sns.set_theme(style="ticks", context="paper")
-    plt.rcParams.update({
-        "font.family": "serif",
-        "font.serif": ["DejaVu Serif", "Liberation Serif", "Times New Roman"],
-        "pdf.fonttype": 42,
-        "axes.linewidth": 1.0,
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-    })
-
-
-def _add_break_marks(ax_top, ax_bot) -> None:
-    """두 축 사이에 절단 표시(//)를 그린다."""
-    d = 0.012
-    kw = dict(color="k", clip_on=False, linewidth=1.2, transform=ax_top.transAxes)
-    ax_top.plot((-d, +d), (-d * 2, +d * 2), **kw)
-    ax_top.plot((1 - d, 1 + d), (-d * 2, +d * 2), **kw)
-    kw["transform"] = ax_bot.transAxes
-    ax_bot.plot((-d, +d), (1 - d * 2, 1 + d * 2), **kw)
-    ax_bot.plot((1 - d, 1 + d), (1 - d * 2, 1 + d * 2), **kw)
-    ax_top.spines["bottom"].set_visible(False)
-    ax_bot.spines["top"].set_visible(False)
-    ax_top.tick_params(bottom=False, labelbottom=False)
+from _plot_utils import (
+    _add_break_band, _add_break_marks, _bar_ylim, _bin_histogram,
+    _broken_axis_limits, _plot_grouped_bars, _plot_single_bars,
+    _save_figure, _setup_theme,
+)
 
 
 def plot_histograms(
     results: List[Tuple[str, ReuseProfile]],
     save_path: Path | None,
 ) -> None:
-    """예측 RDH를 파일별로 subplot에 그린다. cold miss는 broken axis로 분리."""
+    """예측 RDH를 블록별 subplot에 그린다. scale gap이 크면 broken axis로 분리."""
     os.environ.setdefault("MPLBACKEND", "Agg")
     import matplotlib.pyplot as plt
     import seaborn as sns
     from matplotlib.ticker import MaxNLocator
 
     _setup_theme()
-
     n = len(results)
-    has_cold = any(p.cold_misses for _, p in results)
+    series = []
+    has_break = False
+    for label, profile in results:
+        labels, counts = _bin_histogram(profile.histogram)
+        cold = len(profile.cold_misses)
+        if cold:
+            labels, counts = ["-1\n(cold)"] + labels, [cold] + counts
+        limits = _broken_axis_limits(counts)
+        has_break = has_break or limits is not None
+        series.append((label, labels, counts, limits))
 
-    if has_cold:
+    if has_break:
         fig = plt.figure(figsize=(4.0 * n, 3.8))
-        gs = fig.add_gridspec(2, n, height_ratios=[3, 1], hspace=0.05)
+        gs = fig.add_gridspec(2, n, height_ratios=[3, 1], hspace=0.0)
         top_axes = [fig.add_subplot(gs[0, i]) for i in range(n)]
         bot_axes = [fig.add_subplot(gs[1, i]) for i in range(n)]
     else:
@@ -87,74 +50,94 @@ def plot_histograms(
         top_axes = [fig.add_subplot(gs[0, i]) for i in range(n)]
         bot_axes = [None] * n
 
-    for i, (label, profile) in enumerate(results):
-        ax = top_axes[i]
-        ax_cold = bot_axes[i]
-        cold = len(profile.cold_misses)
-
-        if not profile.histogram and not cold:
+    break_axes = []
+    for i, (label, labels, counts, limits) in enumerate(series):
+        ax, ax_cold = top_axes[i], bot_axes[i]
+        if not counts:
             ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
-            ax.set_title(label)
+            ax.set_title(label, fontsize=13, pad=14)
             if ax_cold:
                 ax_cold.set_visible(False)
             continue
 
-        if profile.histogram:
-            labels, counts = _bin_histogram(profile.histogram)
-            x_pos = range(len(labels))
-            ax.bar(x_pos, counts, color="#4C72B0", edgecolor="black", linewidth=0.5, width=0.8)
-            ax.set_xticks(x_pos)
-            ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=9)
-            ax.set_ylabel("Frequency")
-            ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-            ax.set_title(label, fontsize=11)
+        _plot_single_bars(ax, labels, counts)
+        ax.set_ylabel("Frequency", labelpad=12)
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_title(label, fontsize=13, pad=14)
+
+        if ax_cold is not None and limits is not None:
+            low_max, high_min = limits
+            _plot_single_bars(ax_cold, labels, counts)
+            ax.set_ylim(high_min, max(counts) * 1.18)
+            ax_cold.set_ylim(0, low_max)
+            ax.tick_params(labelbottom=False, bottom=False)
+            ax.yaxis.set_major_locator(MaxNLocator(integer=True, prune="lower"))
+            ax_cold.yaxis.set_major_locator(MaxNLocator(integer=True, nbins=2, prune="upper"))
+            ax_cold.set_xlabel("Reuse Distance")
+            _add_break_marks(ax, ax_cold)
+            break_axes.append((ax, ax_cold))
             sns.despine(ax=ax)
-
-        if ax_cold is not None:
-            if cold:
-                ax_cold.bar([0], [cold], color="#4C72B0", edgecolor="black",
-                            linewidth=0.5, width=0.5)
-                ax_cold.set_xticks([0])
-                ax_cold.set_xticklabels(["-1\n(cold)"], fontsize=9)
-                ax_cold.set_xlabel("Reuse Distance")
-                ax_cold.yaxis.set_major_locator(MaxNLocator(integer=True, nbins=2))
-                sns.despine(ax=ax_cold)
-                if profile.histogram:
-                    _add_break_marks(ax, ax_cold)
-            else:
-                ax_cold.set_visible(False)
-                ax.set_xlabel("Reuse Distance")
+            sns.despine(ax=ax_cold)
         else:
+            _bar_ylim(ax, counts)
             ax.set_xlabel("Reuse Distance")
+            sns.despine(ax=ax)
+            if ax_cold is not None:
+                ax_cold.set_visible(False)
 
-    plt.tight_layout()
+    fig.subplots_adjust(left=0.14 if n == 1 else 0.08, right=0.98,
+                        bottom=0.28, top=0.84, hspace=0.0)
+    for ax, ax_cold in break_axes:
+        _add_break_band(ax, ax_cold)
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches="tight", transparent=True)
+        _save_figure(fig, save_path)
 
 
 def plot_verify_comparison(
     results: List[Tuple[str, ReuseProfile, ReuseProfile]],
     save_path: Path | None,
 ) -> None:
-    """블록별 GT vs. 예측 RDH를 grouped bar chart로 비교한다. cold miss는 broken axis로 분리.
+    """블록별 GT vs. 예측 RDH를 grouped bar chart로 비교한다.
 
     @param results  (label, gt_profile, pred_profile) 리스트
     @param save_path  저장 경로. None이면 저장 안 함.
     """
     os.environ.setdefault("MPLBACKEND", "Agg")
     import matplotlib.pyplot as plt
-    import numpy as np
     import seaborn as sns
     from matplotlib.ticker import MaxNLocator
 
     _setup_theme()
-
     n = len(results)
-    has_cold = any(gt.cold_misses or pred.cold_misses for _, gt, pred in results)
+    series = []
+    has_break = False
+    for label, gt, pred in results:
+        merged_gt: dict = defaultdict(int)
+        merged_pred: dict = defaultdict(int)
+        all_rds = sorted(set(gt.histogram) | set(pred.histogram))
+        for rd in all_rds:
+            key = rd if rd <= 1 else 2 ** int(math.log2(rd))
+            merged_gt[key] += gt.histogram.get(rd, 0)
+            merged_pred[key] += pred.histogram.get(rd, 0)
 
-    if has_cold:
+        labels, gt_counts, pred_counts = [], [], []
+        gt_cold, pred_cold = len(gt.cold_misses), len(pred.cold_misses)
+        if gt_cold or pred_cold:
+            labels.append("-1\n(cold)")
+            gt_counts.append(gt_cold)
+            pred_counts.append(pred_cold)
+        for k in sorted(set(merged_gt) | set(merged_pred)):
+            labels.append("0" if k == 0 else "1" if k == 1 else f"{k}-{k*2-1}")
+            gt_counts.append(merged_gt[k])
+            pred_counts.append(merged_pred[k])
+
+        limits = _broken_axis_limits(gt_counts + pred_counts)
+        has_break = has_break or limits is not None
+        series.append((label, labels, gt_counts, pred_counts, limits))
+
+    if has_break:
         fig = plt.figure(figsize=(4.5 * n, 4.2))
-        gs = fig.add_gridspec(2, n, height_ratios=[3, 1], hspace=0.05)
+        gs = fig.add_gridspec(2, n, height_ratios=[3, 1], hspace=0.0)
         top_axes = [fig.add_subplot(gs[0, i]) for i in range(n)]
         bot_axes = [fig.add_subplot(gs[1, i]) for i in range(n)]
     else:
@@ -163,98 +146,69 @@ def plot_verify_comparison(
         top_axes = [fig.add_subplot(gs[0, i]) for i in range(n)]
         bot_axes = [None] * n
 
-    for i, (label, gt, pred) in enumerate(results):
-        ax = top_axes[i]
-        ax_cold = bot_axes[i]
-        gt_cold = len(gt.cold_misses)
-        pred_cold = len(pred.cold_misses)
-        all_rds = sorted(set(gt.histogram) | set(pred.histogram))
-
-        if not all_rds and not gt_cold and not pred_cold:
+    break_axes = []
+    for i, (label, labels, gt_counts, pred_counts, limits) in enumerate(series):
+        ax, ax_cold = top_axes[i], bot_axes[i]
+        if not labels:
             ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
-            ax.set_title(label, fontsize=9)
+            ax.set_title(label, fontsize=13, pad=14)
             if ax_cold:
                 ax_cold.set_visible(False)
             continue
 
-        if all_rds:
-            merged_gt: dict = defaultdict(int)
-            merged_pred: dict = defaultdict(int)
-            for rd in all_rds:
-                key = rd if rd <= 1 else 2 ** int(math.log2(rd))
-                merged_gt[key] += gt.histogram.get(rd, 0)
-                merged_pred[key] += pred.histogram.get(rd, 0)
+        _plot_grouped_bars(ax, labels, gt_counts, pred_counts)
+        ax.set_ylabel("Frequency", labelpad=12)
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_title(label, fontsize=13, pad=14)
 
-            bin_keys = sorted(set(merged_gt) | set(merged_pred))
-            bin_labels = []
-            for k in bin_keys:
-                if k == 0:
-                    bin_labels.append("0")
-                elif k == 1:
-                    bin_labels.append("1")
-                else:
-                    bin_labels.append(f"{k}-{k*2-1}")
-
-            x = np.arange(len(bin_labels))
-            w = 0.38
-            ax.bar(x - w/2, [merged_gt[k] for k in bin_keys], width=w,
-                   label="Ground Truth", color="#4C72B0", edgecolor="black", linewidth=0.5)
-            ax.bar(x + w/2, [merged_pred[k] for k in bin_keys], width=w,
-                   label="Predicted", color="#DD8452", edgecolor="black", linewidth=0.5)
-            ax.set_xticks(x)
-            ax.set_xticklabels(bin_labels, rotation=45, ha="right", fontsize=8)
-            ax.set_ylabel("Frequency")
-            ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-            ax.set_title(label, fontsize=9)
+        counts = gt_counts + pred_counts
+        if ax_cold is not None and limits is not None:
+            low_max, high_min = limits
+            _plot_grouped_bars(ax_cold, labels, gt_counts, pred_counts)
+            ax.set_ylim(high_min, max(counts) * 1.18)
+            ax_cold.set_ylim(0, low_max)
+            ax.tick_params(labelbottom=False, bottom=False)
+            ax.yaxis.set_major_locator(MaxNLocator(integer=True, prune="lower"))
+            ax_cold.yaxis.set_major_locator(MaxNLocator(integer=True, nbins=2, prune="upper"))
+            ax_cold.set_xlabel("Reuse Distance")
+            _add_break_marks(ax, ax_cold)
+            break_axes.append((ax, ax_cold))
             sns.despine(ax=ax)
-
-        if ax_cold is not None:
-            if gt_cold or pred_cold:
-                w = 0.38
-                ax_cold.bar([-w/2], [gt_cold], width=w, color="#4C72B0",
-                            edgecolor="black", linewidth=0.5)
-                ax_cold.bar([+w/2], [pred_cold], width=w, color="#DD8452",
-                            edgecolor="black", linewidth=0.5)
-                ax_cold.set_xticks([0])
-                ax_cold.set_xticklabels(["-1\n(cold)"], fontsize=8)
-                ax_cold.set_xlabel("Reuse Distance")
-                ax_cold.yaxis.set_major_locator(MaxNLocator(integer=True, nbins=2))
-                sns.despine(ax=ax_cold)
-                if all_rds:
-                    _add_break_marks(ax, ax_cold)
-            else:
-                ax_cold.set_visible(False)
-                ax.set_xlabel("Reuse Distance")
+            sns.despine(ax=ax_cold)
         else:
+            _bar_ylim(ax, counts)
             ax.set_xlabel("Reuse Distance")
+            sns.despine(ax=ax)
+            if ax_cold is not None:
+                ax_cold.set_visible(False)
 
     handles, leg_labels = top_axes[0].get_legend_handles_labels()
+    fig.subplots_adjust(left=0.14 if n == 1 else 0.08, right=0.98,
+                        bottom=0.30 if handles else 0.26, top=0.84, hspace=0.0)
     if handles:
+        axes_left = min(ax.get_position().x0 for ax in top_axes)
+        axes_right = max(ax.get_position().x1 for ax in top_axes)
         fig.legend(handles, leg_labels, loc="lower center", ncol=2,
-                   fontsize=9, frameon=False, bbox_to_anchor=(0.5, 0))
-    plt.tight_layout(rect=[0, 0.06, 1, 1])
+                   fontsize=9, frameon=False,
+                   bbox_to_anchor=((axes_left + axes_right) / 2, 0.035))
+    for ax, ax_cold in break_axes:
+        _add_break_band(ax, ax_cold)
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches="tight", transparent=True)
+        _save_figure(fig, save_path)
         print(f"  플롯 저장 → {save_path}")
 
 
-def aggregate_by_function(results: list) -> list:
-    """블록별 결과를 함수명으로 묶어 ReuseProfile을 합산한다.
-
-    @param results  (name, p1[, p2, ...]) 튜플 리스트.
-                    name은 "func  ..." 형태여야 한다.
-    @return         (func_name, merged_p1[, merged_p2, ...]) 리스트.
-    """
-    groups: dict = {}
-    order: List[str] = []
-    for entry in results:
-        name, profiles = entry[0], entry[1:]
-        func_name = name.split("  ")[0]
-        if func_name not in groups:
-            groups[func_name] = tuple(ReuseProfile() for _ in profiles)
-            order.append(func_name)
-        for merged, src in zip(groups[func_name], profiles):
+def aggregate_as_program(results: list, label: str = "program") -> list:
+    """여러 블록 결과를 program-level ReuseProfile 하나로 합산한다."""
+    if not results:
+        return []
+    profile_count = len(results[0]) - 1
+    merged = tuple(ReuseProfile() for _ in range(profile_count))
+    for block_idx, entry in enumerate(results):
+        for profile_idx, (dst, src) in enumerate(zip(merged, entry[1:])):
             for rd, cnt in src.histogram.items():
-                merged.histogram[rd] = merged.histogram.get(rd, 0) + cnt
-            merged.cold_misses |= src.cold_misses
-    return [(fn,) + groups[fn] for fn in order]
+                dst.histogram[rd] = dst.histogram.get(rd, 0) + cnt
+            dst.cold_misses |= {
+                f"{block_idx}:{profile_idx}:{i}" for i in range(len(src.cold_misses))
+            }
+    return [(label,) + merged]
