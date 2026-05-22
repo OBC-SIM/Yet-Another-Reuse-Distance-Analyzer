@@ -18,6 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import List, Tuple
+import math
+from collections import defaultdict
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -112,42 +114,84 @@ def _print_histogram(profile: ReuseProfile) -> None:
 
 
 def plot_histograms(
-    results: List[Tuple[str, ReuseProfile]],
+    results: List[Tuple[str, "ReuseProfile"]],
     save_path: Path | None,
 ) -> None:
     import os
     os.environ.setdefault("MPLBACKEND", "Agg")
     import seaborn as sns
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import MaxNLocator
 
-    sns.set_theme(style="ticks", context="paper", font_scale=1.2)
-    palette = sns.color_palette("muted")
+    # 논문용 전역 설정 (Ubuntu 기본 폰트 호환 포함)
+    sns.set_theme(style="ticks", context="paper")
+    plt.rcParams.update({
+        "font.family": "serif",
+        "font.serif": ["DejaVu Serif", "Liberation Serif", "Times New Roman"],
+        "pdf.fonttype": 42,
+        "axes.linewidth": 1.0,
+        "xtick.direction": "in",
+        "ytick.direction": "in"
+    })
 
     n = len(results)
-    fig, axes = plt.subplots(1, n, figsize=(5 * n, 4), squeeze=False)
+    # X축 라벨이 길어져 공간이 더 필요하므로 가로/세로 비율을 조정 (3.5x2.5 -> 4.0x3.0)
+    fig, axes = plt.subplots(1, n, figsize=(4.0 * n, 3.0), squeeze=False)
 
     for ax, (label, profile) in zip(axes[0], results):
         hist = profile.histogram
         if not hist:
-            ax.text(0.5, 0.5, "no reuse", ha="center", va="center", transform=ax.transAxes)
+            ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
             ax.set_title(label)
             continue
 
-        rds = sorted(hist)
-        counts = [hist[rd] for rd in rds]
+        # 1. 2의 제곱수 단위로 데이터 병합 (Binning)
+        binned = defaultdict(int)
+        for rd, count in hist.items():
+            if rd <= 1:
+                binned[rd] += count
+            else:
+                bin_idx = int(math.log2(rd))
+                binned[2**bin_idx] += count
 
-        ax.bar(rds, counts, color=palette[0], width=max(1, (rds[-1] - rds[0]) / len(rds) * 0.8))
+        # 2. X축 문자열 라벨과 Y축 값 생성
+        labels = []
+        counts = []
+        for k in sorted(binned.keys()):
+            if k == 0:
+                labels.append("0")
+            elif k == 1:
+                labels.append("1")
+            else:
+                labels.append(f"{k}-{k*2-1}")
+            counts.append(binned[k])
+
+        x_pos = range(len(labels))
+
+        # 3. 막대 그래프 생성
+        ax.bar(
+            x_pos, counts,
+            color="#4C72B0",
+            edgecolor="black",
+            linewidth=0.5,
+            width=0.8
+        )
+
+        # 4. X축 텍스트 설정 (라벨이 길어 겹치는 것을 막기 위해 45도 회전)
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=9)
+
         ax.set_xlabel("Reuse Distance")
-        ax.set_ylabel("Access Count")
-        ax.set_title(label, fontsize=10)
+        ax.set_ylabel("Frequency")
+
+        ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_title(label, fontsize=11)
         sns.despine(ax=ax)
 
-    fig.suptitle("Reuse Distance Histogram", y=1.02, fontweight="bold")
     plt.tight_layout()
 
-    fig.savefig(save_path, dpi=300, bbox_inches="tight")
-    print(f"\n  플롯 저장됨: {save_path}")
-
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight", transparent=True)
 
 def analyze_file(path: Path, plugin_path: Path) -> ReuseProfile:
     print(f"\n{'='*62}")
