@@ -22,8 +22,8 @@ from typing import List, Tuple
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lru_sim import ReuseProfile
-from plot import plot_histograms
-from predictor import analyze
+from plot import aggregate_by_function, plot_histograms
+from predictor import analyze, analyze_blocks
 
 _REPO_ROOT = Path(__file__).parent.parent.resolve()
 _DEFAULT_PLUGIN = _REPO_ROOT / "build" / "libLoopAnnotatedTrace.so"
@@ -113,7 +113,10 @@ def _print_histogram(profile: ReuseProfile) -> None:
 
 
 
-def analyze_file(path: Path, plugin_path: Path) -> ReuseProfile:
+def analyze_file(
+    path: Path, plugin_path: Path
+) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
+    """파이프라인 실행 후 (합산 프로파일, 블록별 프로파일 리스트) 반환."""
     print(f"\n{'='*62}")
     print(f"  {path.name}")
     print(f"{'='*62}")
@@ -126,11 +129,12 @@ def analyze_file(path: Path, plugin_path: Path) -> ReuseProfile:
 
     print("  [2/2] 재사용 거리 예측 중...", end=" ", flush=True)
     profile = analyze(str(lat_json))
+    blocks = analyze_blocks(str(lat_json))
     print("완료")
 
     print()
     _print_histogram(profile)
-    return profile
+    return profile, blocks
 
 
 def main() -> None:
@@ -162,7 +166,7 @@ def main() -> None:
         print("  빌드 후 다시 시도하거나 --plugin 으로 경로를 지정하세요.", file=sys.stderr)
         sys.exit(1)
 
-    results: List[Tuple[str, ReuseProfile]] = []
+    block_results: List[Tuple[str, ReuseProfile]] = []
     for file_str in args.files:
         path = Path(file_str)
         if not path.exists():
@@ -172,23 +176,25 @@ def main() -> None:
             print(f"오류: .c 또는 .ll 파일만 지원합니다: {path}", file=sys.stderr)
             continue
         try:
-            profile = analyze_file(path, plugin)
-            results.append((path.stem, profile))
+            _, blocks = analyze_file(path, plugin)
+            block_results.extend(blocks)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode(errors="replace") if e.stderr else ""
             print(f"\n오류: {e.args[0][0]} 실패\n{stderr}", file=sys.stderr)
         except Exception as e:
             print(f"\n오류: {e}", file=sys.stderr)
 
-    if results and (args.plot or args.save):
+    if block_results and (args.plot or args.save):
         if args.save:
-            save_path = Path(args.save)
-        elif args.plot:
+            base = Path(args.save)
+        else:
             figs_dir = _REPO_ROOT / "figs"
             figs_dir.mkdir(exist_ok=True)
-            stem = "_".join(label for label, _ in results)
-            save_path = figs_dir / f"{stem}.png"
-        plot_histograms(results, save_path)
+            stems = "_".join(Path(f).stem for f in args.files)
+            base = figs_dir / f"{stems}.png"
+
+        plot_histograms(block_results, base.with_stem(base.stem + "_blocks"))
+        plot_histograms(aggregate_by_function(block_results), base.with_stem(base.stem + "_funcs"))
 
 
 if __name__ == "__main__":
