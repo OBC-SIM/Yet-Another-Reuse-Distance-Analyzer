@@ -12,10 +12,10 @@
 
 #include <stdio.h>
 
-#define NI 16  // A의 행
-#define NJ 18  // B의 열, C의 행
-#define NK 20  // A의 열, B의 행
-#define NL 22  // C의 열
+#define NI 40  // A의 행
+#define NJ 50  // B의 열, C의 행
+#define NK 70  // A의 열, B의 행
+#define NL 80  // C의 열
 
 double A[NI][NK];
 double B[NK][NJ];

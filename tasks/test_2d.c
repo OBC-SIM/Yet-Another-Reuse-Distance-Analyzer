@@ -1,6 +1,6 @@
 // 케이스 2: 2D 중첩 루프 — A[i][j]
-int A[64][64];
-void loop_2d()
+
+void loop_2d(int A[64][64])
 {
   for (int i = 0; i < 64; i++)
   {

@@ -1,6 +1,6 @@
-void func_1d(float arr[64])
+void func_1d(int arr[64])
 {
-  for (int i = 0; i < 64; i++) arr[i] += 1.0f;
+  for (int i = 0; i < 64; i++) arr[i] += 1;
 }
 
 void func_2d(float A[16][16], float B[16][16])
