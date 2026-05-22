@@ -246,6 +246,39 @@ def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     raise NotImplementedError(f"{depth}D loop not supported")
 
 
+def analyze_blocks(json_path: str) -> List[Tuple[str, ReuseProfile]]:
+    """LAT JSON의 블록별 예측 ReuseProfile을 (블록명, 프로파일) 리스트로 반환.
+
+    @param json_path  _lat.json 경로
+    @return           블록명은 "func  var-loop (bound=N)" 또는 "func  (flat, N accesses)" 형태
+    """
+    with open(json_path) as f:
+        raw = json.load(f)
+
+    results: List[Tuple[str, ReuseProfile]] = []
+    for func_entry in raw:
+        func_name = func_entry["function"]
+        loops = [n for n in func_entry["body"] if n["type"] == "Loop"]
+        non_loops = [n for n in func_entry["body"] if n["type"] != "Loop"]
+
+        for node in loops:
+            profile, _ = _predict_loop_block(node)
+            name = f"{func_name}  {node['var']}-loop (bound={node['bound']})"
+            results.append((name, profile))
+
+        if not loops and non_loops:
+            trace = []
+            for node in non_loops:
+                parsed = parse_trace([node])[0].unroll({})
+                trace.extend(parsed)
+            if trace:
+                profile = LRUProfiler.calculate(trace)
+                name = f"{func_name}  (flat, {len(trace)} accesses)"
+                results.append((name, profile))
+
+    return results
+
+
 def analyze(json_path: str) -> ReuseProfile:
     with open(json_path) as f:
         raw = json.load(f)
