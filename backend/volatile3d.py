@@ -6,6 +6,7 @@ from volatile import (
     _consecutive_groups,
     _group_mode,
 )
+from volatile3d_variable import predict_volatile_3d_variable
 
 
 def _predict_trilinear(points: List[Tuple[int, int, int, int]],
@@ -93,9 +94,29 @@ def predict_volatile_3d_rectangular(raw_node: dict, stable_rds: Set[int],
                                     target_k: int, run_sim: RunSim) -> ReuseProfile | None:
     sample_ns = [3, 4]
     sampled = _sample_volatile_groups_3d(raw_node, sample_ns, stable_rds, run_sim)
+    target_min = min(target_i, target_j, target_k)
+    if target_min > 0 and max(target_i, target_j, target_k) / target_min > 4:
+        variable = predict_volatile_3d_variable(
+            raw_node,
+            stable_rds,
+            target_i,
+            target_j,
+            target_k,
+            run_sim,
+        )
+        if variable is not None:
+            return variable
+
     group_count = len(sampled[0][3])
     if group_count == 0 or any(len(groups) != group_count for _, _, _, groups in sampled):
-        return None
+        return predict_volatile_3d_variable(
+            raw_node,
+            stable_rds,
+            target_i,
+            target_j,
+            target_k,
+            run_sim,
+        )
 
     hist_by_bound = _sample_hist_3d(raw_node, sample_ns, run_sim)
     profile = ReuseProfile()
