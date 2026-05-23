@@ -7,8 +7,8 @@ from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
 from merger import BlockMerger
 from parser import LoopBlockNode, parse_trace, index_variable, resolve_index
+from predictor3d import predict_3d
 from stability import validated_stable_rds_2d
-from volatile import predict_volatile_3d_rectangular, predict_volatile_diagonal
 from volatile2d import predict_volatile_2d_rectangular
 
 
@@ -171,71 +171,6 @@ def _predict_2d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     return predicted, trace
 
 
-def _predict_3d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    sims = {
-        (i, j, k): _run_sim(raw_node, [i, j, k])
-        for i in (2, 3) for j in (2, 3) for k in (2, 3)
-    }
-    def h(key: tuple) -> Dict[int, int]:
-        return sims[key][0].histogram
-    b222  = sims[(2, 2, 2)][0]
-    trace = sims[(2, 2, 2)][1]
-    rds   = set().union(*(set(p.histogram) for p, _ in sims.values()))
-    stable_rds = set.intersection(*(set(p.histogram) for p, _ in sims.values()))
-    stable_b222 = ReuseProfile()
-    stable_b222.histogram = {rd: v for rd, v in b222.histogram.items() if rd in stable_rds}
-    stable_b222.cold_misses = b222.cold_misses
-
-    incr_i  = _diff(h((3,2,2)), h((2,2,2)), rds)
-    incr_j  = _diff(h((2,3,2)), h((2,2,2)), rds)
-    incr_k  = _diff(h((2,2,3)), h((2,2,2)), rds)
-    coff_ij = {rd: h((3,3,2)).get(rd,0) - h((2,2,2)).get(rd,0) - incr_i.get(rd,0) - incr_j.get(rd,0) for rd in rds}
-    coff_jk = {rd: h((2,3,3)).get(rd,0) - h((2,2,2)).get(rd,0) - incr_j.get(rd,0) - incr_k.get(rd,0) for rd in rds}
-    coff_ik = {rd: h((3,2,3)).get(rd,0) - h((2,2,2)).get(rd,0) - incr_i.get(rd,0) - incr_k.get(rd,0) for rd in rds}
-    coff_ijk = {
-        rd: h((3,3,3)).get(rd,0) - h((2,2,2)).get(rd,0)
-            - incr_i.get(rd,0) - incr_j.get(rd,0) - incr_k.get(rd,0)
-            - coff_ij.get(rd,0) - coff_jk.get(rd,0) - coff_ik.get(rd,0)
-        for rd in rds
-    }
-    nodes = parse_trace([raw_node], sim_bound=2)
-    outer = nodes[0]
-    mid   = next(n for n in outer.body if isinstance(n, LoopBlockNode))
-    inner = next(n for n in mid.body   if isinstance(n, LoopBlockNode))
-
-    predicted = DilationPredictor(3).execute(
-        DilationContextBuilder()
-        .set_target_bounds({"i": outer.actual_bound, "j": mid.actual_bound, "k": inner.actual_bound})
-        .set_base_profile(stable_b222)
-        .add_coefficient("Incr_I",   incr_i)
-        .add_coefficient("Incr_J",   incr_j)
-        .add_coefficient("Incr_K",   incr_k)
-        .add_coefficient("Coff_IJ",  coff_ij)
-        .add_coefficient("Coff_JK",  coff_jk)
-        .add_coefficient("Coff_IK",  coff_ik)
-        .add_coefficient("Coff_IJK", coff_ijk)
-    )
-    if stable_rds != rds:
-        bounds = {outer.actual_bound, mid.actual_bound, inner.actual_bound}
-        volatile = None
-        if len(bounds) == 1:
-            volatile = predict_volatile_diagonal(raw_node, stable_rds, outer.actual_bound, _run_sim)
-        if volatile is None:
-            volatile = predict_volatile_3d_rectangular(
-                raw_node,
-                stable_rds,
-                outer.actual_bound,
-                mid.actual_bound,
-                inner.actual_bound,
-                _run_sim,
-            )
-        if volatile is not None:
-            predicted.histogram.update(volatile.histogram)
-
-    predicted.cold_misses = _predict_cold_misses(raw_node)
-    return predicted, trace
-
-
 def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     depth = _get_loop_depth(raw_node)
     if depth == 1:
@@ -243,7 +178,7 @@ def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
     if depth == 2:
         return _predict_2d(raw_node)
     if depth == 3:
-        return _predict_3d(raw_node)
+        return predict_3d(raw_node, _run_sim, _predict_cold_misses)
     raise NotImplementedError(f"{depth}D loop not supported")
 
 
