@@ -3,6 +3,7 @@ from typing import Callable, Dict, List, Tuple
 from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import ReuseProfile
 from parser import LoopBlockNode, parse_trace
+from stability import validated_stable_rds_3d
 from volatile import predict_volatile_diagonal
 from volatile3d import predict_volatile_3d_rectangular
 
@@ -23,6 +24,7 @@ def predict_3d(
         (i, j, k): run_sim(raw_node, [i, j, k])
         for i in (2, 3) for j in (2, 3) for k in (2, 3)
     }
+    sims[(4, 4, 4)] = run_sim(raw_node, [4, 4, 4])
 
     def h(key: tuple) -> Dict[int, int]:
         return sims[key][0].histogram
@@ -30,7 +32,8 @@ def predict_3d(
     b222 = sims[(2, 2, 2)][0]
     trace = sims[(2, 2, 2)][1]
     rds = set().union(*(set(p.histogram) for p, _ in sims.values()))
-    stable_rds = set.intersection(*(set(p.histogram) for p, _ in sims.values()))
+    hist_by_bound = {bound: profile.histogram for bound, (profile, _) in sims.items()}
+    stable_rds = validated_stable_rds_3d(hist_by_bound)
     stable_b222 = ReuseProfile()
     stable_b222.histogram = {rd: v for rd, v in b222.histogram.items() if rd in stable_rds}
     stable_b222.cold_misses = b222.cold_misses
