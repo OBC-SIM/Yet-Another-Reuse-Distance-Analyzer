@@ -4,6 +4,7 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -205,6 +206,50 @@ std::string getBaseName(Value* Ptr, const NameMap& names) {
         return "arg" + std::to_string(Arg->getArgNo());
     std::string n = irOperandName(Base);
     return n.empty() ? "arr" : n;
+}
+
+static const GlobalVariable* globalFromStringPointer(const Value* V) {
+    V = V->stripPointerCasts();
+    if (auto* GV = dyn_cast<GlobalVariable>(V))
+        return GV;
+    if (auto* CE = dyn_cast<ConstantExpr>(V)) {
+        if (CE->getOpcode() == Instruction::GetElementPtr && CE->getNumOperands() > 0)
+            return dyn_cast<GlobalVariable>(CE->getOperand(0)->stripPointerCasts());
+    }
+    return nullptr;
+}
+
+static std::string annotationString(const Value* V) {
+    const GlobalVariable* GV = globalFromStringPointer(V);
+    if (!GV || !GV->hasInitializer())
+        return "";
+    if (auto* Data = dyn_cast<ConstantDataArray>(GV->getInitializer()))
+        if (Data->isCString())
+            return Data->getAsCString().str();
+    return "";
+}
+
+bool hasFunctionAnnotation(Function& F, StringRef Annotation) {
+    GlobalVariable* Annos = F.getParent()->getGlobalVariable("llvm.global.annotations");
+    if (!Annos || !Annos->hasInitializer())
+        return false;
+
+    auto* Entries = dyn_cast<ConstantArray>(Annos->getInitializer());
+    if (!Entries)
+        return false;
+
+    for (const Use& U : Entries->operands()) {
+        auto* Entry = dyn_cast<ConstantStruct>(U.get());
+        if (!Entry || Entry->getNumOperands() < 2)
+            continue;
+
+        Value* Annotated = Entry->getOperand(0)->stripPointerCasts();
+        if (Annotated != &F)
+            continue;
+        if (annotationString(Entry->getOperand(1)) == Annotation)
+            return true;
+    }
+    return false;
 }
 
 }  // namespace lat

@@ -35,8 +35,11 @@ using lat::getTripCount;
 using lat::getLoopStart;
 using lat::getIndexVars;
 using lat::getBaseName;
+using lat::hasFunctionAnnotation;
 
 namespace {
+
+constexpr llvm::StringLiteral AnalyzeAnnotation = "yard.analyze";
 
 // ── 명령어 → Statement 변환 ───────────────────────────────
 
@@ -180,10 +183,16 @@ static void buildRootStatements(Function& F, LoopInfo& LI, ScalarEvolution& SE,
 struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& MAM) {
         auto& FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+        bool requireAnnotation = false;
+        for (Function& F : M)
+            if (!F.isDeclaration() && hasFunctionAnnotation(F, AnalyzeAnnotation))
+                requireAnnotation = true;
 
         llvm::json::Array moduleFuncs;
         for (Function& F : M) {
             if (F.isDeclaration()) continue;
+            if (requireAnnotation && !hasFunctionAnnotation(F, AnalyzeAnnotation))
+                continue;
 
             auto& LI  = FAM.getResult<LoopAnalysis>(F);
             auto& SE  = FAM.getResult<ScalarEvolutionAnalysis>(F);

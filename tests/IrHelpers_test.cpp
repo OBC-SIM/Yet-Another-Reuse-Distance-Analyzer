@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -132,4 +133,46 @@ TEST(GetBaseName, UnnamedAllocAndArgDoNotCollide) {
     std::string alloc = getBaseName(A, names);     // IR 슬롯 번호 (≥ "2")
 
     EXPECT_NE(arg0, alloc);
+}
+
+// ── function annotations ─────────────────────────────────────
+
+TEST(FunctionAnnotation, DetectsClangAnnotateAttributeShape) {
+    LLVMContext Ctx;
+    Module M("test", Ctx);
+    FunctionType* FT = FunctionType::get(Type::getVoidTy(Ctx), false);
+    Function* Marked = Function::Create(FT, Function::ExternalLinkage, "marked", &M);
+    Function* Plain = Function::Create(FT, Function::ExternalLinkage, "plain", &M);
+
+    IRBuilder<> Builder(BasicBlock::Create(Ctx, "entry", Marked));
+    Builder.CreateRetVoid();
+    Builder.SetInsertPoint(BasicBlock::Create(Ctx, "entry", Plain));
+    Builder.CreateRetVoid();
+
+    auto* I32 = Type::getInt32Ty(Ctx);
+    auto* I8Ptr = Type::getInt8PtrTy(Ctx);
+    auto* Str = ConstantDataArray::getString(Ctx, "yard.analyze", true);
+    auto* StrGV = new GlobalVariable(
+        M, Str->getType(), true, GlobalValue::PrivateLinkage, Str, ".str");
+    auto* Zero = ConstantInt::get(I32, 0);
+    std::vector<Constant*> GepIndices{Zero, Zero};
+    auto* StrPtr = ConstantExpr::getInBoundsGetElementPtr(
+        Str->getType(), StrGV, GepIndices);
+    auto* NullI8 = ConstantPointerNull::get(cast<PointerType>(I8Ptr));
+    auto* EntryTy = StructType::get(I8Ptr, I8Ptr, I8Ptr, I32);
+    std::vector<Constant*> EntryFields{
+        ConstantExpr::getBitCast(Marked, I8Ptr),
+        StrPtr,
+        NullI8,
+        Zero};
+    auto* Entry = ConstantStruct::get(EntryTy, EntryFields);
+    auto* ArrayTy = ArrayType::get(EntryTy, 1);
+    std::vector<Constant*> Entries{Entry};
+    new GlobalVariable(
+        M, ArrayTy, false, GlobalValue::AppendingLinkage,
+        ConstantArray::get(ArrayTy, Entries), "llvm.global.annotations");
+
+    EXPECT_TRUE(hasFunctionAnnotation(*Marked, "yard.analyze"));
+    EXPECT_FALSE(hasFunctionAnnotation(*Marked, "other"));
+    EXPECT_FALSE(hasFunctionAnnotation(*Plain, "yard.analyze"));
 }

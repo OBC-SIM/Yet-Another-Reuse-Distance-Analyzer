@@ -8,6 +8,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 
 namespace lat {
@@ -94,5 +95,18 @@ std::vector<std::string> getIndexVars(llvm::GEPOperator* GEP,
  * @param names  buildDebugNameMap 결과
  */
 std::string getBaseName(llvm::Value* Ptr, const NameMap& names);
+
+/**
+ * @brief 함수가 clang annotate attribute로 지정된 annotation을 갖는지 확인한다.
+ *
+ * Clang은 `__attribute__((annotate("...")))` 정보를
+ * `@llvm.global.annotations` 전역에 기록한다. 이 helper는 해당 전역을
+ * 해석해 지정된 함수와 annotation 문자열의 매칭 여부를 반환한다.
+ *
+ * @param F          검사할 함수
+ * @param Annotation 찾을 annotation 문자열
+ * @return annotation이 존재하면 true
+ */
+bool hasFunctionAnnotation(llvm::Function& F, llvm::StringRef Annotation);
 
 }  // namespace lat
