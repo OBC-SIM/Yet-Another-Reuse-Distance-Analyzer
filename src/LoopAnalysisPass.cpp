@@ -224,6 +224,10 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
             std::vector<std::unique_ptr<Statement>> root;
             buildRootStatements(F, LI, SE, names, annotated, root);
 
+            llvm::json::Array params;
+            for (Argument& Arg : F.args())
+                params.push_back(getValueName(&Arg, names));
+
             lat::JsonExportVisitor vis;
             llvm::json::Array bodyJson;
             for (auto& stmt : root) {
@@ -233,6 +237,7 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
 
             llvm::json::Object funcEntry;
             funcEntry["function"] = F.getName().str();
+            funcEntry["params"]   = std::move(params);
             funcEntry["body"]     = std::move(bodyJson);
             moduleFuncs.push_back(std::move(funcEntry));
         }
