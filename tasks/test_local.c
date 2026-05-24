@@ -1,4 +1,7 @@
+#include "yard_analyze.h"
+
 // 케이스 7: 로컬 배열 — alloca 기반 이름 확인
+YARD_ANALYZE
 void loop_local(void)
 {
   int A[64][64];

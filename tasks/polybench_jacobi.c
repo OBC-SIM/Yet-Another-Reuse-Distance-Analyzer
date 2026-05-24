@@ -1,3 +1,5 @@
+#include "yard_analyze.h"
+
 /**
  * PolyBench: jacobi-2d (Jacobi Stencil Computation)
  *
@@ -18,6 +20,7 @@
 double A[N][N];
 double B[N][N];
 
+YARD_ANALYZE
 void jacobi_2d_kernel()
 {
   int t, i, j;
@@ -52,6 +55,7 @@ void jacobi_2d_kernel()
   }
 }
 
+YARD_ANALYZE
 int main()
 {
   int i, j;

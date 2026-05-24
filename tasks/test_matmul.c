@@ -1,4 +1,7 @@
+#include "yard_analyze.h"
+
 // 케이스 3: 행렬 곱셈 — 3중 루프, 다중 배열 접근
+YARD_ANALYZE
 void matmul(float A[32][64], float B[64][32], float C[32][32])
 {
   for (int i = 0; i < 32; i++)

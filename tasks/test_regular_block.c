@@ -1,3 +1,6 @@
+#include "yard_analyze.h"
+
+YARD_ANALYZE
 void test(float * A, float alpha)
 {
   A[0] = 0.0f;

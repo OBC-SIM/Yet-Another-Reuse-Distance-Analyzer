@@ -1,3 +1,5 @@
+#include "yard_analyze.h"
+
 /**
  * PolyBench: atax (Matrix Transpose and Vector Multiplication)
  *
@@ -19,6 +21,7 @@ double x[N];
 double y[N];
 double tmp[M];  // 중간 결과 벡터
 
+YARD_ANALYZE
 void atax_kernel()
 {
   int i, j;
@@ -35,6 +38,7 @@ void atax_kernel()
   }
 }
 
+YARD_ANALYZE
 int main()
 {
   int i, j;

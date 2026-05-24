@@ -1,3 +1,5 @@
+#include "yard_analyze.h"
+
 /**
  * PolyBench: gemm (General Matrix Multiply)
  *
@@ -18,6 +20,7 @@ double A[N][N];
 double B[N][N];
 double C[N][N];
 
+YARD_ANALYZE
 void gemm_kernel(double alpha, double beta)
 {
   int i, j, k;
@@ -46,6 +49,7 @@ void gemm_kernel(double alpha, double beta)
   }
 }
 
+YARD_ANALYZE
 int main()
 {
   int i, j;

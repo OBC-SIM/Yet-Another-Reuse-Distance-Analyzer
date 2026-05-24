@@ -1,6 +1,9 @@
+#include "yard_analyze.h"
+
 #define MAX_SIZE 100
 int array[MAX_SIZE];
 
+YARD_ANALYZE
 void random_access_with_constant_index()
 {
   array[0] = 42;

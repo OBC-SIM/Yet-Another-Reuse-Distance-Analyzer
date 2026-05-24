@@ -1,8 +1,12 @@
+#include "yard_analyze.h"
+
+YARD_ANALYZE
 void func_1d(int arr[64])
 {
   for (int i = 0; i < 64; i++) arr[i] += 1;
 }
 
+YARD_ANALYZE
 void func_2d(float A[16][16], float B[16][16])
 {
   for (int i = 0; i < 16; i++)
