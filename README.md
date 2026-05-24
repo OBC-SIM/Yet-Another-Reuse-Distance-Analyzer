@@ -134,6 +134,25 @@ void user_kernel(float *a, float *b) {
 `loop-annotated-trace` pass는 해당 annotation이 붙은 함수만 JSON에 출력합니다.
 annotation이 전혀 없으면 기존처럼 모든 정의된 함수를 분석합니다.
 
+annotated 함수끼리의 직접 호출은 LAT에 `Call` node로 보존되고,
+Python 백엔드가 예측 전에 callee body를 call site 위치에 확장합니다.
+
+```c
+YARD_ANALYZE
+void touch(float *x, int idx) {
+    x[idx] = x[idx] + 1.0f;
+}
+
+YARD_ANALYZE
+void kernel(float *a) {
+    for (int i = 0; i < 128; ++i)
+        touch(a, i);
+}
+```
+
+지원 범위는 direct call + non-recursive annotated callee입니다.
+function pointer, indirect call, recursion은 지원하지 않습니다.
+
 ### 3. 결과 확인
 
 ```bash
@@ -304,6 +323,7 @@ tests/
 ├── Statement_test.cpp    # AST / JSON 직렬화 단위 테스트
 └── IrHelpers_test.cpp    # IR 헬퍼 단위 테스트 (LLVM IR 직접 생성)
 backend/
+├── calls.py              # annotated direct call의 AST-level inline expansion
 ├── parser.py             # TraceNode AST + parse_trace() + loop start/affine index 해석
 ├── lru_sim.py            # ReuseProfile + LRUProfiler
 ├── dilation.py           # Dilation Equation (Strategy/Factory/Builder/Predictor)
@@ -335,6 +355,7 @@ tasks/
 ├── test_global.c         # 전역 배열
 ├── test_local.c          # 로컬 배열
 ├── test_regular_block.c  # 루프 경계 바깥 블록 순서 검증
+├── test_call.c           # annotated direct call expansion 검증
 ├── test_constant_access.c# 상수 인덱스 접근 (A[0], array[1] 등)
 ├── polybench_gemm.c      # PolyBench: C = α·A·B + β·C
 ├── polybench_atax.c      # PolyBench: y = Aᵀ·(A·x)
@@ -356,6 +377,7 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | 루프 시작 값 `start` 보존 및 JSON 출력 | ✅ |
 | affine 인덱스 (`i-1`, `i+1`) 보존/해석 | ✅ |
 | `__attribute__((annotate("yard.analyze")))` 기반 함수 필터링 | ✅ |
+| annotated direct call의 AST-level expansion | ✅ |
 | 전역 배열 `ConstantExpr` GEP 처리 | ✅ |
 | 무명 변수 IR 슬롯 번호 구분 | ✅ |
 | JSON → TraceNode AST 역직렬화 (`parser.py`) | ✅ |
