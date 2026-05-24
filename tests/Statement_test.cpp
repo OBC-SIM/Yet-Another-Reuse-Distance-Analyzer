@@ -137,6 +137,33 @@ TEST(ArrayAccess, ConstantIndexDistinct) {
 }
 
 // ============================================================
+// CallStmt
+// ============================================================
+
+TEST(CallStmt, Getters) {
+    CallStmt call("helper", {"arr", "i"});
+    EXPECT_EQ(call.getCallee(), "helper");
+    ASSERT_EQ(call.getArgs().size(), 2u);
+    EXPECT_EQ(call.getArgs()[0], "arr");
+    EXPECT_EQ(call.getArgs()[1], "i");
+}
+
+TEST(CallStmt, JsonFields) {
+    CallStmt call("helper", {"arr", "i"});
+    JsonExportVisitor vis;
+    call.accept(vis);
+    auto* obj = toObj(vis.getResult());
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(str(obj->getString("type")), "Call");
+    EXPECT_EQ(str(obj->getString("callee")), "helper");
+    auto* args = obj->getArray("args");
+    ASSERT_NE(args, nullptr);
+    ASSERT_EQ(args->size(), 2u);
+    EXPECT_EQ(str((*args)[0].getAsString()), "arr");
+    EXPECT_EQ(str((*args)[1].getAsString()), "i");
+}
+
+// ============================================================
 // LoopNest
 // ============================================================
 

@@ -30,6 +30,15 @@ class ArrayNode(TraceNode):
         return [self.name + "-" + "-".join(resolved)]
 
 
+class CallNode(TraceNode):
+    def __init__(self, callee: str, args: List[str]):
+        self.callee = callee
+        self.args = args
+
+    def unroll(self, env: Dict[str, int]) -> List[str]:
+        raise RuntimeError("CallNode must be expanded before unroll")
+
+
 class LoopBlockNode(TraceNode):
     def __init__(self, var: str, actual_bound: int, sim_bound: int,
                  depth: int, body: List[TraceNode]):
@@ -71,6 +80,8 @@ def _parse_node(data: dict, sim_bound: int) -> TraceNode:
         return ScalarNode(data["name"])
     elif t == "Array":
         return ArrayNode(data["name"], data["indices"])
+    elif t == "Call":
+        return CallNode(data["callee"], data.get("args", []))
     elif t == "Loop":
         body = [_parse_node(child, sim_bound) for child in data["body"]]
         start = data.get("start", 0)

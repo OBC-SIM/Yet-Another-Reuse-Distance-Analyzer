@@ -35,6 +35,17 @@ public:
         };
     }
 
+    void visit(CallStmt& node) override {
+        llvm::json::Array args;
+        for (const auto& arg : node.getArgs())
+            args.push_back(arg);
+        Result_ = llvm::json::Object{
+            {"type",   "Call"},
+            {"callee", node.getCallee()},
+            {"args",   std::move(args)}
+        };
+    }
+
     void visit(LoopNest& node) override {
         llvm::json::Array body;
         for (const auto& child : node.getBody()) {

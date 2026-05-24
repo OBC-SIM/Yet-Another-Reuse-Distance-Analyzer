@@ -4,8 +4,13 @@
 
 #include <gtest/gtest.h>
 
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -133,6 +138,56 @@ TEST(GetBaseName, UnnamedAllocAndArgDoNotCollide) {
     std::string alloc = getBaseName(A, names);     // IR 슬롯 번호 (≥ "2")
 
     EXPECT_NE(arg0, alloc);
+}
+
+// ── getValueName / resolveIndex ──────────────────────────────
+
+TEST(GetValueName, ConstantsUseIntegerText) {
+    LLVMContext Ctx;
+    NameMap names;
+    auto* Value = ConstantInt::get(Type::getInt32Ty(Ctx), 42);
+
+    EXPECT_EQ(getValueName(Value, names), "42");
+}
+
+TEST(GetValueName, PointerArgumentsUseBaseName) {
+    LLVMContext Ctx;
+    Module M("test", Ctx);
+    Type* F32Ptr = Type::getFloatPtrTy(Ctx);
+    FunctionType* FT = FunctionType::get(Type::getVoidTy(Ctx), {F32Ptr}, false);
+    Function* F = Function::Create(FT, Function::ExternalLinkage, "foo", &M);
+
+    NameMap names;
+    Argument* Arg = &*F->arg_begin();
+    names[Arg] = "arr";
+
+    EXPECT_EQ(getValueName(Arg, names), "arr");
+}
+
+TEST(ResolveIndex, ScalarArgumentLoadKeepsDebugName) {
+    LLVMContext Ctx;
+    Module M("test", Ctx);
+    FunctionType* FT = FunctionType::get(Type::getVoidTy(Ctx), false);
+    Function* F = Function::Create(FT, Function::ExternalLinkage, "foo", &M);
+    BasicBlock* BB = BasicBlock::Create(Ctx, "entry", F);
+    IRBuilder<> Builder(BB);
+
+    Type* I32 = Type::getInt32Ty(Ctx);
+    AllocaInst* Slot = Builder.CreateAlloca(I32);
+    LoadInst* Loaded = Builder.CreateLoad(I32, Slot);
+    Value* Extended = Builder.CreateSExt(Loaded, Type::getInt64Ty(Ctx));
+    Builder.CreateRetVoid();
+
+    NameMap names;
+    names[Slot] = "idx";
+    DominatorTree DT(*F);
+    LoopInfo LI(DT);
+    AssumptionCache AC(*F);
+    TargetLibraryInfoImpl TLII;
+    TargetLibraryInfo TLI(TLII);
+    ScalarEvolution SE(*F, TLI, AC, DT, LI);
+
+    EXPECT_EQ(resolveIndex(Extended, SE, names), std::vector<std::string>{"idx"});
 }
 
 // ── function annotations ─────────────────────────────────────

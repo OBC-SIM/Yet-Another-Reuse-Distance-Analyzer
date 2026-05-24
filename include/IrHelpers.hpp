@@ -97,6 +97,17 @@ std::vector<std::string> getIndexVars(llvm::GEPOperator* GEP,
 std::string getBaseName(llvm::Value* Ptr, const NameMap& names);
 
 /**
+ * @brief 일반 LLVM Value를 LAT JSON에 기록할 이름으로 변환한다.
+ *
+ * 포인터 값은 배열/스칼라 base 이름으로, 정수 상수는 숫자 문자열로,
+ * 그 외 값은 debug name → IR name → IR 슬롯 번호 순으로 변환한다.
+ *
+ * @param V      변환할 LLVM 값
+ * @param names  buildDebugNameMap 결과
+ */
+std::string getValueName(llvm::Value* V, const NameMap& names);
+
+/**
  * @brief 함수가 clang annotate attribute로 지정된 annotation을 갖는지 확인한다.
  *
  * Clang은 `__attribute__((annotate("...")))` 정보를
