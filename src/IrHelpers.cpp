@@ -37,14 +37,34 @@ static std::string irOperandName(const Value* V) {
 
 NameMap buildDebugNameMap(Function& F) {
     NameMap names;
-    for (BasicBlock& BB : F)
-        for (Instruction& I : BB)
+    for (BasicBlock& BB : F) {
+        for (Instruction& I : BB) {
             if (auto* DVI = dyn_cast<DbgValueInst>(&I))
                 if (Value* V = DVI->getValue())
                     if (DILocalVariable* Var = DVI->getVariable())
                         if (!Var->getName().empty())
                             names.emplace(V, Var->getName().str());
+            if (auto* DDI = dyn_cast<DbgDeclareInst>(&I))
+                if (Value* V = DDI->getAddress())
+                    if (DILocalVariable* Var = DDI->getVariable())
+                        if (!Var->getName().empty())
+                            names.emplace(V->stripPointerCasts(), Var->getName().str());
+        }
+    }
     return names;
+}
+
+static std::string scalarDebugName(Value* V, const NameMap& names) {
+    if (auto it = names.find(V); it != names.end())
+        return it->second;
+    if (auto* Cast = dyn_cast<CastInst>(V))
+        return scalarDebugName(Cast->getOperand(0), names);
+    if (auto* Load = dyn_cast<LoadInst>(V)) {
+        Value* Ptr = Load->getPointerOperand()->stripPointerCasts();
+        if (auto it = names.find(Ptr); it != names.end())
+            return it->second;
+    }
+    return "";
 }
 
 std::string getInductionVarName(Loop* L, ScalarEvolution& SE, const NameMap& names) {
@@ -128,6 +148,8 @@ std::vector<std::string> resolveIndex(Value* Idx, ScalarEvolution& SE,
 
     if (auto* C = dyn_cast<SCEVConstant>(S))
         return {std::to_string(C->getValue()->getSExtValue())};
+    if (std::string name = scalarDebugName(Idx, names); !name.empty())
+        return {name};
 
     auto ivName = [&](const Loop* L) -> std::string {
         auto tryValue = [&](Value* V) -> std::string {
