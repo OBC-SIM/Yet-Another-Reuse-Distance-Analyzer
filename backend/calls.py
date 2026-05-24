@@ -6,6 +6,8 @@ from typing import Dict, List
 
 
 _AFFINE_NAME = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$")
+ANALYZE_ANNOTATION = "yard.analyze"
+INLINE_ANNOTATION = "yard.inline"
 
 
 def _substitute_name(name: str, mapping: Dict[str, str]) -> str:
@@ -59,9 +61,16 @@ def _expand_body(
 
 def expand_calls(module: List[dict]) -> List[dict]:
     functions = {entry["function"]: entry for entry in module}
+    has_roles = any(
+        ANALYZE_ANNOTATION in set(func.get("annotations", []))
+        or INLINE_ANNOTATION in set(func.get("annotations", []))
+        for func in module
+    )
     expanded = []
     for entry in module:
         clone = copy.deepcopy(entry)
         clone["body"] = _expand_body(entry["body"], functions, (entry["function"],))
-        expanded.append(clone)
+        annotations = set(entry.get("annotations", []))
+        if not has_roles or ANALYZE_ANNOTATION in annotations:
+            expanded.append(clone)
     return expanded

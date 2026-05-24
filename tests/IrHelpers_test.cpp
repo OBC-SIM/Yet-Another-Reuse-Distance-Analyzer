@@ -192,6 +192,35 @@ TEST(ResolveIndex, ScalarArgumentLoadKeepsDebugName) {
 
 // ── function annotations ─────────────────────────────────────
 
+static GlobalVariable* makeAnnotationString(Module& M, StringRef Text, StringRef Name) {
+    LLVMContext& Ctx = M.getContext();
+    auto* Str = ConstantDataArray::getString(Ctx, Text, true);
+    return new GlobalVariable(
+        M, Str->getType(), true, GlobalValue::PrivateLinkage, Str, Name);
+}
+
+static Constant* annotationEntry(
+    Module& M,
+    Function* F,
+    GlobalVariable* Annotation,
+    StructType* EntryTy
+) {
+    LLVMContext& Ctx = M.getContext();
+    auto* I32 = Type::getInt32Ty(Ctx);
+    auto* I8Ptr = Type::getInt8PtrTy(Ctx);
+    auto* Zero = ConstantInt::get(I32, 0);
+    std::vector<Constant*> GepIndices{Zero, Zero};
+    auto* StrPtr = ConstantExpr::getInBoundsGetElementPtr(
+        Annotation->getValueType(), Annotation, GepIndices);
+    auto* NullI8 = ConstantPointerNull::get(cast<PointerType>(I8Ptr));
+    std::vector<Constant*> EntryFields{
+        ConstantExpr::getBitCast(F, I8Ptr),
+        StrPtr,
+        NullI8,
+        Zero};
+    return ConstantStruct::get(EntryTy, EntryFields);
+}
+
 TEST(FunctionAnnotation, DetectsClangAnnotateAttributeShape) {
     LLVMContext Ctx;
     Module M("test", Ctx);
@@ -206,21 +235,9 @@ TEST(FunctionAnnotation, DetectsClangAnnotateAttributeShape) {
 
     auto* I32 = Type::getInt32Ty(Ctx);
     auto* I8Ptr = Type::getInt8PtrTy(Ctx);
-    auto* Str = ConstantDataArray::getString(Ctx, "yard.analyze", true);
-    auto* StrGV = new GlobalVariable(
-        M, Str->getType(), true, GlobalValue::PrivateLinkage, Str, ".str");
-    auto* Zero = ConstantInt::get(I32, 0);
-    std::vector<Constant*> GepIndices{Zero, Zero};
-    auto* StrPtr = ConstantExpr::getInBoundsGetElementPtr(
-        Str->getType(), StrGV, GepIndices);
-    auto* NullI8 = ConstantPointerNull::get(cast<PointerType>(I8Ptr));
     auto* EntryTy = StructType::get(I8Ptr, I8Ptr, I8Ptr, I32);
-    std::vector<Constant*> EntryFields{
-        ConstantExpr::getBitCast(Marked, I8Ptr),
-        StrPtr,
-        NullI8,
-        Zero};
-    auto* Entry = ConstantStruct::get(EntryTy, EntryFields);
+    auto* StrGV = makeAnnotationString(M, "yard.analyze", ".str");
+    auto* Entry = annotationEntry(M, Marked, StrGV, EntryTy);
     auto* ArrayTy = ArrayType::get(EntryTy, 1);
     std::vector<Constant*> Entries{Entry};
     new GlobalVariable(
@@ -230,4 +247,28 @@ TEST(FunctionAnnotation, DetectsClangAnnotateAttributeShape) {
     EXPECT_TRUE(hasFunctionAnnotation(*Marked, "yard.analyze"));
     EXPECT_FALSE(hasFunctionAnnotation(*Marked, "other"));
     EXPECT_FALSE(hasFunctionAnnotation(*Plain, "yard.analyze"));
+}
+
+TEST(FunctionAnnotation, DetectsInlineAnnotationSeparately) {
+    LLVMContext Ctx;
+    Module M("test", Ctx);
+    FunctionType* FT = FunctionType::get(Type::getVoidTy(Ctx), false);
+    Function* Helper = Function::Create(FT, Function::ExternalLinkage, "helper", &M);
+    BasicBlock* BB = BasicBlock::Create(Ctx, "entry", Helper);
+    IRBuilder<> Builder(BB);
+    Builder.CreateRetVoid();
+
+    auto* I32 = Type::getInt32Ty(Ctx);
+    auto* I8Ptr = Type::getInt8PtrTy(Ctx);
+    auto* EntryTy = StructType::get(I8Ptr, I8Ptr, I8Ptr, I32);
+    auto* InlineStr = makeAnnotationString(M, "yard.inline", ".str.inline");
+    auto* Entry = annotationEntry(M, Helper, InlineStr, EntryTy);
+    auto* ArrayTy = ArrayType::get(EntryTy, 1);
+    std::vector<Constant*> Entries{Entry};
+    new GlobalVariable(
+        M, ArrayTy, false, GlobalValue::AppendingLinkage,
+        ConstantArray::get(ArrayTy, Entries), "llvm.global.annotations");
+
+    EXPECT_TRUE(hasFunctionAnnotation(*Helper, "yard.inline"));
+    EXPECT_FALSE(hasFunctionAnnotation(*Helper, "yard.analyze"));
 }

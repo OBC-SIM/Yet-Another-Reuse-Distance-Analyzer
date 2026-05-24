@@ -1,6 +1,6 @@
 #include "yard_analyze.h"
 
-YARD_ANALYZE
+YARD_INLINE
 void touch(float x[16], int idx)
 {
   x[idx] = x[idx] + 1.0f;
