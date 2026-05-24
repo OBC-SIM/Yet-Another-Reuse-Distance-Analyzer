@@ -111,6 +111,29 @@ opt-14 -load-pass-plugin ./build/libLoopAnnotatedTrace.so \
 
 현재 디렉토리에 `<name>_g_lat.json`이 생성됩니다.
 
+### RTEMS / 사용자 함수만 분석하기
+
+RTEMS 커널이나 라이브러리 함수까지 같은 LLVM 모듈에 들어오는 경우,
+분석 대상 함수에 Clang annotation을 붙여 사용자 정의 함수만 필터링할 수 있습니다.
+
+```c
+#if defined(__clang__)
+#define YARD_ANALYZE __attribute__((annotate("yard.analyze")))
+#else
+#define YARD_ANALYZE
+#endif
+
+YARD_ANALYZE
+void user_kernel(float *a, float *b) {
+    for (int i = 0; i < 128; ++i)
+        a[i] = b[i] + 1.0f;
+}
+```
+
+모듈 안에 `yard.analyze` annotation이 하나라도 있으면
+`loop-annotated-trace` pass는 해당 annotation이 붙은 함수만 JSON에 출력합니다.
+annotation이 전혀 없으면 기존처럼 모든 정의된 함수를 분석합니다.
+
 ### 3. 결과 확인
 
 ```bash
@@ -256,7 +279,13 @@ cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 | ATAX i=100, j=100, k=100 | ✅ MATCH |
 | test_stencil.c | ✅ MATCH |
 | test_regular_block.c | ✅ MATCH |
+| polybench_gemm.c | ✅ MATCH |
+| polybench_atax.c | ✅ MATCH |
 | polybench_2mm.c | ✅ MATCH |
+| polybench_correlation.c | ⚠️ 마지막 3D `i-loop (bound=25)` MISMATCH |
+| polybench_jacobi.c | ⚠️ `jacobi_2d_kernel`의 3D `t-loop (bound=5)` MISMATCH |
+
+현재 `polybench_correlation.c`의 미해결 케이스는 sample마다 volatile RD group count가 달라지는 3D sparse/tail family를 기존 rectangular predictor가 표현하지 못해서 발생합니다. `polybench_jacobi.c`는 `t` 루프 안에 두 개의 2D stencil nest가 순차 배치된 구조라, 현재 3D predictor가 하나의 rectangular nest처럼 처리하면서 histogram과 cold miss가 함께 어긋납니다.
 
 ---
 
@@ -284,8 +313,8 @@ backend/
 ├── _plot_utils.py        # 공유 시각화 인프라 (binning, broken axis, bar helpers)
 ├── plot.py               # RDH 시각화 (plot_histograms, plot_verify_comparison, aggregate_as_program)
 ├── plot_timing.py        # 실행시간 비교 차트 (plot_timing_comparison, aggregate_timing_as_program)
-├── stability.py          # stable RD 후보 검증
-├── volatile.py           # 3D Volatile RD 예측
+├── stability.py          # stable RD 후보 검증 (2D holdout validation)
+├── volatile.py           # 공용 volatile helper + 3D diagonal/rectangular RD 예측
 ├── volatile2d.py         # 2D Volatile RD 예측
 ├── gt_cache.py           # Ground-truth 계산 + SHA-256 캐시
 ├── report.py             # 비교 출력 헬퍼 (timed / print_comparison)
@@ -326,6 +355,7 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | 배열 접근 인덱스 추출 (루프 IV, 상수) | ✅ |
 | 루프 시작 값 `start` 보존 및 JSON 출력 | ✅ |
 | affine 인덱스 (`i-1`, `i+1`) 보존/해석 | ✅ |
+| `__attribute__((annotate("yard.analyze")))` 기반 함수 필터링 | ✅ |
 | 전역 배열 `ConstantExpr` GEP 처리 | ✅ |
 | 무명 변수 IR 슬롯 번호 구분 | ✅ |
 | JSON → TraceNode AST 역직렬화 (`parser.py`) | ✅ |
@@ -343,4 +373,5 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | 실행시간 비교 시각화 (`plot_timing.py`, verify `--plot`) | ✅ |
 | `--mode unroll`로 실제 LRU 시뮬 결과 출력 (`main.py`) | ✅ |
 | `polybench_correlation.c` 마지막 3D sparse/tail family | 🔲 미해결 |
+| `polybench_jacobi.c` sequential 2D stencil nests | 🔲 미해결 |
 | 4중 루프 이상 지원 | 🔲 미구현 |
