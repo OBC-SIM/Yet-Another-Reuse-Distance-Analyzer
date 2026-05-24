@@ -19,6 +19,7 @@ from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from calls import expand_calls
 from gt_cache import ground_truth_cached
 from lru_sim import LRUProfiler, ReuseProfile
 from main import _DEFAULT_PLUGIN, _REPO_ROOT, _to_ll, run_llvm_pass
@@ -126,7 +127,7 @@ def verify_json(
     results: List[Tuple[str, ReuseProfile, ReuseProfile]] = []
     timings: List[Tuple[str, float, float]] = []
     with open(json_path) as f:
-        raw = json.load(f)
+        raw = expand_calls(json.load(f))
     for func_entry in raw:
         loops = [n for n in func_entry["body"] if n["type"] == "Loop"]
         non_loops = [n for n in func_entry["body"] if n["type"] != "Loop"]

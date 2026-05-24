@@ -2,6 +2,7 @@ import json
 from itertools import product
 from typing import Dict, List, Tuple
 
+from calls import expand_calls
 from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
 from merger import BlockMerger
@@ -253,7 +254,7 @@ def analyze_blocks(json_path: str) -> List[Tuple[str, ReuseProfile]]:
     @return           블록명은 "func  var-loop (bound=N)" 또는 "func  (flat, N accesses)" 형태
     """
     with open(json_path) as f:
-        raw = json.load(f)
+        raw = expand_calls(json.load(f))
 
     results: List[Tuple[str, ReuseProfile]] = []
     for func_entry in raw:
@@ -281,7 +282,7 @@ def analyze_blocks(json_path: str) -> List[Tuple[str, ReuseProfile]]:
 
 def analyze(json_path: str) -> ReuseProfile:
     with open(json_path) as f:
-        raw = json.load(f)
+        raw = expand_calls(json.load(f))
 
     merger = BlockMerger()
     for func_entry in raw:

@@ -24,6 +24,7 @@ from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from calls import expand_calls
 from gt_cache import ground_truth
 from lru_sim import LRUProfiler, ReuseProfile
 from parser import parse_trace
@@ -97,7 +98,7 @@ def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
 def _unroll_blocks(lat_json: Path) -> List[Tuple[str, ReuseProfile]]:
     """LAT JSON 블록을 실제 unroll + LRU 시뮬레이션으로 정확히 계산."""
     with open(lat_json) as f:
-        raw = json.load(f)
+        raw = expand_calls(json.load(f))
     results: List[Tuple[str, ReuseProfile]] = []
     for func_entry in raw:
         func_name = func_entry["function"]
