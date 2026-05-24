@@ -30,13 +30,15 @@ RDH (Reuse Distance Histogram)
 
 ## 출력 형식
 
-`{ll파일명}_lat.json`은 함수별 wrapper를 갖고, 각 함수의 `body`는 세 가지 노드 타입으로 구성됩니다.
+`{ll파일명}_lat.json`은 함수별 wrapper를 갖고, 각 함수 wrapper는 `function`, `params`, `annotations`, `body` 필드를 가집니다. `body`는 네 가지 노드 타입으로 구성됩니다.
 
 | 타입 | 필드 | 설명 |
 |------|------|------|
+| Function wrapper | `function`, `params`, `annotations`, `body` | 함수 이름, 파라미터 이름, `yard.*` annotation, 함수 본문 |
 | `Loop` | `var`, `start`, `bound`, `depth`, `body` | 루프 노드. `start` 이상 `bound` 미만 반복 |
 | `Array` | `name`, `indices` | 배열 접근. 인덱스는 루프 유도 변수, 상수, `i-1` 같은 affine 식 |
 | `Scalar` | `name` | 루프 인덱스와 무관한 스칼라 접근 |
+| `Call` | `callee`, `args` | direct call node. Python 백엔드에서 `YARD_INLINE` callee를 call site에 확장 |
 
 **예시 — 행렬 곱셈 (`test_matmul_g.ll`)**
 
@@ -50,7 +52,7 @@ void matmul(float A[32][64], float B[64][32], float C[32][32]) {
 ```
 
 ```json
-[{"function":"matmul","body":[
+[{"function":"matmul","params":["A","B","C"],"annotations":["yard.analyze"],"body":[
   {"type":"Loop","var":"i","start":0,"bound":32,"depth":1,"body":[
     {"type":"Loop","var":"j","start":0,"bound":32,"depth":2,"body":[
       {"type":"Loop","var":"k","start":0,"bound":64,"depth":3,"body":[
@@ -243,14 +245,18 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 ./build/LoopAnnotatedTraceTests
 ```
 
-19개 테스트.
+26개 테스트.
 
 | 테스트 스위트 | 내용 |
 |---|---|
 | `ScalarAccess` | 스칼라 접근 생성 및 JSON 직렬화 |
 | `ArrayAccess` | 배열 접근 생성, 상수 인덱스 구분 포함 |
 | `LoopNest` | 루프 트리 구성 및 중첩 JSON 직렬화 |
+| `CallStmt` | 함수 호출 노드 생성 및 JSON 직렬화 |
 | `GetBaseName` | `IrHelpers::getBaseName` — 무명 변수 IR 슬롯 번호 구분 |
+| `GetValueName` | 함수 파라미터와 call argument 이름 추출 |
+| `ResolveIndex` | 스칼라 argument index 이름 보존 |
+| `FunctionAnnotation` | `yard.analyze` / `yard.inline` annotation 감지 |
 
 ### Python (pytest)
 
@@ -258,11 +264,12 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 pytest -q
 ```
 
-66개 테스트.
+71개 테스트.
 
 | 테스트 파일 | 내용 |
 |---|---|
 | `test_parser.py` | TraceNode AST, unroll(), parse_trace(), loop start/affine index |
+| `test_calls.py` | `CallNode` expansion, analyze root filtering, recursion guard |
 | `test_lru_sim.py` | LRU 스택 시뮬레이션, 재사용 거리 계산 |
 | `test_dilation.py` | Dilation 수식 (2D/3D), Strategy/Builder/Predictor |
 | `test_merger.py` | BlockMerger cold miss 조정, cross-block 재사용 조정, intra-block 중복 방지 |
@@ -306,6 +313,7 @@ cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 | ATAX i=100, j=100, k=100 | ✅ MATCH |
 | test_stencil.c | ✅ MATCH |
 | test_regular_block.c | ✅ MATCH |
+| test_call.c | ✅ MATCH |
 | polybench_gemm.c | ✅ MATCH |
 | polybench_atax.c | ✅ MATCH |
 | polybench_2mm.c | ✅ MATCH |
@@ -320,7 +328,7 @@ cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 
 ```
 include/
-├── Statement.hpp         # AST 노드: Statement / ScalarAccess / ArrayAccess / LoopNest
+├── Statement.hpp         # AST 노드: Statement / ScalarAccess / ArrayAccess / LoopNest / CallStmt
 ├── JsonExportVisitor.hpp # Visitor: AST → llvm::json::Value
 └── IrHelpers.hpp         # IR 쿼리 헬퍼 선언 (NameMap, getBaseName 등)
 src/
@@ -349,6 +357,7 @@ backend/
 ├── verify.py             # ground-truth vs. 예측 비교 스크립트 (--plot/--save, RDH + 타이밍 4장)
 └── tests/
     ├── test_parser.py
+    ├── test_calls.py
     ├── test_lru_sim.py
     ├── test_dilation.py
     ├── test_merger.py
