@@ -35,6 +35,7 @@ using lat::getTripCount;
 using lat::getLoopStart;
 using lat::getIndexVars;
 using lat::getBaseName;
+using lat::getValueName;
 using lat::hasFunctionAnnotation;
 
 namespace {
@@ -55,7 +56,21 @@ constexpr llvm::StringLiteral AnalyzeAnnotation = "yard.analyze";
  */
 static std::unique_ptr<Statement> makeAccessFromInstr(Instruction& I,
                                                        ScalarEvolution& SE,
-                                                       const NameMap& names) {
+                                                       const NameMap& names,
+                                                       const std::set<const Function*>& annotated,
+                                                       const Function& current) {
+    if (auto* Call = dyn_cast<CallBase>(&I)) {
+        if (Function* Callee = Call->getCalledFunction()) {
+            if (Callee != &current && annotated.count(Callee)) {
+                std::vector<std::string> args;
+                for (Value* Arg : Call->args())
+                    args.push_back(getValueName(Arg, names));
+                return std::make_unique<lat::CallStmt>(Callee->getName().str(), args);
+            }
+        }
+        return nullptr;
+    }
+
     Value* ptr = nullptr;
     if (auto* Load  = dyn_cast<LoadInst>(&I))  ptr = Load->getPointerOperand();
     else if (auto* Store = dyn_cast<StoreInst>(&I)) ptr = Store->getPointerOperand();
@@ -84,7 +99,9 @@ static std::unique_ptr<Statement> makeAccessFromInstr(Instruction& I,
 // ── 트리 빌더 ─────────────────────────────────────────────
 
 static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE,
-                                                unsigned depth, const NameMap& names);
+                                                unsigned depth, const NameMap& names,
+                                                const std::set<const Function*>& annotated,
+                                                const Function& current);
 
 /**
  * @brief 루프 바디의 직접 BB에서 메모리 접근 Statement를 수집한다.
@@ -98,7 +115,9 @@ static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE
  * @param names llvm.dbg.value 기반 Value → 변수명 맵
  */
 static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
-                         lat::LoopNest& nest, const NameMap& names) {
+                         lat::LoopNest& nest, const NameMap& names,
+                         const std::set<const Function*>& annotated,
+                         const Function& current) {
     std::set<BasicBlock*>        subLoopBlocks;
     std::map<BasicBlock*, Loop*> subLoopHeaders;
     for (Loop* Sub : L->getSubLoops()) {
@@ -113,23 +132,26 @@ static void populateBody(Loop* L, ScalarEvolution& SE, unsigned depth,
         if (hIt != subLoopHeaders.end()) {
             if (!processed.count(hIt->second)) {
                 processed.insert(hIt->second);
-                nest.addChild(buildLoopNest(hIt->second, SE, depth + 1, names));
+                nest.addChild(buildLoopNest(
+                    hIt->second, SE, depth + 1, names, annotated, current));
             }
             continue;
         }
         if (subLoopBlocks.count(BB)) continue;
 
         for (Instruction& I : *BB)
-            if (auto stmt = makeAccessFromInstr(I, SE, names))
+            if (auto stmt = makeAccessFromInstr(I, SE, names, annotated, current))
                 nest.addChild(std::move(stmt));
     }
 }
 
 static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE,
-                                                unsigned depth, const NameMap& names) {
+                                                unsigned depth, const NameMap& names,
+                                                const std::set<const Function*>& annotated,
+                                                const Function& current) {
     auto nest = std::make_unique<lat::LoopNest>(getInductionVarName(L, SE, names),
                                            getLoopStart(L, SE), getTripCount(L, SE), depth);
-    populateBody(L, SE, depth, *nest, names);
+    populateBody(L, SE, depth, *nest, names, annotated, current);
     return nest;
 }
 
@@ -150,6 +172,7 @@ static std::unique_ptr<lat::LoopNest> buildLoopNest(Loop* L, ScalarEvolution& SE
  */
 static void buildRootStatements(Function& F, LoopInfo& LI, ScalarEvolution& SE,
                                  const NameMap& names,
+                                 const std::set<const Function*>& annotated,
                                  std::vector<std::unique_ptr<Statement>>& root) {
     std::map<BasicBlock*, Loop*> topLoopHeaders;
     std::set<BasicBlock*>        topLoopBlocks;
@@ -166,14 +189,14 @@ static void buildRootStatements(Function& F, LoopInfo& LI, ScalarEvolution& SE,
         if (hIt != topLoopHeaders.end()) {
             if (!processed.count(hIt->second)) {
                 processed.insert(hIt->second);
-                root.push_back(buildLoopNest(hIt->second, SE, 1, names));
+                root.push_back(buildLoopNest(hIt->second, SE, 1, names, annotated, F));
             }
             continue;
         }
         if (topLoopBlocks.count(BB)) continue;
 
         for (Instruction& I : *BB)
-            if (auto stmt = makeAccessFromInstr(I, SE, names))
+            if (auto stmt = makeAccessFromInstr(I, SE, names, annotated, F))
                 root.push_back(std::move(stmt));
     }
 }
@@ -183,15 +206,15 @@ static void buildRootStatements(Function& F, LoopInfo& LI, ScalarEvolution& SE,
 struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
     PreservedAnalyses run(Module& M, ModuleAnalysisManager& MAM) {
         auto& FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-        bool requireAnnotation = false;
+        std::set<const Function*> annotated;
         for (Function& F : M)
             if (!F.isDeclaration() && hasFunctionAnnotation(F, AnalyzeAnnotation))
-                requireAnnotation = true;
+                annotated.insert(&F);
 
         llvm::json::Array moduleFuncs;
         for (Function& F : M) {
             if (F.isDeclaration()) continue;
-            if (requireAnnotation && !hasFunctionAnnotation(F, AnalyzeAnnotation))
+            if (!annotated.empty() && !annotated.count(&F))
                 continue;
 
             auto& LI  = FAM.getResult<LoopAnalysis>(F);
@@ -199,7 +222,7 @@ struct LoopAnnotatedTracePass : public PassInfoMixin<LoopAnnotatedTracePass> {
             NameMap names = buildDebugNameMap(F);
 
             std::vector<std::unique_ptr<Statement>> root;
-            buildRootStatements(F, LI, SE, names, root);
+            buildRootStatements(F, LI, SE, names, annotated, root);
 
             lat::JsonExportVisitor vis;
             llvm::json::Array bodyJson;

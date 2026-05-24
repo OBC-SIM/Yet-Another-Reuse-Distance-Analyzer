@@ -208,6 +208,19 @@ std::string getBaseName(Value* Ptr, const NameMap& names) {
     return n.empty() ? "arr" : n;
 }
 
+std::string getValueName(Value* V, const NameMap& names) {
+    if (auto* C = dyn_cast<ConstantInt>(V))
+        return std::to_string(C->getSExtValue());
+    if (V->getType()->isPointerTy())
+        return getBaseName(V, names);
+
+    auto it = names.find(V);
+    if (it != names.end()) return it->second;
+    if (V->hasName()) return V->getName().str();
+    std::string n = irOperandName(V);
+    return n.empty() ? "value" : n;
+}
+
 static const GlobalVariable* globalFromStringPointer(const Value* V) {
     V = V->stripPointerCasts();
     if (auto* GV = dyn_cast<GlobalVariable>(V))
