@@ -9,6 +9,7 @@ namespace lat {
 
 class ScalarAccess;
 class ArrayAccess;
+class CallStmt;
 class LoopNest;
 
 // ── Visitor 추상 클래스 ─────────────────────────────────────
@@ -17,6 +18,7 @@ public:
     virtual ~Visitor() = default;
     virtual void visit(ScalarAccess& node) = 0;
     virtual void visit(ArrayAccess&  node) = 0;
+    virtual void visit(CallStmt&     node) = 0;
     virtual void visit(LoopNest&     node) = 0;
 };
 
@@ -59,6 +61,25 @@ public:
 private:
     std::string              array_name_;
     std::vector<std::string> index_vars_;
+};
+
+// ── CallStmt: 단말 노드 ───────────────────────────────────
+/**
+ * @brief 직접 함수 호출 위치를 나타낸다.
+ *
+ * @param callee 호출 대상 함수 이름
+ * @param args   호출 인자 이름 목록
+ */
+class CallStmt : public Statement {
+public:
+    CallStmt(std::string callee, std::vector<std::string> args)
+        : callee_(std::move(callee)), args_(std::move(args)) {}
+    void accept(Visitor& v) override { v.visit(*this); }
+    const std::string& getCallee() const { return callee_; }
+    const std::vector<std::string>& getArgs() const { return args_; }
+private:
+    std::string callee_;
+    std::vector<std::string> args_;
 };
 
 // ── LoopNest: 내부 노드 ────────────────────────────────────
