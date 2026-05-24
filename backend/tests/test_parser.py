@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 import pytest
-from parser import ScalarNode, ArrayNode, LoopBlockNode, parse_trace
+from parser import ScalarNode, ArrayNode, CallNode, LoopBlockNode, parse_trace
 
 TASKS_DIR = Path(__file__).resolve().parent.parent.parent / "tasks"
 
@@ -26,6 +26,12 @@ class TestArrayNode:
 
     def test_unroll_affine_indices(self):
         assert ArrayNode("A", ["i-1", "i", "i+1"]).unroll({"i": 3}) == ["A-2-3-4"]
+
+
+class TestCallNode:
+    def test_unroll_requires_expansion(self):
+        with pytest.raises(RuntimeError):
+            CallNode("helper", ["A", "i"]).unroll({})
 
 
 class TestLoopBlockNode:
@@ -76,6 +82,14 @@ class TestParseTrace:
         assert nodes[0].actual_bound == 32
         assert nodes[0].sim_bound == 2
         assert nodes[0].var == "i"
+
+    def test_parse_call_node(self):
+        data = [{"type": "Call", "callee": "helper", "args": ["A", "i"]}]
+        nodes = parse_trace(data)
+        assert len(nodes) == 1
+        assert isinstance(nodes[0], CallNode)
+        assert nodes[0].callee == "helper"
+        assert nodes[0].args == ["A", "i"]
 
     def test_parse_loop_start_field(self):
         data = [{"type": "Loop", "var": "i", "start": 1, "bound": 99, "depth": 1,
