@@ -264,7 +264,7 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 pytest -q
 ```
 
-71개 테스트.
+76개 테스트.
 
 | 테스트 파일 | 내용 |
 |---|---|
@@ -273,7 +273,7 @@ pytest -q
 | `test_lru_sim.py` | LRU 스택 시뮬레이션, 재사용 거리 계산 |
 | `test_dilation.py` | Dilation 수식 (2D/3D), Strategy/Builder/Predictor |
 | `test_merger.py` | BlockMerger cold miss 조정, cross-block 재사용 조정, intra-block 중복 방지 |
-| `test_e2e.py` | 전체 파이프라인 E2E (1D/2D/3D matmul/Scalar/function-level block) |
+| `test_e2e.py` | 전체 파이프라인 E2E, LAT body 순서 보존, function-level cross-block GT |
 
 ### 예측 정확도 검증 (verify.py)
 
@@ -293,14 +293,14 @@ python backend/verify.py --save figs/compare.png tasks/polybench_atax.c
 
 ground-truth(완전 언롤 LRU)와 Dilation 예측을 케이스별로 비교합니다. C/LLVM 입력을 주면 컴파일과 pass 실행까지 포함해 검증합니다.
 
-`--plot` / `--save` 옵션을 주면 파일당 4장이 생성됩니다.
+`verify.py`는 디버깅용 block-level 비교를 먼저 출력하고, 이어서 함수 전체 LAT body 순서를 실제로 unroll한 function-level GT와 `BlockMerger` 기반 예측을 비교합니다. function-level 비교는 loop 사이의 cross-block RD를 포함하므로 block-level MATCH와 별개로 MISMATCH가 드러날 수 있습니다.
+
+`--plot` / `--save` 옵션을 주면 함수 단위 비교 차트가 생성됩니다.
 
 | 파일 | 내용 |
 |------|------|
-| `verify_<stem>_blocks.png`         | 블록별 GT(파랑) vs. 예측(주황) RDH |
-| `verify_<stem>_program.png`        | 프로그램 전체 합산 GT vs. 예측 RDH |
-| `verify_<stem>_timing_blocks.png`  | 블록별 unroll 시간 vs. 예측 시간 |
-| `verify_<stem>_timing_program.png` | 프로그램 전체 합산 타이밍 |
+| `verify_<stem>_functions.png`        | 함수별 GT(파랑) vs. 예측(주황) RDH |
+| `verify_<stem>_timing_functions.png` | 함수별 unroll 시간 vs. 예측 시간 (ms) |
 
 cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 
@@ -314,13 +314,26 @@ cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 | test_stencil.c | ✅ MATCH |
 | test_regular_block.c | ✅ MATCH |
 | test_call.c | ✅ MATCH |
-| polybench_gemm.c | ✅ MATCH |
+| polybench_gemm.c | ⚠️ loop block은 MATCH, function-level cross-block MISMATCH |
 | polybench_atax.c | ✅ MATCH |
-| polybench_2mm.c | ✅ MATCH |
+| polybench_2mm.c | ⚠️ loop block은 MATCH, function-level cross-block MISMATCH |
 | polybench_correlation.c | ⚠️ 마지막 3D `i-loop (bound=25)` MISMATCH |
-| polybench_jacobi.c | ⚠️ `jacobi_2d_kernel`의 3D `t-loop (bound=5)` MISMATCH |
+| polybench_jacobi.c | ⚠️ `jacobi_2d_kernel`의 3D `t-loop (bound=5)` 및 function-level MISMATCH |
 
 현재 `polybench_correlation.c`의 미해결 케이스는 sample마다 volatile RD group count가 달라지는 3D sparse/tail family를 기존 rectangular predictor가 표현하지 못해서 발생합니다. `polybench_jacobi.c`는 `t` 루프 안에 두 개의 2D stencil nest가 순차 배치된 구조라, 현재 3D predictor가 하나의 rectangular nest처럼 처리하면서 histogram과 cold miss가 함께 어긋납니다.
+
+`polybench_gemm.c`와 `polybench_2mm.c`는 개별 loop block RDH는 맞지만, 함수 전체에서 같은 배열 reference가 여러 loop block을 건너 재사용되는 경우 현재 `BlockMerger`가 sample trace 기반 LRU stack으로 cross-block RD를 보정하기 때문에 function-level GT와 차이가 납니다. 논문식 sequence-based cross-block prediction은 아직 별도 과제로 남아 있습니다.
+
+### Legacy analyzer 비교
+
+기존 MEM_RD_IR 결과 JSON과 현재 analyzer 결과를 같은 입력에서 비교할 수 있습니다.
+
+```bash
+python backend/compare_legacy.py tasks/polybench_atax.c
+python backend/compare_legacy.py tasks/polybench_*.c --save figs/legacy_compare
+```
+
+기본 legacy 결과 위치는 `/workspace/caas/MEM_RD_IR/Static-Memory-Reuse-Distance-on-LLVM/results`입니다. `--legacy-dir` 또는 `--legacy-json`으로 경로를 바꿀 수 있습니다.
 
 ---
 
@@ -339,6 +352,7 @@ tests/
 ├── Statement_test.cpp    # AST / JSON 직렬화 단위 테스트
 └── IrHelpers_test.cpp    # IR 헬퍼 단위 테스트 (LLVM IR 직접 생성)
 backend/
+├── block_trace.py        # LAT body 순서를 보존하는 actual trace / block trace helper
 ├── calls.py              # annotated direct call의 AST-level inline expansion
 ├── parser.py             # TraceNode AST + parse_trace() + loop start/affine index 해석
 ├── lru_sim.py            # ReuseProfile + LRUProfiler
@@ -354,7 +368,8 @@ backend/
 ├── volatile2d.py         # 2D Volatile RD 예측
 ├── gt_cache.py           # Ground-truth 계산 + SHA-256 캐시
 ├── report.py             # 비교 출력 헬퍼 (timed / print_comparison)
-├── verify.py             # ground-truth vs. 예측 비교 스크립트 (--plot/--save, RDH + 타이밍 4장)
+├── verify.py             # block/function-level GT vs. 예측 비교 스크립트
+├── compare_legacy.py     # legacy analyzer JSON vs. current analyzer 비교 플롯
 └── tests/
     ├── test_parser.py
     ├── test_calls.py
@@ -403,14 +418,17 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | 블록 간 재사용 조정 및 병합 (`merger.py`) | ✅ |
 | 1D loop actual-bound frequency 확장 | ✅ |
 | function-level top-level access 병합 | ✅ |
+| LAT body 순서 보존 actual trace helper (`block_trace.py`) | ✅ |
 | 파이프라인 오케스트레이터 (`main.py`) | ✅ |
 | Volatile RD 예측 (2D rectangular, 3D diagonal/일부 rectangular) | ✅ |
 | Cold miss 정확 예측 (`_predict_cold_misses`) | ✅ |
-| Ground-truth vs. 예측 비교 검증 (`verify.py`) | ✅ |
+| block/function-level Ground-truth vs. 예측 비교 검증 (`verify.py`) | ✅ |
+| legacy analyzer 결과 비교 (`compare_legacy.py`) | ✅ |
 | 블록별 / 프로그램 전체 RDH 시각화 (`plot.py`, `--plot`/`--save`) | ✅ |
 | GT vs. 예측 비교 시각화 (grouped bar, cold miss RD=−1, broken axis 자동) | ✅ |
 | 실행시간 비교 시각화 (`plot_timing.py`, verify `--plot`) | ✅ |
 | `--mode unroll`로 실제 LRU 시뮬 결과 출력 (`main.py`) | ✅ |
+| sequence-based cross-block RD prediction | 🔲 미구현 |
 | `polybench_correlation.c` 마지막 3D sparse/tail family | 🔲 미해결 |
 | `polybench_jacobi.c` sequential 2D stencil nests | 🔲 미해결 |
 | 4중 루프 이상 지원 | 🔲 미구현 |
