@@ -11,6 +11,17 @@ from _plot_utils import (
     _save_figure, _setup_theme, _time_ylim,
 )
 
+_SECONDS_TO_MILLISECONDS = 1000.0
+
+
+def _timing_results_ms(
+    results: List[Tuple[str, float, float]],
+) -> List[Tuple[str, float, float]]:
+    return [
+        (label, gt_time * _SECONDS_TO_MILLISECONDS, pred_time * _SECONDS_TO_MILLISECONDS)
+        for label, gt_time, pred_time in results
+    ]
+
 
 def _plot_timing_bars(ax, gt_time: float, pred_time: float):
     w = 0.38
@@ -46,7 +57,7 @@ def plot_timing_comparison(
     n = len(results)
     series = []
     has_break = False
-    for label, gt_time, pred_time in results:
+    for label, gt_time, pred_time in _timing_results_ms(results):
         limits = _broken_axis_limits([gt_time, pred_time])
         has_break = has_break or limits is not None
         series.append((label, gt_time, pred_time, limits))
@@ -68,7 +79,7 @@ def plot_timing_comparison(
         values = [gt_time, pred_time]
 
         _plot_timing_bars(ax, gt_time, pred_time)
-        ax.set_ylabel("Time (s)", labelpad=12)
+        ax.set_ylabel("Time (ms)", labelpad=12)
         ax.yaxis.set_major_locator(MaxNLocator(nbins=5))
         ax.set_title(label, fontsize=13, pad=14)
         _add_timing_reduction_label(ax, gt_time, pred_time)
