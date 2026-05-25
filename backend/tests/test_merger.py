@@ -1,6 +1,7 @@
 import pytest
 from lru_sim import ReuseProfile
 from merger import BlockMerger
+from sequence_summary import DenseSequence
 
 
 def make_profile(histogram: dict, cold_misses: set = None) -> ReuseProfile:
@@ -118,3 +119,13 @@ class TestMergeBlock:
         merger = BlockMerger()
         result = merger.merge_block(make_profile({2: 1}, set()), [])
         assert result is merger.global_profile
+
+    def test_repeated_dense_sequence_adds_symbolic_cross_reuses(self):
+        sequence = DenseSequence("tmp", ("i", "j"), ("i", "j"), (0, 0), (4, 5))
+        cold = {f"tmp-{i}-{j}" for i in range(4) for j in range(5)}
+        merger = BlockMerger()
+
+        merger.merge_sequence(make_profile({}, cold), sequence, [])
+        result = merger.merge_sequence(make_profile({}, set()), sequence, [])
+
+        assert result.histogram == {19: 20}

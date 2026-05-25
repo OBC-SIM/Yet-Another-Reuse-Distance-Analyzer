@@ -8,6 +8,7 @@ from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
 from merger import BlockMerger
 from parser import LoopBlockNode, parse_trace, index_variable, resolve_index
+from sequence_summary import dense_sequence
 from stability import validated_stable_rds_2d
 from volatile import predict_volatile_3d_rectangular, predict_volatile_diagonal
 from volatile2d import predict_volatile_2d_rectangular
@@ -282,7 +283,11 @@ def analyze(json_path: str) -> ReuseProfile:
         for node in func_entry["body"]:
             if node["type"] == "Loop":
                 block_profile, block_trace = _predict_loop_block(node)
-                merger.merge_block(block_profile, block_trace)
+                sequence = dense_sequence(node)
+                if sequence:
+                    merger.merge_sequence(block_profile, sequence, block_trace)
+                else:
+                    merger.merge_block(block_profile, block_trace)
             else:
                 block_trace = parse_trace([node])[0].unroll({})
                 block_profile = LRUProfiler.calculate(block_trace)

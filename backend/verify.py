@@ -30,6 +30,7 @@ from plot_timing import plot_timing_comparison
 from predictor import _predict_loop_block
 from parser import parse_trace
 from report import print_comparison, timed
+from sequence_summary import dense_sequence
 
 # ── 내장 테스트 케이스 ────────────────────────────────────────
 
@@ -101,10 +102,7 @@ def _verify_node(name: str, raw: dict) -> Tuple[ReuseProfile, ReuseProfile, floa
     return gt, pred, unroll_time, pred_time
 
 
-def _verify_flat(
-    func_name: str,
-    trace: List[str],
-) -> Tuple[str, ReuseProfile, ReuseProfile, float, float] | None:
+def _verify_flat(func_name: str, trace: List[str]) -> Tuple[str, ReuseProfile, ReuseProfile, float, float] | None:
     """루프 없는 flat 접근 시퀀스를 LRU로 직접 검증."""
     if not trace:
         return None
@@ -123,6 +121,10 @@ def _predict_function(func_entry: dict) -> ReuseProfile:
     for node in func_entry["body"]:
         if node["type"] == "Loop":
             block_profile, block_trace = _predict_loop_block(node)
+            sequence = dense_sequence(node)
+            if sequence:
+                merger.merge_sequence(block_profile, sequence, block_trace)
+                continue
         else:
             block_trace = parse_trace([node])[0].unroll({})
             block_profile = LRUProfiler.calculate(block_trace)
@@ -130,9 +132,7 @@ def _predict_function(func_entry: dict) -> ReuseProfile:
     return merger.global_profile
 
 
-def _verify_function(
-    func_entry: dict,
-) -> Tuple[str, ReuseProfile, ReuseProfile, float, float]:
+def _verify_function(func_entry: dict) -> Tuple[str, ReuseProfile, ReuseProfile, float, float]:
     name = f"{func_entry['function']}  (function)"
     gt, gt_time = timed(lambda: _ground_truth_function(func_entry))
     pred, pred_time = timed(lambda: _predict_function(func_entry))
@@ -211,9 +211,7 @@ def _save_verify_plots(
 # ── 진입점 ───────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="ground-truth vs. Dilation-prediction 비교"
-    )
+    parser = argparse.ArgumentParser(description="ground-truth vs. Dilation-prediction 비교")
     parser.add_argument(
         "files", nargs="*", metavar="FILE",
         help=".c 또는 .ll 파일. 미지정 시 내장 테스트 케이스 실행",

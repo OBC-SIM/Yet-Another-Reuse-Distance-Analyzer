@@ -104,6 +104,26 @@ ORDERED_MIXED_TRACE = [
     "E-1-1-1", "B-0",
 ]
 
+REPEATED_2D_BLOCKS = [{"function": "two_blocks", "body": [
+    {"type": "Loop", "var": "i", "bound": 4, "depth": 1, "body": [
+        {"type": "Loop", "var": "j", "bound": 5, "depth": 2, "body": [
+            {"type": "Array", "name": "tmp", "indices": ["i", "j"]},
+        ]},
+    ]},
+    {"type": "Loop", "var": "i", "bound": 4, "depth": 1, "body": [
+        {"type": "Loop", "var": "j", "bound": 5, "depth": 2, "body": [
+            {"type": "Array", "name": "tmp", "indices": ["i", "j"]},
+        ]},
+    ]},
+]}]
+
+REPEATED_2D_TRACE = [
+    f"tmp-{i}-{j}"
+    for _ in range(2)
+    for i in range(4)
+    for j in range(5)
+]
+
 LOOP_2D = [{"function": "test_2d", "body": [
     {"type": "Loop", "var": "j", "bound": 8, "depth": 1, "body": [
         {"type": "Loop", "var": "k", "bound": 8, "depth": 2, "body": [
@@ -184,6 +204,27 @@ class TestAnalyze1D:
         expected = LRUProfiler.calculate(ORDERED_MIXED_TRACE)
         assert function_results[0][1].histogram == expected.histogram
         assert function_results[0][1].cold_misses == expected.cold_misses
+        capsys.readouterr()
+
+    def test_analyze_uses_full_loop_boundary_for_cross_block_reuse(self, tmp_path):
+        path = write_json(tmp_path, REPEATED_2D_BLOCKS)
+
+        profile = analyze(path)
+        expected = LRUProfiler.calculate(REPEATED_2D_TRACE)
+
+        assert profile.histogram == expected.histogram
+        assert profile.cold_misses == expected.cold_misses
+
+    def test_verify_function_uses_full_loop_boundary_for_cross_block_reuse(
+        self, tmp_path, capsys,
+    ):
+        path = Path(write_json(tmp_path, REPEATED_2D_BLOCKS))
+
+        _, _, function_results, _ = verify_json(path)
+        expected = LRUProfiler.calculate(REPEATED_2D_TRACE)
+
+        assert function_results[0][1].histogram == expected.histogram
+        assert function_results[0][2].histogram == expected.histogram
         capsys.readouterr()
 
 
