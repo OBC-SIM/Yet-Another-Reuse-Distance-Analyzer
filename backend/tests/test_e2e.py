@@ -1,8 +1,11 @@
 import json
 import pytest
+from pathlib import Path
+from main import _unroll_file
 from predictor import analyze
-from predictor import _predict_loop_block
-from lru_sim import ReuseProfile
+from predictor import _predict_loop_block, analyze_blocks
+from verify import verify_json
+from lru_sim import LRUProfiler, ReuseProfile
 
 
 LOOP_1D = [{"function": "test_1d", "body": [
@@ -36,6 +39,70 @@ REGULAR_BLOCK = [{"function": "regular_block", "body": [
     {"type": "Array", "name": "A", "indices": ["0"]},
     {"type": "Array", "name": "A", "indices": ["0"]},
 ]}]
+
+ORDERED_MIXED_BLOCKS = [{"function": "ordered", "body": [
+    {"type": "Array", "name": "A", "indices": ["0"]},
+    {"type": "Array", "name": "B", "indices": ["0"]},
+    {"type": "Loop", "var": "i", "bound": 3, "depth": 1, "body": [
+        {"type": "Array", "name": "A", "indices": ["i"]},
+        {"type": "Array", "name": "A", "indices": ["i"]},
+        {"type": "Array", "name": "B", "indices": ["i"]},
+    ]},
+    {"type": "Array", "name": "A", "indices": ["2"]},
+    {"type": "Loop", "var": "j", "bound": 2, "depth": 1, "body": [
+        {"type": "Loop", "var": "k", "bound": 3, "depth": 2, "body": [
+            {"type": "Array", "name": "C", "indices": ["j", "k"]},
+            {"type": "Array", "name": "C", "indices": ["j", "k"]},
+            {"type": "Array", "name": "D", "indices": ["k", "j"]},
+        ]},
+    ]},
+    {"type": "Array", "name": "C", "indices": ["1", "2"]},
+    {"type": "Loop", "var": "x", "bound": 2, "depth": 1, "body": [
+        {"type": "Loop", "var": "y", "bound": 2, "depth": 2, "body": [
+            {"type": "Loop", "var": "z", "bound": 2, "depth": 3, "body": [
+                {"type": "Array", "name": "E", "indices": ["x", "y", "z"]},
+                {"type": "Array", "name": "F", "indices": ["z", "y"]},
+                {"type": "Array", "name": "E", "indices": ["x", "y", "z"]},
+            ]},
+        ]},
+    ]},
+    {"type": "Array", "name": "E", "indices": ["1", "1", "1"]},
+    {"type": "Array", "name": "B", "indices": ["0"]},
+]}]
+
+ORDERED_MIXED_NAMES = [
+    "ordered  (flat, 2 accesses)",
+    "ordered  i-loop (bound=3)",
+    "ordered  (flat, 1 accesses)",
+    "ordered  j-loop (bound=2)",
+    "ordered  (flat, 1 accesses)",
+    "ordered  x-loop (bound=2)",
+    "ordered  (flat, 2 accesses)",
+]
+
+ORDERED_MIXED_TRACE = [
+    "A-0", "B-0",
+    "A-0", "A-0", "B-0",
+    "A-1", "A-1", "B-1",
+    "A-2", "A-2", "B-2",
+    "A-2",
+    "C-0-0", "C-0-0", "D-0-0",
+    "C-0-1", "C-0-1", "D-1-0",
+    "C-0-2", "C-0-2", "D-2-0",
+    "C-1-0", "C-1-0", "D-0-1",
+    "C-1-1", "C-1-1", "D-1-1",
+    "C-1-2", "C-1-2", "D-2-1",
+    "C-1-2",
+    "E-0-0-0", "F-0-0", "E-0-0-0",
+    "E-0-0-1", "F-1-0", "E-0-0-1",
+    "E-0-1-0", "F-0-1", "E-0-1-0",
+    "E-0-1-1", "F-1-1", "E-0-1-1",
+    "E-1-0-0", "F-0-0", "E-1-0-0",
+    "E-1-0-1", "F-1-0", "E-1-0-1",
+    "E-1-1-0", "F-0-1", "E-1-1-0",
+    "E-1-1-1", "F-1-1", "E-1-1-1",
+    "E-1-1-1", "B-0",
+]
 
 LOOP_2D = [{"function": "test_2d", "body": [
     {"type": "Loop", "var": "j", "bound": 8, "depth": 1, "body": [
@@ -87,6 +154,37 @@ class TestAnalyze1D:
         profile = analyze(path)
         assert profile.histogram == {0: 102, 99: 1}
         assert len(profile.cold_misses) == 100
+
+    def test_analyze_blocks_preserves_body_order(self, tmp_path):
+        path = write_json(tmp_path, ORDERED_MIXED_BLOCKS)
+
+        names = [name for name, _ in analyze_blocks(path)]
+
+        assert names == ORDERED_MIXED_NAMES
+
+    def test_unroll_mode_uses_ordered_full_trace_for_program_profile(self, tmp_path):
+        path = Path(write_json(tmp_path, ORDERED_MIXED_BLOCKS))
+
+        profile, blocks = _unroll_file(path)
+        expected = LRUProfiler.calculate(ORDERED_MIXED_TRACE)
+
+        assert [name for name, _ in blocks] == ORDERED_MIXED_NAMES
+        assert profile.histogram == expected.histogram
+        assert profile.cold_misses == expected.cold_misses
+
+    def test_verify_json_preserves_body_order(self, tmp_path, capsys):
+        path = Path(write_json(tmp_path, ORDERED_MIXED_BLOCKS))
+
+        results, timings, function_results, function_timings = verify_json(path)
+
+        assert [name for name, _, _ in results] == ORDERED_MIXED_NAMES
+        assert [name for name, _, _ in timings] == ORDERED_MIXED_NAMES
+        assert [name for name, _, _ in function_results] == ["ordered  (function)"]
+        assert [name for name, _, _ in function_timings] == ["ordered  (function)"]
+        expected = LRUProfiler.calculate(ORDERED_MIXED_TRACE)
+        assert function_results[0][1].histogram == expected.histogram
+        assert function_results[0][1].cold_misses == expected.cold_misses
+        capsys.readouterr()
 
 
 class TestAnalyze2D:
