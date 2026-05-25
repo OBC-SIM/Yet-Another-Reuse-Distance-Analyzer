@@ -24,10 +24,8 @@ from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from calls import expand_calls
-from gt_cache import ground_truth
+from block_trace import block_trace_results
 from lru_sim import LRUProfiler, ReuseProfile
-from parser import parse_trace
 from plot import aggregate_as_program, plot_histograms
 from predictor import analyze, analyze_blocks
 
@@ -95,37 +93,24 @@ def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
     return out_json
 
 
-def _unroll_blocks(lat_json: Path) -> List[Tuple[str, ReuseProfile]]:
-    """LAT JSON 블록을 실제 unroll + LRU 시뮬레이션으로 정확히 계산."""
+def _unroll_block_traces(lat_json: Path) -> List[Tuple[str, ReuseProfile, List[str]]]:
+    """LAT JSON body 순서를 보존해 block별 actual trace를 계산."""
     with open(lat_json) as f:
-        raw = expand_calls(json.load(f))
-    results: List[Tuple[str, ReuseProfile]] = []
-    for func_entry in raw:
-        func_name = func_entry["function"]
-        loops = [n for n in func_entry["body"] if n["type"] == "Loop"]
-        non_loops = [n for n in func_entry["body"] if n["type"] != "Loop"]
-        for node in loops:
-            profile = ground_truth(node)
-            name = f"{func_name}  {node['var']}-loop (bound={node['bound']})"
-            results.append((name, profile))
-        if not loops and non_loops:
-            trace: List[str] = []
-            for node in non_loops:
-                trace.extend(parse_trace([node])[0].unroll({}))
-            if trace:
-                profile = LRUProfiler.calculate(trace)
-                name = f"{func_name}  (flat, {len(trace)} accesses)"
-                results.append((name, profile))
-    return results
+        return block_trace_results(json.load(f))
 
 
-def _merge_blocks(blocks: List[Tuple[str, ReuseProfile]]) -> ReuseProfile:
-    merged = ReuseProfile()
-    for _, p in blocks:
-        for rd, cnt in p.histogram.items():
-            merged.histogram[rd] = merged.histogram.get(rd, 0) + cnt
-        merged.cold_misses |= p.cold_misses
-    return merged
+def _unroll_blocks(lat_json: Path) -> List[Tuple[str, ReuseProfile]]:
+    return [(name, profile) for name, profile, _ in _unroll_block_traces(lat_json)]
+
+
+def _unroll_file(lat_json: Path) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
+    block_traces = _unroll_block_traces(lat_json)
+    full_trace: List[str] = []
+    blocks: List[Tuple[str, ReuseProfile]] = []
+    for name, profile, trace in block_traces:
+        blocks.append((name, profile))
+        full_trace.extend(trace)
+    return LRUProfiler.calculate(full_trace), blocks
 
 
 def _print_histogram(profile: ReuseProfile) -> None:
@@ -172,8 +157,7 @@ def analyze_file(
         profile = analyze(str(lat_json))
         blocks = analyze_blocks(str(lat_json))
     else:
-        blocks = _unroll_blocks(lat_json)
-        profile = _merge_blocks(blocks)
+        profile, blocks = _unroll_file(lat_json)
     print("완료")
 
     print()

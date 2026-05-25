@@ -2,6 +2,7 @@ import json
 from itertools import product
 from typing import Dict, List, Tuple
 
+from block_trace import unroll_node_actual
 from calls import expand_calls
 from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
@@ -38,15 +39,7 @@ def _run_sim(raw_node: dict, sim_bounds: List[int]) -> Tuple[ReuseProfile, List[
 
 
 def _unroll_with_actual_bounds(raw_node: dict) -> List[str]:
-    nodes = parse_trace([raw_node], sim_bound=2)
-    def apply_actual(loop: LoopBlockNode) -> None:
-        loop.sim_bound = loop.actual_bound
-        for child in loop.body:
-            if isinstance(child, LoopBlockNode):
-                apply_actual(child)
-
-    apply_actual(nodes[0])
-    return nodes[0].unroll({})
+    return unroll_node_actual(raw_node)
 
 
 def _diff(a: Dict[int, int], b: Dict[int, int], rds) -> Dict[int, int]:
@@ -257,25 +250,25 @@ def analyze_blocks(json_path: str) -> List[Tuple[str, ReuseProfile]]:
         raw = expand_calls(json.load(f))
 
     results: List[Tuple[str, ReuseProfile]] = []
+    def flush_flat(func_name: str, trace: List[str]) -> None:
+        if trace:
+            profile = LRUProfiler.calculate(trace)
+            name = f"{func_name}  (flat, {len(trace)} accesses)"
+            results.append((name, profile))
+            trace.clear()
+
     for func_entry in raw:
         func_name = func_entry["function"]
-        loops = [n for n in func_entry["body"] if n["type"] == "Loop"]
-        non_loops = [n for n in func_entry["body"] if n["type"] != "Loop"]
-
-        for node in loops:
-            profile, _ = _predict_loop_block(node)
-            name = f"{func_name}  {node['var']}-loop (bound={node['bound']})"
-            results.append((name, profile))
-
-        if not loops and non_loops:
-            trace = []
-            for node in non_loops:
-                parsed = parse_trace([node])[0].unroll({})
-                trace.extend(parsed)
-            if trace:
-                profile = LRUProfiler.calculate(trace)
-                name = f"{func_name}  (flat, {len(trace)} accesses)"
+        flat_trace: List[str] = []
+        for node in func_entry["body"]:
+            if node["type"] == "Loop":
+                flush_flat(func_name, flat_trace)
+                profile, _ = _predict_loop_block(node)
+                name = f"{func_name}  {node['var']}-loop (bound={node['bound']})"
                 results.append((name, profile))
+            else:
+                flat_trace.extend(unroll_node_actual(node))
+        flush_flat(func_name, flat_trace)
 
     return results
 
