@@ -22,7 +22,7 @@ double corr[N][N];
 double mean[N];
 double stddev[N];
 
-YARD_ANALYZE
+YARD_INLINE
 void correlation_kernel()
 {
   int i, j, k;

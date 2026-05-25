@@ -25,7 +25,7 @@ double C[NJ][NL];
 double D[NI][NL];
 double tmp[NI][NJ];  // 중간 결과
 
-YARD_ANALYZE
+YARD_INLINE
 void kernel_2mm(double alpha, double beta)
 {
   int i, j, k;

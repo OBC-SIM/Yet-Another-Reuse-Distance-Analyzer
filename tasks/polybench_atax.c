@@ -21,7 +21,7 @@ double x[N];
 double y[N];
 double tmp[M];  // 중간 결과 벡터
 
-YARD_ANALYZE
+YARD_INLINE
 void atax_kernel()
 {
   int i, j;

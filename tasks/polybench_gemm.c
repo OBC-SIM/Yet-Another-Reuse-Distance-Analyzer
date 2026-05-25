@@ -20,7 +20,7 @@ double A[N][N];
 double B[N][N];
 double C[N][N];
 
-YARD_ANALYZE
+YARD_INLINE
 void gemm_kernel(double alpha, double beta)
 {
   int i, j, k;
