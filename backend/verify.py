@@ -30,7 +30,7 @@ from plot_timing import plot_timing_comparison
 from predictor import _predict_loop_block
 from parser import parse_trace
 from report import print_comparison, timed
-from sequence_summary import dense_sequence
+from sequence_summary import summarize_sequence
 
 # ── 내장 테스트 케이스 ────────────────────────────────────────
 
@@ -121,7 +121,7 @@ def _predict_function(func_entry: dict) -> ReuseProfile:
     for node in func_entry["body"]:
         if node["type"] == "Loop":
             block_profile, block_trace = _predict_loop_block(node)
-            sequence = dense_sequence(node)
+            sequence = summarize_sequence(node)
             if sequence:
                 merger.merge_sequence(block_profile, sequence, block_trace)
                 continue

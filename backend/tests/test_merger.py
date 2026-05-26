@@ -1,7 +1,7 @@
 import pytest
 from lru_sim import ReuseProfile
 from merger import BlockMerger
-from sequence_summary import DenseSequence
+from sequence_summary import AccessPattern, SequenceSummary
 
 
 def make_profile(histogram: dict, cold_misses: set = None) -> ReuseProfile:
@@ -121,7 +121,8 @@ class TestMergeBlock:
         assert result is merger.global_profile
 
     def test_repeated_dense_sequence_adds_symbolic_cross_reuses(self):
-        sequence = DenseSequence("tmp", ("i", "j"), ("i", "j"), (0, 0), (4, 5))
+        tmp = AccessPattern("tmp", (4, 5), (0, 0))
+        sequence = SequenceSummary([tmp], [tmp])
         cold = {f"tmp-{i}-{j}" for i in range(4) for j in range(5)}
         merger = BlockMerger()
 
@@ -129,3 +130,15 @@ class TestMergeBlock:
         result = merger.merge_sequence(make_profile({}, set()), sequence, [])
 
         assert result.histogram == {19: 20}
+
+    def test_sequence_merge_uses_final_recency_for_next_block(self):
+        tmp = AccessPattern("tmp", (2,), (0,))
+        b = AccessPattern("b", (2,), (0,))
+        first = SequenceSummary([tmp, b], [b, tmp])
+        second = SequenceSummary([tmp], [tmp])
+        merger = BlockMerger()
+
+        merger.merge_sequence(make_profile({}, {"tmp-0", "tmp-1", "b-0", "b-1"}), first, [])
+        result = merger.merge_sequence(make_profile({}, {"tmp-0", "tmp-1"}), second, [])
+
+        assert result.histogram == {3: 2}
