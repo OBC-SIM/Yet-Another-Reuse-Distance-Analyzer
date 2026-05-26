@@ -3,7 +3,7 @@ main.py — C/LLVM IR → 재사용 거리 히스토그램 출력.
 
 Usage:
     python backend/main.py [--plugin PATH] [--mode predict|unroll]
-                           [--plot] [--save PATH] FILE [FILE ...]
+                           [--plot] [--save PATH] [--export PATH] FILE [FILE ...]
 
     FILE: .c 또는 .ll 파일. .c 는 clang-14 로 컴파일 후 파이프라인 실행.
 
@@ -13,6 +13,7 @@ Options:
                            unroll: 실제 loop unroll + LRU 시뮬 (정확)
     --plot                 seaborn 히스토그램 저장
     --save PATH            플롯 저장 경로 (PNG/PDF/SVG 등)
+    --export PATH          RDH 결과를 JSON 파일 또는 디렉토리로 저장
 """
 
 import argparse
@@ -136,6 +137,37 @@ def _print_histogram(profile: ReuseProfile) -> None:
     print(f"  cold misses: {len(profile.cold_misses)}")
 
 
+def _profile_json(profile: ReuseProfile) -> dict:
+    return {
+        "histogram": {str(rd): count for rd, count in sorted(profile.histogram.items())},
+        "cold_misses": len(profile.cold_misses),
+        "total_reuses": sum(profile.histogram.values()),
+    }
+
+
+def _export_path_for(path: Path, export_arg: str, file_count: int, mode: str) -> Path:
+    export_path = Path(export_arg)
+    if file_count == 1 and export_path.suffix:
+        export_path.parent.mkdir(parents=True, exist_ok=True)
+        return export_path
+    export_path.mkdir(parents=True, exist_ok=True)
+    return export_path / f"{path.stem}_{mode}_rdh.json"
+
+
+def export_profile(path: Path, mode: str, profile: ReuseProfile,
+                   blocks: List[Tuple[str, ReuseProfile]], export_path: Path) -> None:
+    payload = {
+        "file": str(path),
+        "mode": mode,
+        "program": _profile_json(profile),
+        "blocks": [
+            {"name": name, "profile": _profile_json(block_profile)}
+            for name, block_profile in blocks
+        ],
+    }
+    export_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    print(f"  JSON 저장 → {export_path}")
+
 
 def analyze_file(
     path: Path, plugin_path: Path, mode: str = "predict"
@@ -192,6 +224,11 @@ def main() -> None:
         metavar="PATH",
         help="플롯을 지정 경로에 저장 (PNG/PDF/SVG 등)",
     )
+    parser.add_argument(
+        "--export",
+        metavar="PATH",
+        help="RDH 결과를 JSON 파일 또는 디렉토리로 저장",
+    )
     args = parser.parse_args()
 
     plugin = Path(args.plugin)
@@ -210,8 +247,11 @@ def main() -> None:
             print(f"오류: .c 또는 .ll 파일만 지원합니다: {path}", file=sys.stderr)
             continue
         try:
-            _, blocks = analyze_file(path, plugin, args.mode)
+            profile, blocks = analyze_file(path, plugin, args.mode)
             block_results.extend(blocks)
+            if args.export:
+                export_path = _export_path_for(path, args.export, len(args.files), args.mode)
+                export_profile(path, args.mode, profile, blocks, export_path)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode(errors="replace") if e.stderr else ""
             print(f"\n오류: {e.args[0][0]} 실패\n{stderr}", file=sys.stderr)
