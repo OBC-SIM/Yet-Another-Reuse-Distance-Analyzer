@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import Dict, List, Set, Tuple
 
 from lru_sim import LRUProfiler, ReuseProfile
+from block_trace import function_trace
 from predictor import _apply_sim_bounds
 from parser import LoopBlockNode, parse_trace
 
@@ -40,6 +41,12 @@ def _save_gt_cache() -> None:
 
 def _gt_cache_key(raw_node: dict) -> str:
     payload = {"version": GT_CACHE_VERSION, "raw": raw_node}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _function_gt_cache_key(func_entry: dict) -> str:
+    payload = {"version": GT_CACHE_VERSION, "function": func_entry}
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
@@ -141,6 +148,28 @@ def ground_truth_cached(raw_node: dict) -> Tuple[ReuseProfile, bool, float]:
 
     start = perf_counter()
     profile = ground_truth(raw_node)
+    unroll_seconds = perf_counter() - start
+    cache[key] = _profile_to_cache(profile, unroll_seconds)
+    _save_gt_cache()
+    return profile, False, unroll_seconds
+
+
+def function_ground_truth(func_entry: dict) -> ReuseProfile:
+    return LRUProfiler.calculate(function_trace(func_entry))
+
+
+def function_ground_truth_cached(func_entry: dict) -> Tuple[ReuseProfile, bool, float]:
+    """
+    @return (profile, cache_hit, unroll_seconds)
+    """
+    cache = _load_gt_cache()
+    key = _function_gt_cache_key(func_entry)
+    if key in cache:
+        data = cache[key]
+        return _profile_from_cache(data), True, data.get("unroll_seconds", 0.0)
+
+    start = perf_counter()
+    profile = function_ground_truth(func_entry)
     unroll_seconds = perf_counter() - start
     cache[key] = _profile_to_cache(profile, unroll_seconds)
     _save_gt_cache()

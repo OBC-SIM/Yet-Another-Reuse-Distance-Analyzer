@@ -19,9 +19,8 @@ from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from block_trace import function_trace
 from calls import expand_calls
-from gt_cache import ground_truth_cached
+from gt_cache import function_ground_truth_cached, ground_truth_cached
 from lru_sim import LRUProfiler, ReuseProfile
 from main import _DEFAULT_PLUGIN, _REPO_ROOT, _to_ll, run_llvm_pass
 from merger import BlockMerger
@@ -112,10 +111,6 @@ def _verify_flat(func_name: str, trace: List[str]) -> Tuple[str, ReuseProfile, R
     return name, profile, profile, 0.0, 0.0
 
 
-def _ground_truth_function(func_entry: dict) -> ReuseProfile:
-    return LRUProfiler.calculate(function_trace(func_entry))
-
-
 def _predict_function(func_entry: dict) -> ReuseProfile:
     merger = BlockMerger()
     for node in func_entry["body"]:
@@ -134,10 +129,12 @@ def _predict_function(func_entry: dict) -> ReuseProfile:
 
 def _verify_function(func_entry: dict) -> Tuple[str, ReuseProfile, ReuseProfile, float, float]:
     name = f"{func_entry['function']}  (function)"
-    gt, gt_time = timed(lambda: _ground_truth_function(func_entry))
+    (gt, gt_cached, unroll_time), gt_time = timed(
+        lambda: function_ground_truth_cached(func_entry)
+    )
     pred, pred_time = timed(lambda: _predict_function(func_entry))
-    print_comparison(name, gt, pred, gt_time, pred_time, False, gt_time)
-    return name, gt, pred, gt_time, pred_time
+    print_comparison(name, gt, pred, gt_time, pred_time, gt_cached, unroll_time)
+    return name, gt, pred, unroll_time, pred_time
 
 
 def verify_json(
