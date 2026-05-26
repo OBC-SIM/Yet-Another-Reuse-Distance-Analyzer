@@ -21,6 +21,12 @@ REPEATED_1D = [{"function": "repeated_1d", "body": [
     ]}
 ]}]
 
+CACHE_LINE_1D = [{"function": "cache_line_1d", "body": [
+    {"type": "Loop", "var": "i", "bound": 16, "depth": 1, "body": [
+        {"type": "Array", "name": "A", "indices": ["i"], "shape": [16], "elem_size": 8}
+    ]}
+]}]
+
 STENCIL_LIKE_1D = [{"function": "stencil_like_1d", "body": [
     {"type": "Loop", "var": "i", "bound": 99, "depth": 1, "body": [
         {"type": "Array", "name": "in", "indices": ["i"]},
@@ -171,6 +177,14 @@ class TestAnalyze1D:
         assert [name for name, _ in blocks] == ORDERED_MIXED_NAMES
         assert profile.histogram == expected.histogram
         assert profile.cold_misses == expected.cold_misses
+
+    def test_unroll_mode_can_use_cache_line_granularity(self, tmp_path):
+        path = Path(write_json(tmp_path, CACHE_LINE_1D))
+
+        profile, _ = _unroll_file(path, granularity="cache-line", cache_line_size=64)
+
+        assert profile.histogram == {0: 14}
+        assert profile.cold_misses == {"A-line-0", "A-line-1"}
 
     def test_verify_json_preserves_body_order(self, tmp_path, capsys):
         path = Path(write_json(tmp_path, ORDERED_MIXED_BLOCKS))

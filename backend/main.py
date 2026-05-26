@@ -3,7 +3,8 @@ main.py — C/LLVM IR → 재사용 거리 히스토그램 출력.
 
 Usage:
     python backend/main.py [--plugin PATH] [--mode predict|unroll]
-                           [--plot] [--save PATH] [--export [PATH]] FILE [FILE ...]
+                           [--plot] [--save PATH] [--export [PATH]]
+                           [--granularity element|cache-line] FILE [FILE ...]
 
     FILE: .c 또는 .ll 파일. .c 는 clang-14 로 컴파일 후 파이프라인 실행.
 
@@ -15,6 +16,7 @@ Options:
     --save PATH            플롯 저장 경로 (PNG/PDF/SVG 등)
     --export [PATH]        RDH 결과를 JSON 파일 또는 디렉토리로 저장
                            PATH 생략 시 exports/에 저장
+    --granularity MODE     unroll trace 주소 단위 (기본: element)
 """
 
 import argparse
@@ -30,6 +32,7 @@ from block_trace import block_trace_results
 from lru_sim import LRUProfiler, ReuseProfile
 from plot import aggregate_as_program, plot_histograms
 from predictor import analyze, analyze_blocks
+from profile_export import export_path_for, export_profile
 
 _REPO_ROOT = Path(__file__).parent.parent.resolve()
 _DEFAULT_PLUGIN = _REPO_ROOT / "build" / "libLoopAnnotatedTrace.so"
@@ -95,18 +98,20 @@ def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
     return out_json
 
 
-def _unroll_block_traces(lat_json: Path) -> List[Tuple[str, ReuseProfile, List[str]]]:
+def _unroll_block_traces(lat_json: Path, granularity: str = "element",
+                         cache_line_size: int = 64) -> List[Tuple[str, ReuseProfile, List[str]]]:
     """LAT JSON body 순서를 보존해 block별 actual trace를 계산."""
     with open(lat_json) as f:
-        return block_trace_results(json.load(f))
+        return block_trace_results(json.load(f), granularity, cache_line_size)
 
 
 def _unroll_blocks(lat_json: Path) -> List[Tuple[str, ReuseProfile]]:
     return [(name, profile) for name, profile, _ in _unroll_block_traces(lat_json)]
 
 
-def _unroll_file(lat_json: Path) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
-    block_traces = _unroll_block_traces(lat_json)
+def _unroll_file(lat_json: Path, granularity: str = "element",
+                 cache_line_size: int = 64) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
+    block_traces = _unroll_block_traces(lat_json, granularity, cache_line_size)
     full_trace: List[str] = []
     blocks: List[Tuple[str, ReuseProfile]] = []
     for name, profile, trace in block_traces:
@@ -138,40 +143,9 @@ def _print_histogram(profile: ReuseProfile) -> None:
     print(f"  cold misses: {len(profile.cold_misses)}")
 
 
-def _profile_json(profile: ReuseProfile) -> dict:
-    return {
-        "histogram": {str(rd): count for rd, count in sorted(profile.histogram.items())},
-        "cold_misses": len(profile.cold_misses),
-        "total_reuses": sum(profile.histogram.values()),
-    }
-
-
-def _export_path_for(path: Path, export_arg: str, file_count: int, mode: str) -> Path:
-    export_path = Path(export_arg)
-    if file_count == 1 and export_path.suffix:
-        export_path.parent.mkdir(parents=True, exist_ok=True)
-        return export_path
-    export_path.mkdir(parents=True, exist_ok=True)
-    return export_path / f"{path.stem}_{mode}_rdh.json"
-
-
-def export_profile(path: Path, mode: str, profile: ReuseProfile,
-                   blocks: List[Tuple[str, ReuseProfile]], export_path: Path) -> None:
-    payload = {
-        "file": str(path),
-        "mode": mode,
-        "program": _profile_json(profile),
-        "blocks": [
-            {"name": name, "profile": _profile_json(block_profile)}
-            for name, block_profile in blocks
-        ],
-    }
-    export_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-    print(f"  JSON 저장 → {export_path}")
-
-
 def analyze_file(
-    path: Path, plugin_path: Path, mode: str = "predict"
+    path: Path, plugin_path: Path, mode: str = "predict",
+    granularity: str = "element", cache_line_size: int = 64
 ) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
     """파이프라인 실행 후 (합산 프로파일, 블록별 프로파일 리스트) 반환."""
     print(f"\n{'='*62}")
@@ -187,10 +161,12 @@ def analyze_file(
     action = "예측" if mode == "predict" else "unrolling"
     print(f"  [2/2] 재사용 거리 {action} 중...", end=" ", flush=True)
     if mode == "predict":
+        if granularity != "element":
+            raise ValueError("cache-line granularity는 --mode unroll에서만 지원합니다.")
         profile = analyze(str(lat_json))
         blocks = analyze_blocks(str(lat_json))
     else:
-        profile, blocks = _unroll_file(lat_json)
+        profile, blocks = _unroll_file(lat_json, granularity, cache_line_size)
     print("완료")
 
     print()
@@ -232,6 +208,10 @@ def main() -> None:
         metavar="PATH",
         help="RDH 결과를 JSON 파일 또는 디렉토리로 저장 (기본: exports/)",
     )
+    parser.add_argument("--granularity", choices=["element", "cache-line"],
+                        default="element", help="unroll trace 주소 단위")
+    parser.add_argument("--cache-line-size", type=int, default=64,
+                        help="cache-line granularity의 line 크기(bytes)")
     args = parser.parse_args()
 
     plugin = Path(args.plugin)
@@ -250,11 +230,14 @@ def main() -> None:
             print(f"오류: .c 또는 .ll 파일만 지원합니다: {path}", file=sys.stderr)
             continue
         try:
-            profile, blocks = analyze_file(path, plugin, args.mode)
+            profile, blocks = analyze_file(
+                path, plugin, args.mode, args.granularity, args.cache_line_size
+            )
             block_results.extend(blocks)
             if args.export:
-                export_path = _export_path_for(path, args.export, len(args.files), args.mode)
-                export_profile(path, args.mode, profile, blocks, export_path)
+                export_path = export_path_for(path, args.export, len(args.files), args.mode)
+                export_profile(path, args.mode, profile, blocks, export_path,
+                               args.granularity, args.cache_line_size)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode(errors="replace") if e.stderr else ""
             print(f"\n오류: {e.args[0][0]} 실패\n{stderr}", file=sys.stderr)
