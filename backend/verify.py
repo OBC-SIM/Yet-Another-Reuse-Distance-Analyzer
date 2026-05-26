@@ -195,7 +195,7 @@ def _save_verify_plots(
 
     reusable_results = [
         row for row in function_results
-        if any(profile.histogram for profile in row[1:])
+        if any(profile.histogram or profile.cold_misses for profile in row[1:])
     ]
     if reusable_results:
         plot_verify_comparison(reusable_results, function_path)
