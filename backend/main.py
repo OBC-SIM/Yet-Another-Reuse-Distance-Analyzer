@@ -3,7 +3,7 @@ main.py — C/LLVM IR → 재사용 거리 히스토그램 출력.
 
 Usage:
     python backend/main.py [--plugin PATH] [--mode predict|unroll]
-                           [--plot] [--save PATH] [--export PATH] FILE [FILE ...]
+                           [--plot] [--save PATH] [--export [PATH]] FILE [FILE ...]
 
     FILE: .c 또는 .ll 파일. .c 는 clang-14 로 컴파일 후 파이프라인 실행.
 
@@ -13,7 +13,8 @@ Options:
                            unroll: 실제 loop unroll + LRU 시뮬 (정확)
     --plot                 seaborn 히스토그램 저장
     --save PATH            플롯 저장 경로 (PNG/PDF/SVG 등)
-    --export PATH          RDH 결과를 JSON 파일 또는 디렉토리로 저장
+    --export [PATH]        RDH 결과를 JSON 파일 또는 디렉토리로 저장
+                           PATH 생략 시 exports/에 저장
 """
 
 import argparse
@@ -226,8 +227,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--export",
+        nargs="?",
+        const=str(_REPO_ROOT / "exports"),
         metavar="PATH",
-        help="RDH 결과를 JSON 파일 또는 디렉토리로 저장",
+        help="RDH 결과를 JSON 파일 또는 디렉토리로 저장 (기본: exports/)",
     )
     args = parser.parse_args()
 
