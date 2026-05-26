@@ -10,6 +10,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/DataLayout.h"
+
+#include "ArrayMetadata.hpp"
 
 namespace lat {
 
@@ -119,5 +122,14 @@ std::string getValueName(llvm::Value* V, const NameMap& names);
  * @return annotation이 존재하면 true
  */
 bool hasFunctionAnnotation(llvm::Function& F, llvm::StringRef Annotation);
+
+/**
+ * @brief GEP source type에서 배열 shape와 element byte size를 추출한다.
+ *
+ * @param GEP 분석할 GEPOperator
+ * @param DL  모듈 DataLayout
+ * @return 추론 가능한 배열 metadata. shape를 모르면 비워두고 elem_size만 반환할 수 있다.
+ */
+ArrayMetadata getArrayMetadata(llvm::GEPOperator* GEP, const llvm::DataLayout& DL);
 
 }  // namespace lat

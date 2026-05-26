@@ -82,7 +82,7 @@ static std::unique_ptr<Statement> makeAccessFromInstr(Instruction& I,
         auto indices = getIndexVars(GEP, SE, names);
         std::string base = getBaseName(GEP->getPointerOperand(), names);
         if (indices.empty()) return std::make_unique<ScalarAccess>(base);
-        return std::make_unique<ArrayAccess>(base, indices);
+        return std::make_unique<ArrayAccess>(base, indices, lat::getArrayMetadata(GEP, I.getModule()->getDataLayout()));
     }
 
     // GEP 없는 직접 포인터 접근 (e.g. -O1에서 arr[0]이 base pointer로 최적화된 경우)

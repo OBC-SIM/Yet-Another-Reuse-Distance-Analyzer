@@ -14,6 +14,7 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # ── LLVM Pass (shared library) ────────────────────────────
 add_library(LoopAnnotatedTrace MODULE
+    src/ArrayMetadata.cpp
     src/IrHelpers.cpp
     src/LoopAnalysisPass.cpp
 )
@@ -41,6 +42,8 @@ if(GTEST_LIB AND GTEST_MAIN_LIB)
     add_executable(LoopAnnotatedTraceTests
         tests/Statement_test.cpp
         tests/IrHelpers_test.cpp
+        tests/ArrayMetadata_test.cpp
+        src/ArrayMetadata.cpp
         src/IrHelpers.cpp
     )
     target_include_directories(LoopAnnotatedTraceTests PRIVATE

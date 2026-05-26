@@ -38,6 +38,10 @@ class TestArrayNode:
         assert node.unroll({"i": 0, "j": 8}, "cache-line", 64) == ["A-line-1"]
         assert node.unroll({"i": 1, "j": 0}, "cache-line", 64) == ["A-line-2"]
 
+    def test_unroll_cache_line_2d_with_trailing_shape(self):
+        node = ArrayNode("A", ["i", "j"], shape=[16], elem_size=8)
+        assert node.unroll({"i": 1, "j": 0}, "cache-line", 64) == ["A-line-2"]
+
     def test_cache_line_falls_back_without_shape(self):
         node = ArrayNode("A", ["i", "j"])
         assert node.unroll({"i": 0, "j": 1}, "cache-line", 64) == ["A-0-1"]

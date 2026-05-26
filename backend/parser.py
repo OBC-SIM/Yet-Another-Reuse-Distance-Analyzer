@@ -48,11 +48,12 @@ class ArrayNode(TraceNode):
             return None
         if len(numeric) == 1:
             linear_index = numeric[0]
-        elif self.shape and len(self.shape) == len(numeric):
+        elif self.shape and len(self.shape) in (len(numeric), len(numeric) - 1):
+            shape = self.shape[-(len(numeric) - 1):]
             linear_index = 0
             for pos, index in enumerate(numeric):
                 stride = 1
-                for dim in self.shape[pos + 1:]:
+                for dim in shape[pos:]:
                     stride *= dim
                 linear_index += index * stride
         else:

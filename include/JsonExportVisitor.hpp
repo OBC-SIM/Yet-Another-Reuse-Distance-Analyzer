@@ -28,11 +28,21 @@ public:
         llvm::json::Array indices;
         for (const auto& idx : node.getIndexVars())
             indices.push_back(idx);
-        Result_ = llvm::json::Object{
+        llvm::json::Object obj{
             {"type",    "Array"},
             {"name",    node.getArrayName()},
             {"indices", std::move(indices)}
         };
+        const auto& metadata = node.getMetadata();
+        if (!metadata.shape.empty()) {
+            llvm::json::Array shape;
+            for (int64_t dim : metadata.shape)
+                shape.push_back(dim);
+            obj["shape"] = std::move(shape);
+        }
+        if (metadata.elem_size > 0)
+            obj["elem_size"] = metadata.elem_size;
+        Result_ = std::move(obj);
     }
 
     void visit(CallStmt& node) override {

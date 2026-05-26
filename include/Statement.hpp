@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "ArrayMetadata.hpp"
+
 namespace lat {
 
 class ScalarAccess;
@@ -55,12 +57,18 @@ class ArrayAccess : public Statement {
 public:
     ArrayAccess(std::string array_name, std::vector<std::string> index_vars)
         : array_name_(std::move(array_name)), index_vars_(std::move(index_vars)) {}
+    ArrayAccess(std::string array_name, std::vector<std::string> index_vars,
+                ArrayMetadata metadata)
+        : array_name_(std::move(array_name)), index_vars_(std::move(index_vars)),
+          metadata_(std::move(metadata)) {}
     void accept(Visitor& v) override { v.visit(*this); }
     const std::string& getArrayName()               const { return array_name_; }
     const std::vector<std::string>& getIndexVars()  const { return index_vars_; }
+    const ArrayMetadata& getMetadata()              const { return metadata_; }
 private:
     std::string              array_name_;
     std::vector<std::string> index_vars_;
+    ArrayMetadata            metadata_;
 };
 
 // ── CallStmt: 단말 노드 ───────────────────────────────────
