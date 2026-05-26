@@ -1,9 +1,4 @@
-"""Compare ground truth and legacy analyzer output.
-
-Usage:
-    python backend/compare_legacy.py tasks/polybench_atax.c
-    python backend/compare_legacy.py tasks/polybench_*.c --plot
-"""
+"""Compare unrolling and legacy analyzer output."""
 
 import argparse
 import json
@@ -13,7 +8,6 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Tuple
 
 os.environ.setdefault("MPLBACKEND", "Agg")
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/matplotlib")
@@ -39,9 +33,12 @@ def _add_to_hist(dst: dict, src: dict) -> None:
         dst[rd] = dst.get(rd, 0) + count
 
 
-def _ground_truth_profile(lat_json: Path) -> ReuseProfile:
+def _expanded_lat(lat_json: Path) -> list[dict]:
+    return expand_calls(json.loads(lat_json.read_text()))
+
+
+def _ground_truth_profile(raw: list[dict]) -> ReuseProfile:
     profile = ReuseProfile()
-    raw = expand_calls(json.loads(lat_json.read_text()))
     for func_idx, func_entry in enumerate(raw):
         func_profile = LRUProfiler.calculate(function_trace(func_entry))
         _add_to_hist(profile.histogram, func_profile.histogram)
@@ -51,12 +48,14 @@ def _ground_truth_profile(lat_json: Path) -> ReuseProfile:
     return profile
 
 
-def _legacy_profile(json_path: Path) -> ReuseProfile:
+def _legacy_profile(json_path: Path, include_funcs: set[str]) -> ReuseProfile:
     profile = ReuseProfile()
     data = json.loads(json_path.read_text())
     cold_idx = 0
     for entry in data:
-        for address_map in entry.get("functions", {}).values():
+        for func_name, address_map in entry.get("functions", {}).items():
+            if func_name not in include_funcs:
+                continue
             for rd_values in address_map.values():
                 for rd in rd_values:
                     rd = int(rd)
@@ -68,7 +67,7 @@ def _legacy_profile(json_path: Path) -> ReuseProfile:
     return profile
 
 
-def _bin_counts(profiles: list[ReuseProfile]) -> Tuple[list[str], list[list[int]]]:
+def _bin_counts(profiles: list[ReuseProfile]) -> tuple[list[str], list[list[int]]]:
     merged = [defaultdict(int) for _ in profiles]
     for i, profile in enumerate(profiles):
         for rd, count in profile.histogram.items():
@@ -98,15 +97,8 @@ def _plot_two_bars(ax, labels: list[str], counts_by_series: list[list[int]]) -> 
     width = 0.34
     bar_groups = []
     for idx, (name, color, counts) in enumerate(zip(names, colors, counts_by_series)):
-        bars = ax.bar(
-            x_pos + (idx - 0.5) * width,
-            counts,
-            width=width,
-            label=name,
-            color=color,
-            edgecolor="black",
-            linewidth=0.5,
-        )
+        bars = ax.bar(x_pos + (idx - 0.5) * width, counts, width=width,
+                      label=name, color=color, edgecolor="black", linewidth=0.5)
         bar_groups.append(bars)
     ax.set_xticks(x_pos)
     ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
@@ -128,15 +120,34 @@ def _annotate_legacy(ax, legacy_bars, legacy_counts: list[int]) -> None:
         )
 
 
-def _normalize_counts(counts_by_series: list[list[int]]) -> list[list[float]]:
-    normalized = []
-    for counts in counts_by_series:
-        total = sum(counts)
-        if total == 0:
-            normalized.append([0.0 for _ in counts])
-        else:
-            normalized.append([count * 100.0 / total for count in counts])
-    return normalized
+def _weighted_mean_rd(profile: ReuseProfile) -> float:
+    total = sum(profile.histogram.values())
+    if total == 0:
+        return 0.0
+    return sum(rd * count for rd, count in profile.histogram.items()) / total
+
+
+def _ca_score(mean_rd: float) -> float:
+    return 1.0 / (1.0 + mean_rd)
+
+
+def _comparison_metrics(gt: ReuseProfile, legacy: ReuseProfile) -> dict:
+    gt_mean, legacy_mean = _weighted_mean_rd(gt), _weighted_mean_rd(legacy)
+    gt_score, legacy_score = _ca_score(gt_mean), _ca_score(legacy_mean)
+    gt_reuses, legacy_reuses = sum(gt.histogram.values()), sum(legacy.histogram.values())
+    score_error = legacy_score - gt_score
+    return {
+        "mean_rd_unrolling": gt_mean,
+        "mean_rd_legacy": legacy_mean,
+        "ca_score_unrolling": gt_score,
+        "ca_score_legacy": legacy_score,
+        "ca_score_error": score_error,
+        "ca_score_relative_error": score_error / gt_score if gt_score else 0.0,
+        "gt_reuses": gt_reuses,
+        "legacy_reuses": legacy_reuses,
+        "reuse_count_error": legacy_reuses - gt_reuses,
+        "cold_miss_error": len(legacy.cold_misses) - len(gt.cold_misses),
+    }
 
 
 def plot_comparison(
@@ -144,17 +155,12 @@ def plot_comparison(
     gt: ReuseProfile,
     legacy: ReuseProfile,
     save_path: Path,
-    normalize: bool = False,
 ) -> None:
     os.environ.setdefault("MPLBACKEND", "Agg")
     import matplotlib.pyplot as plt
     import seaborn as sns
-    from matplotlib.ticker import MaxNLocator
-
     _setup_theme()
     labels, counts_by_series = _bin_counts([gt, legacy])
-    if normalize:
-        counts_by_series = _normalize_counts(counts_by_series)
     counts = [value for series in counts_by_series for value in series]
     fig = plt.figure(figsize=(6.0, 3.4))
     ax = fig.add_subplot(111)
@@ -163,24 +169,27 @@ def plot_comparison(
         ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
     else:
         bar_groups = _plot_two_bars(ax, labels, counts_by_series)
-        if normalize:
-            ax.set_ylabel("Percentage (%)", labelpad=12)
-            ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-        else:
-            ax.set_ylabel("Frequency (symlog scale)", labelpad=12)
-            ax.set_yscale("symlog", linthresh=1)
-            _annotate_legacy(ax, bar_groups[1], counts_by_series[1])
+        ax.set_ylabel("Frequency (symlog scale)", labelpad=12)
+        ax.set_yscale("symlog", linthresh=1)
+        _annotate_legacy(ax, bar_groups[1], counts_by_series[1])
 
     ax.set_title(label, fontsize=13, pad=14)
-    ax.set_ylim(0, 100 if normalize else max(1, max(counts, default=0) * 2.0))
+    ax.set_ylim(0, max(1, max(counts, default=0) * 2.0))
     ax.set_xlabel("Reuse Distance")
     sns.despine(ax=ax)
 
     handles, names = ax.get_legend_handles_labels()
-    fig.subplots_adjust(left=0.12, right=0.98, bottom=0.36, top=0.84)
+    metrics = _comparison_metrics(gt, legacy)
+    score_text = (
+        "CA score  Unrolling: {ca_score_unrolling:.6f}   "
+        "Legacy: {ca_score_legacy:.6f}   "
+        "Delta: {ca_score_error:+.6f}"
+    ).format(**metrics)
+    fig.subplots_adjust(left=0.12, right=0.98, bottom=0.42, top=0.84)
     axes_center = (ax.get_position().x0 + ax.get_position().x1) / 2
     fig.legend(handles, names, loc="lower center", ncol=2, fontsize=9,
-               frameon=False, bbox_to_anchor=(axes_center, 0.025))
+               frameon=False, bbox_to_anchor=(axes_center, 0.09))
+    fig.text(axes_center, 0.025, score_text, ha="center", va="bottom", fontsize=8)
     _save_figure(fig, save_path)
     print(f"  플롯 저장 → {save_path}")
 
@@ -204,10 +213,6 @@ def _export_path_for(c_path: Path, export_arg: str, file_count: int) -> Path:
     return export_path / f"legacy_compare_{c_path.stem}.json"
 
 
-def _variant_path(base: Path, suffix: str) -> Path:
-    return base.with_stem(f"{base.stem}_{suffix}")
-
-
 def _profile_json(profile: ReuseProfile) -> dict:
     return {
         "histogram": {str(rd): count for rd, count in sorted(profile.histogram.items())},
@@ -219,8 +224,9 @@ def _profile_json(profile: ReuseProfile) -> dict:
 def export_comparison(label: str, gt: ReuseProfile, legacy: ReuseProfile, path: Path) -> None:
     payload = {
         "label": label,
-        "ground_truth": _profile_json(gt),
+        "unrolling": _profile_json(gt),
         "legacy": _profile_json(legacy),
+        "metrics": _comparison_metrics(gt, legacy),
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     print(f"  JSON 저장 → {path}")
@@ -232,8 +238,20 @@ def compare_file(c_path: Path, legacy_path: Path, plugin: Path,
     ll_path = _to_ll(c_path)
     lat_json = run_llvm_pass(ll_path, plugin)
     print(f"  opt-14 완료 → {lat_json.name}")
-    gt = _ground_truth_profile(lat_json)
-    legacy = _legacy_profile(legacy_path)
+    raw = _expanded_lat(lat_json)
+    include_funcs = {entry["function"] for entry in raw}
+    print(f"  legacy 필터 → {', '.join(sorted(include_funcs))}")
+    gt = _ground_truth_profile(raw)
+    legacy = _legacy_profile(legacy_path, include_funcs)
+    metrics = _comparison_metrics(gt, legacy)
+    print("  mean_rd: unrolling={:.2f} legacy={:.2f}".format(
+        metrics["mean_rd_unrolling"], metrics["mean_rd_legacy"]))
+    print("  ca_score: unrolling={:.6f} legacy={:.6f} error={:+.6f} ({:+.2f}%)".format(
+        metrics["ca_score_unrolling"], metrics["ca_score_legacy"],
+        metrics["ca_score_error"], metrics["ca_score_relative_error"] * 100))
+    print("  reuse_count: unrolling={} legacy={} error={:+d} cold_error={:+d}".format(
+        metrics["gt_reuses"], metrics["legacy_reuses"],
+        metrics["reuse_count_error"], metrics["cold_miss_error"]))
     if save_path:
         plot_comparison(c_path.name, gt, legacy, save_path)
     if export_path:
@@ -241,7 +259,7 @@ def compare_file(c_path: Path, legacy_path: Path, plugin: Path,
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="RDH 비교 플롯 생성: Ground Truth vs Legacy")
+    parser = argparse.ArgumentParser(description="RDH 비교 플롯 생성: Unrolling vs Legacy")
     parser.add_argument("files", nargs="+", help=".c 파일")
     parser.add_argument("--legacy-dir", default=str(_DEFAULT_LEGACY_DIR))
     parser.add_argument("--legacy-json", help="단일 파일 비교용 legacy JSON")
