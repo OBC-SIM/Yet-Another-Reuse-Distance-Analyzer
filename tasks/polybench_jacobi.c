@@ -20,7 +20,7 @@
 double A[N][N];
 double B[N][N];
 
-YARD_INLINE
+YARD_ANALYZE
 void jacobi_2d_kernel()
 {
   int t, i, j;
@@ -55,7 +55,6 @@ void jacobi_2d_kernel()
   }
 }
 
-YARD_ANALYZE
 int main()
 {
   int i, j;
