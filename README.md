@@ -185,12 +185,17 @@ python backend/main.py --plot tasks/test_stencil.c
 
 # 저장 경로 직접 지정 (_blocks / _program suffix 자동 추가)
 python backend/main.py --save figs/out.png tasks/test_matmul.c
+
+# JSON export: 경로를 생략하면 exports/<stem>_<mode>_rdh.json 사용
+python backend/main.py tasks/test_stencil.c --export
+python backend/main.py tasks/test_stencil.c --export out.json
 ```
 
 | 옵션 | 설명 |
 |------|------|
 | `--mode predict` | Dilation Equation 정적 예측 (기본값) |
 | `--mode unroll`  | 실제 loop unroll + LRU 시뮬레이션 (ground truth) |
+| `--export [PATH]` | RDH JSON 저장. PATH 생략 시 `exports/` 사용 |
 
 `--plot` / `--save`를 주면 두 파일이 생성됩니다.
 
@@ -330,10 +335,19 @@ cold miss는 RD = −1 bin으로 맨 앞에 표시됩니다.
 
 ```bash
 python backend/compare_legacy.py tasks/polybench_atax.c
-python backend/compare_legacy.py tasks/polybench_*.c --save figs/legacy_compare
+python backend/compare_legacy.py tasks/polybench_*.c --plot
+python backend/compare_legacy.py tasks/polybench_atax.c --export compare.json
 ```
 
 기본 legacy 결과 위치는 `/workspace/caas/MEM_RD_IR/Static-Memory-Reuse-Distance-on-LLVM/results`입니다. `--legacy-dir` 또는 `--legacy-json`으로 경로를 바꿀 수 있습니다.
+
+비교는 현재 analyzer의 unrolling 결과와 legacy JSON을 사용합니다.
+legacy JSON에 `main` 같은 주변 함수가 들어 있어도, YARD LAT에서 최종
+분석 대상으로 남은 함수 이름만 합산합니다. 출력과 JSON export에는
+평균 RD, CA score, reuse/cold miss 차이가 함께 포함됩니다.
+
+현재 RD/CA score는 element-level temporal reuse 기준입니다. 실제 캐시의
+cache-line 단위 spatial locality는 아직 별도 모델로 반영하지 않습니다.
 
 ---
 
@@ -382,6 +396,7 @@ tasks/
 ├── test_2d.c             # 2D 루프
 ├── test_2steps.c         # stride-2 1D 루프
 ├── test_matmul.c         # 행렬 곱셈 (3중 루프)
+├── test_matmul_cache_friendly.c # i-k-j 순서 행렬 곱셈
 ├── test_stencil.c        # 스텐실 패턴
 ├── test_multi_array.c    # 다중 배열 접근
 ├── test_global.c         # 전역 배열
@@ -389,6 +404,7 @@ tasks/
 ├── test_regular_block.c  # 루프 경계 바깥 블록 순서 검증
 ├── test_call.c           # annotated direct call expansion 검증
 ├── test_constant_access.c# 상수 인덱스 접근 (A[0], array[1] 등)
+├── test_constant_access2.c# 상수 인덱스 반복 접근 variant
 ├── polybench_gemm.c      # PolyBench: C = α·A·B + β·C
 ├── polybench_atax.c      # PolyBench: y = Aᵀ·(A·x)
 ├── polybench_2mm.c       # PolyBench: D = A·B·C (2단계 행렬 곱)
@@ -428,6 +444,9 @@ pyproject.toml            # pytest 설정 (testpaths, pythonpath)
 | GT vs. 예측 비교 시각화 (grouped bar, cold miss RD=−1, broken axis 자동) | ✅ |
 | 실행시간 비교 시각화 (`plot_timing.py`, verify `--plot`) | ✅ |
 | `--mode unroll`로 실제 LRU 시뮬 결과 출력 (`main.py`) | ✅ |
+| `--export` 기본 디렉터리 저장 (`main.py`) | ✅ |
+| legacy 비교 CA score 및 analyzed 함수 필터링 | ✅ |
+| cache-line 기반 spatial locality 모델 | 🔲 미구현 |
 | sequence-based cross-block RD prediction | 🔲 미구현 |
 | `polybench_correlation.c` 마지막 3D sparse/tail family | 🔲 미해결 |
 | `polybench_jacobi.c` sequential 2D stencil nests | 🔲 미해결 |
