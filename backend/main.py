@@ -29,6 +29,7 @@ from typing import List, Tuple
 sys.path.insert(0, str(Path(__file__).parent))
 
 from block_trace import block_trace_results
+from ca_metrics import format_ca_metrics
 from lru_sim import LRUProfiler, ReuseProfile
 from plot import aggregate_as_program, plot_histograms
 from predictor import analyze, analyze_blocks
@@ -171,6 +172,7 @@ def analyze_file(
 
     print()
     _print_histogram(profile)
+    print(format_ca_metrics(profile))
     return profile, blocks
 
 
@@ -253,7 +255,10 @@ def main() -> None:
             stems = "_".join(Path(f).stem for f in args.files)
             base = figs_dir / f"{stems}.png"
 
-        plot_histograms(block_results, base.with_stem(base.stem + "_blocks"))
+        plot_histograms(
+            block_results, base.with_stem(base.stem + "_blocks"),
+            show_ca_metrics=True,
+        )
         reusable_results = [
             row for row in block_results
             if any(profile.histogram for profile in row[1:])
@@ -265,7 +270,10 @@ def main() -> None:
         )
         program_results = aggregate_as_program(reusable_results, label=program_label)
         if program_results:
-            plot_histograms(program_results, base.with_stem(base.stem + "_program"))
+            plot_histograms(
+                program_results, base.with_stem(base.stem + "_program"),
+                show_ca_metrics=True,
+            )
 
 
 if __name__ == "__main__":
