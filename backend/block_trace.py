@@ -6,7 +6,7 @@ from parser import LoopBlockNode, parse_trace
 
 
 def unroll_node_actual(raw_node: dict, granularity: str = "element",
-                       cache_line_size: int = 64) -> List[str]:
+                       cache_line_size: int = 32) -> List[str]:
     node = parse_trace([raw_node], sim_bound=2)[0]
 
     def apply_actual(loop: LoopBlockNode) -> None:
@@ -21,7 +21,7 @@ def unroll_node_actual(raw_node: dict, granularity: str = "element",
 
 
 def function_trace(func_entry: dict, granularity: str = "element",
-                   cache_line_size: int = 64) -> List[str]:
+                   cache_line_size: int = 32) -> List[str]:
     trace: List[str] = []
     for node in func_entry["body"]:
         trace.extend(unroll_node_actual(node, granularity, cache_line_size))
@@ -29,7 +29,7 @@ def function_trace(func_entry: dict, granularity: str = "element",
 
 
 def block_trace_results(raw: list, granularity: str = "element",
-                        cache_line_size: int = 64) -> List[Tuple[str, ReuseProfile, List[str]]]:
+                        cache_line_size: int = 32) -> List[Tuple[str, ReuseProfile, List[str]]]:
     expanded = expand_calls(raw)
     results: List[Tuple[str, ReuseProfile, List[str]]] = []
 

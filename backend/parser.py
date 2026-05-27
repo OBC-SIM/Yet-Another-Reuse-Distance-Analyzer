@@ -9,7 +9,7 @@ _AFFINE_INDEX = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$")
 class TraceNode(ABC):
     @abstractmethod
     def unroll(self, env: Dict[str, int], granularity: str = "element",
-               cache_line_size: int = 64) -> List[str]:
+               cache_line_size: int = 32) -> List[str]:
         pass
 
 
@@ -18,7 +18,7 @@ class ScalarNode(TraceNode):
         self.name = name
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
-               cache_line_size: int = 64) -> List[str]:
+               cache_line_size: int = 32) -> List[str]:
         return [self.name]
 
 
@@ -31,7 +31,7 @@ class ArrayNode(TraceNode):
         self.elem_size = elem_size
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
-               cache_line_size: int = 64) -> List[str]:
+               cache_line_size: int = 32) -> List[str]:
         resolved = [resolve_index(idx, env) for idx in self.indices]
         if granularity == "cache-line":
             line_key = self._cache_line_key(resolved, cache_line_size)
@@ -68,7 +68,7 @@ class CallNode(TraceNode):
         self.args = args
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
-               cache_line_size: int = 64) -> List[str]:
+               cache_line_size: int = 32) -> List[str]:
         raise RuntimeError("CallNode must be expanded before unroll")
 
 
@@ -83,7 +83,7 @@ class LoopBlockNode(TraceNode):
         self.body = body
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
-               cache_line_size: int = 64) -> List[str]:
+               cache_line_size: int = 32) -> List[str]:
         result = []
         for i in range(self.start, self.start + self.sim_bound):
             child_env = {**env, self.var: i}

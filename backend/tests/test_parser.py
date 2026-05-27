@@ -32,6 +32,11 @@ class TestArrayNode:
         assert node.unroll({"i": 7}, "cache-line", 64) == ["A-line-0"]
         assert node.unroll({"i": 8}, "cache-line", 64) == ["A-line-1"]
 
+    def test_unroll_cache_line_default_is_32_bytes(self):
+        node = ArrayNode("A", ["i"], elem_size=8)
+        assert node.unroll({"i": 3}, "cache-line") == ["A-line-0"]
+        assert node.unroll({"i": 4}, "cache-line") == ["A-line-1"]
+
     def test_unroll_cache_line_2d_with_shape(self):
         node = ArrayNode("A", ["i", "j"], shape=[4, 16], elem_size=8)
         assert node.unroll({"i": 0, "j": 7}, "cache-line", 64) == ["A-line-0"]

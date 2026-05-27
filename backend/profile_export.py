@@ -24,7 +24,7 @@ def profile_json(profile: ReuseProfile) -> dict:
 
 def export_profile(path: Path, mode: str, profile: ReuseProfile,
                    blocks: List[Tuple[str, ReuseProfile]], export_path: Path,
-                   granularity: str = "element", cache_line_size: int = 64) -> None:
+                   granularity: str = "element", cache_line_size: int = 32) -> None:
     payload = {
         "file": str(path),
         "mode": mode,

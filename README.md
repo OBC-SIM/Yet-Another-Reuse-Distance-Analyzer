@@ -201,7 +201,7 @@ python backend/main.py tasks/test_1d.c --mode unroll --granularity cache-line
 | `--export [PATH]` | RDH JSON 저장. PATH 생략 시 `exports/` 사용 |
 | `--granularity element` | element 단위 trace key 사용 (기본값) |
 | `--granularity cache-line` | unroll 모드에서 cache line 단위 trace key 사용 |
-| `--cache-line-size N` | cache-line granularity의 line 크기 bytes (기본값 64) |
+| `--cache-line-size N` | cache-line granularity의 line 크기 bytes (기본값 32) |
 
 `--plot` / `--save`를 주면 두 파일이 생성됩니다.
 

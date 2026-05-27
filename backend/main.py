@@ -99,7 +99,7 @@ def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
 
 
 def _unroll_block_traces(lat_json: Path, granularity: str = "element",
-                         cache_line_size: int = 64) -> List[Tuple[str, ReuseProfile, List[str]]]:
+                         cache_line_size: int = 32) -> List[Tuple[str, ReuseProfile, List[str]]]:
     """LAT JSON body 순서를 보존해 block별 actual trace를 계산."""
     with open(lat_json) as f:
         return block_trace_results(json.load(f), granularity, cache_line_size)
@@ -110,7 +110,7 @@ def _unroll_blocks(lat_json: Path) -> List[Tuple[str, ReuseProfile]]:
 
 
 def _unroll_file(lat_json: Path, granularity: str = "element",
-                 cache_line_size: int = 64) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
+                 cache_line_size: int = 32) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
     block_traces = _unroll_block_traces(lat_json, granularity, cache_line_size)
     full_trace: List[str] = []
     blocks: List[Tuple[str, ReuseProfile]] = []
@@ -145,7 +145,7 @@ def _print_histogram(profile: ReuseProfile) -> None:
 
 def analyze_file(
     path: Path, plugin_path: Path, mode: str = "predict",
-    granularity: str = "element", cache_line_size: int = 64
+    granularity: str = "element", cache_line_size: int = 32
 ) -> Tuple[ReuseProfile, List[Tuple[str, ReuseProfile]]]:
     """파이프라인 실행 후 (합산 프로파일, 블록별 프로파일 리스트) 반환."""
     print(f"\n{'='*62}")
@@ -210,7 +210,7 @@ def main() -> None:
     )
     parser.add_argument("--granularity", choices=["element", "cache-line"],
                         default="element", help="unroll trace 주소 단위")
-    parser.add_argument("--cache-line-size", type=int, default=64,
+    parser.add_argument("--cache-line-size", type=int, default=32,
                         help="cache-line granularity의 line 크기(bytes)")
     args = parser.parse_args()
 
