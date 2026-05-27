@@ -8,6 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List, Tuple
 
+from ca_metrics import format_ca_metrics
 from lru_sim import ReuseProfile
 from _plot_utils import (
     _add_break_band, _add_break_marks, _bar_ylim, _bin_histogram,
@@ -16,9 +17,18 @@ from _plot_utils import (
 )
 
 
+def _add_ca_metric_text(fig, ax, profile: ReuseProfile) -> None:
+    pos = ax.get_position()
+    fig.text(
+        (pos.x0 + pos.x1) / 2, 0.035, format_ca_metrics(profile).strip(),
+        ha="center", va="bottom", fontsize=8,
+    )
+
+
 def plot_histograms(
     results: List[Tuple[str, ReuseProfile]],
     save_path: Path | None,
+    show_ca_metrics: bool = False,
 ) -> None:
     """예측 RDH를 블록별 subplot에 그린다. scale gap이 크면 broken axis로 분리."""
     os.environ.setdefault("MPLBACKEND", "Agg")
@@ -37,7 +47,7 @@ def plot_histograms(
             labels, counts = ["-1\n(cold)"] + labels, [cold] + counts
         limits = _broken_axis_limits(counts)
         has_break = has_break or limits is not None
-        series.append((label, labels, counts, limits))
+        series.append((label, profile, labels, counts, limits))
 
     if has_break:
         fig = plt.figure(figsize=(4.0 * n, 3.8))
@@ -51,11 +61,14 @@ def plot_histograms(
         bot_axes = [None] * n
 
     break_axes = []
-    for i, (label, labels, counts, limits) in enumerate(series):
+    metric_axes = []
+    for i, (label, profile, labels, counts, limits) in enumerate(series):
         ax, ax_cold = top_axes[i], bot_axes[i]
         if not counts:
             ax.text(0.5, 0.5, "No reuse", ha="center", va="center")
             ax.set_title(label, fontsize=13, pad=14)
+            if show_ca_metrics:
+                metric_axes.append((ax, profile))
             if ax_cold:
                 ax_cold.set_visible(False)
             continue
@@ -74,6 +87,8 @@ def plot_histograms(
             ax.yaxis.set_major_locator(MaxNLocator(integer=True, prune="lower"))
             ax_cold.yaxis.set_major_locator(MaxNLocator(integer=True, nbins=2, prune="upper"))
             ax_cold.set_xlabel("Reuse Distance")
+            if show_ca_metrics:
+                metric_axes.append((ax_cold, profile))
             _add_break_marks(ax, ax_cold)
             break_axes.append((ax, ax_cold))
             sns.despine(ax=ax)
@@ -81,12 +96,17 @@ def plot_histograms(
         else:
             _bar_ylim(ax, counts)
             ax.set_xlabel("Reuse Distance")
+            if show_ca_metrics:
+                metric_axes.append((ax, profile))
             sns.despine(ax=ax)
             if ax_cold is not None:
                 ax_cold.set_visible(False)
 
+    bottom = 0.40 if show_ca_metrics else 0.28
     fig.subplots_adjust(left=0.14 if n == 1 else 0.08, right=0.98,
-                        bottom=0.28, top=0.84, hspace=0.0)
+                        bottom=bottom, top=0.84, hspace=0.0)
+    for ax, profile in metric_axes:
+        _add_ca_metric_text(fig, ax, profile)
     for ax, ax_cold in break_axes:
         _add_break_band(ax, ax_cold)
     if save_path:

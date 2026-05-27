@@ -5,7 +5,8 @@ from lru_sim import LRUProfiler, ReuseProfile
 from parser import LoopBlockNode, parse_trace
 
 
-def unroll_node_actual(raw_node: dict) -> List[str]:
+def unroll_node_actual(raw_node: dict, granularity: str = "element",
+                       cache_line_size: int = 32) -> List[str]:
     node = parse_trace([raw_node], sim_bound=2)[0]
 
     def apply_actual(loop: LoopBlockNode) -> None:
@@ -16,17 +17,19 @@ def unroll_node_actual(raw_node: dict) -> List[str]:
 
     if isinstance(node, LoopBlockNode):
         apply_actual(node)
-    return node.unroll({})
+    return node.unroll({}, granularity, cache_line_size)
 
 
-def function_trace(func_entry: dict) -> List[str]:
+def function_trace(func_entry: dict, granularity: str = "element",
+                   cache_line_size: int = 32) -> List[str]:
     trace: List[str] = []
     for node in func_entry["body"]:
-        trace.extend(unroll_node_actual(node))
+        trace.extend(unroll_node_actual(node, granularity, cache_line_size))
     return trace
 
 
-def block_trace_results(raw: list) -> List[Tuple[str, ReuseProfile, List[str]]]:
+def block_trace_results(raw: list, granularity: str = "element",
+                        cache_line_size: int = 32) -> List[Tuple[str, ReuseProfile, List[str]]]:
     expanded = expand_calls(raw)
     results: List[Tuple[str, ReuseProfile, List[str]]] = []
 
@@ -43,11 +46,11 @@ def block_trace_results(raw: list) -> List[Tuple[str, ReuseProfile, List[str]]]:
         for node in func_entry["body"]:
             if node["type"] == "Loop":
                 flush_flat(func_name, flat_trace)
-                trace = unroll_node_actual(node)
+                trace = unroll_node_actual(node, granularity, cache_line_size)
                 profile = LRUProfiler.calculate(trace)
                 name = f"{func_name}  {node['var']}-loop (bound={node['bound']})"
                 results.append((name, profile, trace))
             else:
-                flat_trace.extend(unroll_node_actual(node))
+                flat_trace.extend(unroll_node_actual(node, granularity, cache_line_size))
         flush_flat(func_name, flat_trace)
     return results

@@ -27,6 +27,30 @@ class TestArrayNode:
     def test_unroll_affine_indices(self):
         assert ArrayNode("A", ["i-1", "i", "i+1"]).unroll({"i": 3}) == ["A-2-3-4"]
 
+    def test_unroll_cache_line_1d(self):
+        node = ArrayNode("A", ["i"], elem_size=8)
+        assert node.unroll({"i": 7}, "cache-line", 64) == ["A-line-0"]
+        assert node.unroll({"i": 8}, "cache-line", 64) == ["A-line-1"]
+
+    def test_unroll_cache_line_default_is_32_bytes(self):
+        node = ArrayNode("A", ["i"], elem_size=8)
+        assert node.unroll({"i": 3}, "cache-line") == ["A-line-0"]
+        assert node.unroll({"i": 4}, "cache-line") == ["A-line-1"]
+
+    def test_unroll_cache_line_2d_with_shape(self):
+        node = ArrayNode("A", ["i", "j"], shape=[4, 16], elem_size=8)
+        assert node.unroll({"i": 0, "j": 7}, "cache-line", 64) == ["A-line-0"]
+        assert node.unroll({"i": 0, "j": 8}, "cache-line", 64) == ["A-line-1"]
+        assert node.unroll({"i": 1, "j": 0}, "cache-line", 64) == ["A-line-2"]
+
+    def test_unroll_cache_line_2d_with_trailing_shape(self):
+        node = ArrayNode("A", ["i", "j"], shape=[16], elem_size=8)
+        assert node.unroll({"i": 1, "j": 0}, "cache-line", 64) == ["A-line-2"]
+
+    def test_cache_line_falls_back_without_shape(self):
+        node = ArrayNode("A", ["i", "j"])
+        assert node.unroll({"i": 0, "j": 1}, "cache-line", 64) == ["A-0-1"]
+
 
 class TestCallNode:
     def test_unroll_requires_expansion(self):
@@ -73,6 +97,13 @@ class TestParseTrace:
         assert len(nodes) == 1
         assert isinstance(nodes[0], ArrayNode)
         assert nodes[0].indices == ["i", "j"]
+
+    def test_parse_array_shape_metadata(self):
+        data = [{"type": "Array", "name": "A", "indices": ["i", "j"],
+                 "shape": [4, 16], "elem_size": 8}]
+        nodes = parse_trace(data)
+        assert nodes[0].shape == [4, 16]
+        assert nodes[0].elem_size == 8
 
     def test_parse_loop_node(self):
         data = [{"type": "Loop", "var": "i", "bound": 32, "depth": 1,

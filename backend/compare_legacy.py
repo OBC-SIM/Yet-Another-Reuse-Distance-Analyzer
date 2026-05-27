@@ -19,6 +19,7 @@ from _plot_utils import (  # noqa: E402
     _setup_theme,
 )
 from block_trace import function_trace  # noqa: E402
+from ca_metrics import calculate_ca_metrics  # noqa: E402
 from calls import expand_calls  # noqa: E402
 from lru_sim import LRUProfiler, ReuseProfile  # noqa: E402
 from main import _DEFAULT_PLUGIN, _REPO_ROOT, _to_ll, run_llvm_pass  # noqa: E402
@@ -127,13 +128,10 @@ def _weighted_mean_rd(profile: ReuseProfile) -> float:
     return sum(rd * count for rd, count in profile.histogram.items()) / total
 
 
-def _ca_score(mean_rd: float) -> float:
-    return 1.0 / (1.0 + mean_rd)
-
-
 def _comparison_metrics(gt: ReuseProfile, legacy: ReuseProfile) -> dict:
     gt_mean, legacy_mean = _weighted_mean_rd(gt), _weighted_mean_rd(legacy)
-    gt_score, legacy_score = _ca_score(gt_mean), _ca_score(legacy_mean)
+    gt_score = calculate_ca_metrics(gt).ca_score or 0.0
+    legacy_score = calculate_ca_metrics(legacy).ca_score or 0.0
     gt_reuses, legacy_reuses = sum(gt.histogram.values()), sum(legacy.histogram.values())
     score_error = legacy_score - gt_score
     return {

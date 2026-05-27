@@ -10,6 +10,9 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/DataLayout.h"
+
+#include "ArrayMetadata.hpp"
 
 namespace lat {
 
@@ -75,7 +78,7 @@ std::vector<std::string> resolveIndex(llvm::Value* Idx, llvm::ScalarEvolution& S
  *
  * GetElementPtrInst(명령어 GEP)와 ConstantExpr GEP(전역 배열 상수 접근)를
  * 모두 처리하기 위해 GEPOperator를 인자로 받는다.
- * 소스 타입이 배열([N x T]*)이면 첫 번째 인덱스(포인터 역참조 0)를 건너뛴다.
+ * multi-index GEP에서 첫 번째 인덱스가 상수 0이면 포인터 역참조로 보고 건너뛴다.
  *
  * @param GEP    분석할 GEPOperator (GetElementPtrInst 또는 ConstantExpr GEP)
  * @param SE     ScalarEvolution 분석 결과
@@ -119,5 +122,14 @@ std::string getValueName(llvm::Value* V, const NameMap& names);
  * @return annotation이 존재하면 true
  */
 bool hasFunctionAnnotation(llvm::Function& F, llvm::StringRef Annotation);
+
+/**
+ * @brief GEP source type에서 배열 shape와 element byte size를 추출한다.
+ *
+ * @param GEP 분석할 GEPOperator
+ * @param DL  모듈 DataLayout
+ * @return 추론 가능한 배열 metadata. shape를 모르면 비워두고 elem_size만 반환할 수 있다.
+ */
+ArrayMetadata getArrayMetadata(llvm::GEPOperator* GEP, const llvm::DataLayout& DL);
 
 }  // namespace lat
