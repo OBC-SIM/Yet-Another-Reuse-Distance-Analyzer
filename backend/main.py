@@ -190,13 +190,13 @@ def main() -> None:
     parser.add_argument(
         "--mode",
         choices=["predict", "unroll"],
-        default="predict",
-        help="predict: Dilation 예측 (기본), unroll: 실제 LRU 시뮬레이션",
+        default="unroll",
+        help="predict: Dilation 예측, unroll: 실제 LRU 시뮬레이션 (기본)",
     )
     parser.add_argument(
         "--plot",
         action="store_true",
-        help="seaborn 히스토그램 저장 (figs/<stem>.png). --save와 함께 쓰면 --save 경로 우선",
+        help="seaborn 히스토그램 저장 (기본: figs/<stem>.png). --save와 함께 쓰면 --save 경로 우선",
     )
     parser.add_argument(
         "--save",
@@ -211,9 +211,9 @@ def main() -> None:
         help="RDH 결과를 JSON 파일 또는 디렉토리로 저장 (기본: exports/)",
     )
     parser.add_argument("--granularity", choices=["element", "cache-line"],
-                        default="element", help="unroll trace 주소 단위")
+                        default="cache-line", help="unroll trace 주소 단위 (기본: cache-line)")
     parser.add_argument("--cache-line-size", type=int, default=32,
-                        help="cache-line granularity의 line 크기(bytes)")
+                        help="cache-line granularity의 line 크기(bytes) (기본: 32)")
     args = parser.parse_args()
 
     plugin = Path(args.plugin)
