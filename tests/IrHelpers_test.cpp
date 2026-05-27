@@ -23,7 +23,6 @@ using namespace lat;
 using namespace llvm;
 
 // ── getBaseName ───────────────────────────────────────────────
-
 TEST(GetBaseName, UnnamedAllocasAreDistinct) {
     // irOperandName fallback 회귀 테스트:
     // 무명 alloca 두 개가 서로 다른 이름을 받아야 한다
@@ -141,7 +140,6 @@ TEST(GetBaseName, UnnamedAllocAndArgDoNotCollide) {
 }
 
 // ── getValueName / resolveIndex ──────────────────────────────
-
 TEST(GetValueName, ConstantsUseIntegerText) {
     LLVMContext Ctx;
     NameMap names;
@@ -191,7 +189,6 @@ TEST(ResolveIndex, ScalarArgumentLoadKeepsDebugName) {
 }
 
 // ── function annotations ─────────────────────────────────────
-
 static GlobalVariable* makeAnnotationString(Module& M, StringRef Text, StringRef Name) {
     LLVMContext& Ctx = M.getContext();
     auto* Str = ConstantDataArray::getString(Ctx, Text, true);
@@ -199,12 +196,8 @@ static GlobalVariable* makeAnnotationString(Module& M, StringRef Text, StringRef
         M, Str->getType(), true, GlobalValue::PrivateLinkage, Str, Name);
 }
 
-static Constant* annotationEntry(
-    Module& M,
-    Function* F,
-    GlobalVariable* Annotation,
-    StructType* EntryTy
-) {
+static Constant* annotationEntry(Module& M, Function* F,
+                                 GlobalVariable* Annotation, StructType* EntryTy) {
     LLVMContext& Ctx = M.getContext();
     auto* I32 = Type::getInt32Ty(Ctx);
     auto* I8Ptr = Type::getInt8PtrTy(Ctx);

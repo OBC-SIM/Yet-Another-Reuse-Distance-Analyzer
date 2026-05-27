@@ -42,6 +42,7 @@ if(GTEST_LIB AND GTEST_MAIN_LIB)
     add_executable(LoopAnnotatedTraceTests
         tests/Statement_test.cpp
         tests/IrHelpers_test.cpp
+        tests/IrHelpersGep_test.cpp
         tests/ArrayMetadata_test.cpp
         src/ArrayMetadata.cpp
         src/IrHelpers.cpp

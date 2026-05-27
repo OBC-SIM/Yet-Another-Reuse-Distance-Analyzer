@@ -78,7 +78,7 @@ std::vector<std::string> resolveIndex(llvm::Value* Idx, llvm::ScalarEvolution& S
  *
  * GetElementPtrInst(명령어 GEP)와 ConstantExpr GEP(전역 배열 상수 접근)를
  * 모두 처리하기 위해 GEPOperator를 인자로 받는다.
- * 소스 타입이 배열([N x T]*)이면 첫 번째 인덱스(포인터 역참조 0)를 건너뛴다.
+ * multi-index GEP에서 첫 번째 인덱스가 상수 0이면 포인터 역참조로 보고 건너뛴다.
  *
  * @param GEP    분석할 GEPOperator (GetElementPtrInst 또는 ConstantExpr GEP)
  * @param SE     ScalarEvolution 분석 결과

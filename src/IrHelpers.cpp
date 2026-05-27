@@ -208,8 +208,9 @@ std::vector<std::string> getIndexVars(GEPOperator* GEP, ScalarEvolution& SE,
         result.insert(result.end(), parentIndices.begin(), parentIndices.end());
     }
     auto it = GEP->idx_begin();
-    // [N x T]* 소스 타입이면 첫 번째 인덱스는 포인터 역참조(항상 0) — 스킵
-    if (GEP->getSourceElementType()->isArrayTy())
+    // multi-index GEP의 leading zero만 포인터 역참조로 보고 스킵한다.
+    if (GEP->getNumIndices() > 1 && isa<ConstantInt>(*it) &&
+        cast<ConstantInt>(*it)->isZero())
         ++it;
     for (; it != GEP->idx_end(); ++it)
         for (auto& name : resolveIndex(*it, SE, names))
