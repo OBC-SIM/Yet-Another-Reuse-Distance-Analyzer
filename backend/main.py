@@ -255,10 +255,10 @@ def main() -> None:
             stems = "_".join(Path(f).stem for f in args.files)
             base = figs_dir / f"{stems}.png"
 
-        plot_histograms(
-            block_results, base.with_stem(base.stem + "_blocks"),
-            show_ca_metrics=True,
-        )
+        blocks_path = base.with_stem(base.stem + "_blocks")
+        plot_histograms(block_results, blocks_path, show_ca_metrics=True)
+        print(f"  플롯 저장 → {blocks_path.resolve()}")
+
         reusable_results = [
             row for row in block_results
             if any(profile.histogram for profile in row[1:])
@@ -270,10 +270,9 @@ def main() -> None:
         )
         program_results = aggregate_as_program(reusable_results, label=program_label)
         if program_results:
-            plot_histograms(
-                program_results, base.with_stem(base.stem + "_program"),
-                show_ca_metrics=True,
-            )
+            program_path = base.with_stem(base.stem + "_program")
+            plot_histograms(program_results, program_path, show_ca_metrics=True)
+            print(f"  플롯 저장 → {program_path.resolve()}")
 
 
 if __name__ == "__main__":
