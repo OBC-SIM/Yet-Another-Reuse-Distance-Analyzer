@@ -63,6 +63,29 @@ def _plot_single_bars(ax, labels: List[str], counts: List):
     return list(bars)
 
 
+def _show_bar_counts(ax, bars: List, counts: List, ylim_min: float = 0.0,
+                     inside: bool = False) -> None:
+    """bar 위(또는 안)에 count 값을 표시한다. ylim 범위 밖 bar는 건너뛴다."""
+    ylim_max = ax.get_ylim()[1]
+    for bar, count in zip(bars, counts):
+        if count == 0 or not (ylim_min <= count <= ylim_max):
+            continue
+        if inside:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() * 0.5,
+                str(count),
+                ha="center", va="center", fontsize=7, color="white",
+            )
+        else:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + ylim_max * 0.01,
+                str(count),
+                ha="center", va="bottom", fontsize=7, clip_on=False,
+            )
+
+
 def _plot_grouped_bars(ax, labels: List[str], gt_counts: List, pred_counts: List):
     import numpy as np
     x = np.arange(len(labels))

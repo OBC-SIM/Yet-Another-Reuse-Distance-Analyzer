@@ -214,6 +214,8 @@ def main() -> None:
                         default="cache-line", help="unroll trace 주소 단위 (기본: cache-line)")
     parser.add_argument("--cache-line-size", type=int, default=32,
                         help="cache-line granularity의 line 크기(bytes) (기본: 32)")
+    parser.add_argument("--show-counts", action="store_true",
+                        help="막대 위에 count 값 표시")
     args = parser.parse_args()
 
     plugin = Path(args.plugin)
@@ -258,13 +260,15 @@ def main() -> None:
             base = figs_dir / f"{stems}.png"
 
         blocks_path = base.with_stem(base.stem + "_blocks")
-        plot_histograms(block_results, blocks_path, show_ca_metrics=True)
+        plot_histograms(block_results, blocks_path, show_ca_metrics=True,
+                        show_counts=args.show_counts)
         print(f"  플롯 저장 → {blocks_path.resolve()}")
 
         program_results = [(label, p) for label, p in file_profiles if p.histogram]
         if program_results:
             program_path = base.with_stem(base.stem + "_program")
-            plot_histograms(program_results, program_path, show_ca_metrics=True)
+            plot_histograms(program_results, program_path, show_ca_metrics=True,
+                            show_counts=args.show_counts)
             print(f"  플롯 저장 → {program_path.resolve()}")
 
 

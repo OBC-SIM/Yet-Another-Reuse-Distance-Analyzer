@@ -13,7 +13,7 @@ from lru_sim import ReuseProfile
 from _plot_utils import (
     _add_break_band, _add_break_marks, _bar_ylim, _bin_histogram,
     _broken_axis_limits, _plot_grouped_bars, _plot_single_bars,
-    _save_figure, _setup_theme,
+    _save_figure, _setup_theme, _show_bar_counts,
 )
 
 
@@ -29,6 +29,7 @@ def plot_histograms(
     results: List[Tuple[str, ReuseProfile]],
     save_path: Path | None,
     show_ca_metrics: bool = False,
+    show_counts: bool = False,
 ) -> None:
     """예측 RDH를 블록별 subplot에 그린다. scale gap이 크면 broken axis로 분리."""
     os.environ.setdefault("MPLBACKEND", "Agg")
@@ -73,20 +74,23 @@ def plot_histograms(
                 ax_cold.set_visible(False)
             continue
 
-        _plot_single_bars(ax, labels, counts)
+        bars = _plot_single_bars(ax, labels, counts)
         ax.set_ylabel("Frequency", labelpad=12)
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_title(label, fontsize=13, pad=14)
 
         if ax_cold is not None and limits is not None:
             low_max, high_min = limits
-            _plot_single_bars(ax_cold, labels, counts)
+            bars_cold = _plot_single_bars(ax_cold, labels, counts)
             ax.set_ylim(high_min, max(counts) * 1.18)
             ax_cold.set_ylim(0, low_max)
             ax.tick_params(labelbottom=False, bottom=False)
             ax.yaxis.set_major_locator(MaxNLocator(integer=True, prune="lower"))
             ax_cold.yaxis.set_major_locator(MaxNLocator(integer=True, nbins=2, prune="upper"))
             ax_cold.set_xlabel("Reuse Distance")
+            if show_counts:
+                _show_bar_counts(ax, bars, counts, ylim_min=high_min)
+                _show_bar_counts(ax_cold, bars_cold, counts, ylim_min=0.0, inside=True)
             if show_ca_metrics:
                 metric_axes.append((ax_cold, profile))
             _add_break_marks(ax, ax_cold)
@@ -96,6 +100,8 @@ def plot_histograms(
         else:
             _bar_ylim(ax, counts)
             ax.set_xlabel("Reuse Distance")
+            if show_counts:
+                _show_bar_counts(ax, bars, counts)
             if show_ca_metrics:
                 metric_axes.append((ax, profile))
             sns.despine(ax=ax)
