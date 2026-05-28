@@ -223,6 +223,7 @@ def main() -> None:
         sys.exit(1)
 
     block_results: List[Tuple[str, ReuseProfile]] = []
+    file_profiles: List[Tuple[str, ReuseProfile]] = []
     for file_str in args.files:
         path = Path(file_str)
         if not path.exists():
@@ -236,6 +237,7 @@ def main() -> None:
                 path, plugin, args.mode, args.granularity, args.cache_line_size
             )
             block_results.extend(blocks)
+            file_profiles.append((path.name, profile))
             if args.export:
                 export_path = export_path_for(path, args.export, len(args.files), args.mode)
                 export_profile(path, args.mode, profile, blocks, export_path,
@@ -259,16 +261,7 @@ def main() -> None:
         plot_histograms(block_results, blocks_path, show_ca_metrics=True)
         print(f"  플롯 저장 → {blocks_path.resolve()}")
 
-        reusable_results = [
-            row for row in block_results
-            if any(profile.histogram for profile in row[1:])
-        ]
-        program_label = (
-            Path(args.files[0]).name
-            if len(args.files) == 1
-            else ", ".join(Path(f).name for f in args.files)
-        )
-        program_results = aggregate_as_program(reusable_results, label=program_label)
+        program_results = [(label, p) for label, p in file_profiles if p.histogram]
         if program_results:
             program_path = base.with_stem(base.stem + "_program")
             plot_histograms(program_results, program_path, show_ca_metrics=True)
