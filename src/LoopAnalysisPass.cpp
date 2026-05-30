@@ -19,6 +19,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "../include/AccessBuilder.hpp"
 #include "../include/IrHelpers.hpp"
 #include "../include/JsonExportVisitor.hpp"
 #include "../include/Statement.hpp"
@@ -27,75 +28,18 @@ using namespace llvm;
 // lat::LoopNest는 llvm::LoopNest와 충돌하므로 명시적으로 lat:: 사용
 using lat::NameMap;
 using lat::Statement;
-using lat::ScalarAccess;
-using lat::ArrayAccess;
 using lat::buildDebugNameMap;
 using lat::getInductionVarName;
 using lat::getTripCount;
 using lat::getLoopStart;
-using lat::getIndexVars;
-using lat::getBaseName;
 using lat::getValueName;
 using lat::hasFunctionAnnotation;
+using lat::makeAccessFromInstr;
 
 namespace {
 
 constexpr llvm::StringLiteral AnalyzeAnnotation = "yard.analyze";
 constexpr llvm::StringLiteral InlineAnnotation = "yard.inline";
-
-// ── 명령어 → Statement 변환 ───────────────────────────────
-
-/**
- * @brief Load/Store 명령어 하나에서 Statement를 생성한다.
- *
- * GEP 있으면 ArrayAccess/ScalarAccess, GEP 없으면 Argument/Global/Alloca에
- * 한해 ScalarAccess로 처리한다. 해당 없으면 nullptr 반환.
- *
- * @param I      분석할 명령어
- * @param SE     ScalarEvolution 분석 결과
- * @param names  llvm.dbg.value 기반 Value → 변수명 맵
- */
-static std::unique_ptr<Statement> makeAccessFromInstr(Instruction& I,
-                                                       ScalarEvolution& SE,
-                                                       const NameMap& names,
-                                                       const std::set<const Function*>& inlineFuncs,
-                                                       const Function& current) {
-    if (auto* Call = dyn_cast<CallBase>(&I)) {
-        if (Function* Callee = Call->getCalledFunction()) {
-            if (Callee != &current && inlineFuncs.count(Callee)) {
-                std::vector<std::string> args;
-                for (Value* Arg : Call->args())
-                    args.push_back(getValueName(Arg, names));
-                return std::make_unique<lat::CallStmt>(Callee->getName().str(), args);
-            }
-        }
-        return nullptr;
-    }
-
-    Value* ptr = nullptr;
-    if (auto* Load  = dyn_cast<LoadInst>(&I))  ptr = Load->getPointerOperand();
-    else if (auto* Store = dyn_cast<StoreInst>(&I)) ptr = Store->getPointerOperand();
-    if (!ptr) return nullptr;
-
-    // GetElementPtrInst(명령어)와 ConstantExpr GEP(전역 배열 상수 접근) 모두 처리
-    if (auto* GEP = dyn_cast<GEPOperator>(ptr)) {
-        auto indices = getIndexVars(GEP, SE, names);
-        std::string base = getBaseName(GEP->getPointerOperand(), names);
-        if (indices.empty()) return std::make_unique<ScalarAccess>(base);
-        return std::make_unique<ArrayAccess>(base, indices, lat::getArrayMetadata(GEP, I.getModule()->getDataLayout()));
-    }
-
-    // GEP 없는 직접 포인터 접근 (e.g. -O1에서 arr[0]이 base pointer로 최적화된 경우)
-    Value* base = ptr->stripPointerCasts();
-    if (!isa<Argument>(base) && !isa<GlobalVariable>(base) && !isa<AllocaInst>(base))
-        return nullptr;
-    std::string name = getBaseName(ptr, names);
-    // base가 다른 GEP의 포인터 피연산자로도 쓰이면 배열의 index-0 접근으로 처리
-    for (const User* U : base->users())
-        if (isa<GetElementPtrInst>(U))
-            return std::make_unique<ArrayAccess>(name, std::vector<std::string>{"0"});
-    return std::make_unique<ScalarAccess>(name);
-}
 
 // ── 트리 빌더 ─────────────────────────────────────────────
 

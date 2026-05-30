@@ -14,8 +14,9 @@ class TraceNode(ABC):
 
 
 class ScalarNode(TraceNode):
-    def __init__(self, name: str):
+    def __init__(self, name: str, op: str | None = None):
         self.name = name
+        self.op = op
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
                cache_line_size: int = 32) -> List[str]:
@@ -24,11 +25,13 @@ class ScalarNode(TraceNode):
 
 class ArrayNode(TraceNode):
     def __init__(self, name: str, indices: List[str],
-                 shape: List[int] | None = None, elem_size: int | None = None):
+                 shape: List[int] | None = None, elem_size: int | None = None,
+                 op: str | None = None):
         self.name = name
         self.indices = indices
         self.shape = shape
         self.elem_size = elem_size
+        self.op = op
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
                cache_line_size: int = 32) -> List[str]:
@@ -111,10 +114,10 @@ def index_variable(index: str) -> str | None:
 def _parse_node(data: dict, sim_bound: int) -> TraceNode:
     t = data["type"]
     if t == "Scalar":
-        return ScalarNode(data["name"])
+        return ScalarNode(data["name"], data.get("op"))
     elif t == "Array":
         return ArrayNode(data["name"], data["indices"],
-                         data.get("shape"), data.get("elem_size"))
+                         data.get("shape"), data.get("elem_size"), data.get("op"))
     elif t == "Call":
         return CallNode(data["callee"], data.get("args", []))
     elif t == "Loop":

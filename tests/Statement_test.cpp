@@ -43,6 +43,15 @@ TEST(ScalarAccess, JsonFields) {
     EXPECT_EQ(str(obj->getString("name")), "x");
 }
 
+TEST(ScalarAccess, JsonOpField) {
+    ScalarAccess s("x", "load");
+    JsonExportVisitor vis;
+    s.accept(vis);
+    auto* obj = toObj(vis.getResult());
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(str(obj->getString("op")), "load");
+}
+
 // ============================================================
 // ArrayAccess
 // ============================================================
@@ -68,6 +77,15 @@ TEST(ArrayAccess, JsonFields) {
     ASSERT_EQ(indices->size(), 2u);
     EXPECT_EQ(str((*indices)[0].getAsString()), "i");
     EXPECT_EQ(str((*indices)[1].getAsString()), "j");
+}
+
+TEST(ArrayAccess, JsonOpField) {
+    ArrayAccess a("arr", {"i"}, "store");
+    JsonExportVisitor vis;
+    a.accept(vis);
+    auto* obj = toObj(vis.getResult());
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(str(obj->getString("op")), "store");
 }
 
 TEST(ArrayAccess, JsonMetadataFields) {

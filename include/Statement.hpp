@@ -36,14 +36,18 @@ public:
  * @brief 루프 인덱스와 무관한 스칼라 메모리 접근을 나타낸다.
  *
  * @param name 접근 대상 변수 이름 (LLVM Value 이름에서 추출)
+ * @param op   접근 종류. "load" 또는 "store"
  */
 class ScalarAccess : public Statement {
 public:
-    explicit ScalarAccess(std::string name) : name_(std::move(name)) {}
+    explicit ScalarAccess(std::string name, std::string op = "")
+        : name_(std::move(name)), op_(std::move(op)) {}
     void accept(Visitor& v) override { v.visit(*this); }
     const std::string& getName() const { return name_; }
+    const std::string& getOp()   const { return op_; }
 private:
     std::string name_;
+    std::string op_;
 };
 
 // ── ArrayAccess: 단말 노드 ─────────────────────────────────
@@ -52,23 +56,28 @@ private:
  *
  * @param array_name  배열 베이스 포인터 이름
  * @param index_vars  각 차원의 인덱스 변수 이름 목록 (루프 IV 기반)
+ * @param op          접근 종류. "load" 또는 "store"
  */
 class ArrayAccess : public Statement {
 public:
-    ArrayAccess(std::string array_name, std::vector<std::string> index_vars)
-        : array_name_(std::move(array_name)), index_vars_(std::move(index_vars)) {}
     ArrayAccess(std::string array_name, std::vector<std::string> index_vars,
-                ArrayMetadata metadata)
+                std::string op = "")
         : array_name_(std::move(array_name)), index_vars_(std::move(index_vars)),
-          metadata_(std::move(metadata)) {}
+          op_(std::move(op)) {}
+    ArrayAccess(std::string array_name, std::vector<std::string> index_vars,
+                ArrayMetadata metadata, std::string op = "")
+        : array_name_(std::move(array_name)), index_vars_(std::move(index_vars)),
+          metadata_(std::move(metadata)), op_(std::move(op)) {}
     void accept(Visitor& v) override { v.visit(*this); }
     const std::string& getArrayName()               const { return array_name_; }
     const std::vector<std::string>& getIndexVars()  const { return index_vars_; }
     const ArrayMetadata& getMetadata()              const { return metadata_; }
+    const std::string& getOp()                      const { return op_; }
 private:
     std::string              array_name_;
     std::vector<std::string> index_vars_;
     ArrayMetadata            metadata_;
+    std::string              op_;
 };
 
 // ── CallStmt: 단말 노드 ───────────────────────────────────

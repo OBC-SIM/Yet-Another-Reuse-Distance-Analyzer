@@ -14,6 +14,7 @@ add_definitions(${LLVM_DEFINITIONS})
 
 # ── LLVM Pass (shared library) ────────────────────────────
 add_library(LoopAnnotatedTrace MODULE
+    src/AccessBuilder.cpp
     src/ArrayMetadata.cpp
     src/IrHelpers.cpp
     src/LoopAnalysisPass.cpp

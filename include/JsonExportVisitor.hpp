@@ -18,10 +18,13 @@ public:
     const llvm::json::Value& getResult() const { return Result_; }
 
     void visit(ScalarAccess& node) override {
-        Result_ = llvm::json::Object{
+        llvm::json::Object obj{
             {"type", "Scalar"},
             {"name", node.getName()}
         };
+        if (!node.getOp().empty())
+            obj["op"] = node.getOp();
+        Result_ = std::move(obj);
     }
 
     void visit(ArrayAccess& node) override {
@@ -42,6 +45,8 @@ public:
         }
         if (metadata.elem_size > 0)
             obj["elem_size"] = metadata.elem_size;
+        if (!node.getOp().empty())
+            obj["op"] = node.getOp();
         Result_ = std::move(obj);
     }
 
