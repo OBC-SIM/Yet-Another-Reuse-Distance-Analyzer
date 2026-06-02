@@ -111,6 +111,17 @@ class TestParseTrace:
         nodes = parse_trace(data)
         assert nodes[0].object_id == "global::A"
 
+    def test_parse_array_access_path(self):
+        path = [
+            {"kind": "field", "name": "items", "index": 1},
+            {"kind": "index", "value": "i"},
+            {"kind": "field", "name": "x", "index": 0},
+        ]
+        data = [{"type": "Array", "name": "o.items[i].x", "object": "global::o",
+                 "indices": ["i"], "access_path": path}]
+        nodes = parse_trace(data)
+        assert nodes[0].access_path == path
+
     def test_parse_v2_metadata_fills_array_shape(self):
         data = {
             "schema_version": 2,

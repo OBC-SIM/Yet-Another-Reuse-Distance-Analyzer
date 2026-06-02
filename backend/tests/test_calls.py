@@ -104,3 +104,40 @@ def test_expand_calls_fills_v2_array_metadata():
     expanded = expand_calls(raw)
     assert expanded[0]["body"][0]["shape"] == [16]
     assert expanded[0]["body"][0]["elem_size"] == 8
+
+
+def test_expand_calls_substitutes_access_path_indices():
+    raw = [
+        {
+            "function": "helper",
+            "params": ["x", "idx"],
+            "annotations": ["yard.inline"],
+            "body": [{
+                "type": "Array",
+                "name": "x.items[idx].value",
+                "indices": ["idx"],
+                "access_path": [
+                    {"kind": "field", "name": "items", "index": 1},
+                    {"kind": "index", "value": "idx"},
+                    {"kind": "field", "name": "value", "index": 0},
+                ],
+            }],
+        },
+        {
+            "function": "kernel",
+            "params": ["a"],
+            "annotations": ["yard.analyze"],
+            "body": [{"type": "Call", "callee": "helper", "args": ["a", "i"]}],
+        },
+    ]
+
+    expanded = expand_calls(raw)
+    node = expanded[0]["body"][0]
+
+    assert node["name"] == "a.items[i].value"
+    assert node["indices"] == ["i"]
+    assert node["access_path"] == [
+        {"kind": "field", "name": "items", "index": 1},
+        {"kind": "index", "value": "i"},
+        {"kind": "field", "name": "value", "index": 0},
+    ]

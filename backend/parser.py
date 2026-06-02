@@ -28,13 +28,15 @@ class ScalarNode(TraceNode):
 class ArrayNode(TraceNode):
     def __init__(self, name: str, indices: List[str],
                  shape: List[int] | None = None, elem_size: int | None = None,
-                 op: str | None = None, object_id: str | None = None):
+                 op: str | None = None, object_id: str | None = None,
+                 access_path: List[dict] | None = None):
         self.name = name
         self.indices = indices
         self.shape = shape
         self.elem_size = elem_size
         self.op = op
         self.object_id = object_id
+        self.access_path = access_path
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
                cache_line_size: int = 32) -> List[str]:
@@ -121,7 +123,7 @@ def _parse_node(data: dict, sim_bound: int) -> TraceNode:
     elif t == "Array":
         return ArrayNode(data["name"], data["indices"],
                          data.get("shape"), data.get("elem_size"), data.get("op"),
-                         data.get("object"))
+                         data.get("object"), data.get("access_path"))
     elif t == "Call":
         return CallNode(data["callee"], data.get("args", []))
     elif t == "Loop":

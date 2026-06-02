@@ -8,6 +8,7 @@ from ape_schema import normalize_module
 
 
 _AFFINE_NAME = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$")
+_IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 ANALYZE_ANNOTATION = "yard.analyze"
 INLINE_ANNOTATION = "yard.inline"
 
@@ -21,11 +22,25 @@ def _substitute_name(name: str, mapping: Dict[str, str]) -> str:
     return name
 
 
+def _substitute_text(text: str, mapping: Dict[str, str]) -> str:
+    return _IDENTIFIER.sub(lambda match: mapping.get(match.group(0), match.group(0)), text)
+
+
+def _substitute_access_path(path: List[dict], mapping: Dict[str, str]) -> List[dict]:
+    result = copy.deepcopy(path)
+    for segment in result:
+        if segment.get("kind") == "index" and "value" in segment:
+            segment["value"] = _substitute_name(segment["value"], mapping)
+    return result
+
+
 def _substitute_node(node: dict, mapping: Dict[str, str]) -> dict:
     node = copy.deepcopy(node)
     if node["type"] == "Array":
-        node["name"] = _substitute_name(node["name"], mapping)
+        node["name"] = _substitute_text(node["name"], mapping)
         node["indices"] = [_substitute_name(index, mapping) for index in node["indices"]]
+        if "access_path" in node:
+            node["access_path"] = _substitute_access_path(node["access_path"], mapping)
     elif node["type"] == "Scalar":
         node["name"] = _substitute_name(node["name"], mapping)
     elif node["type"] == "Loop":

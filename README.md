@@ -36,9 +36,17 @@ RDH (Reuse Distance Histogram)
 |------|------|------|
 | Function wrapper | `function`, `params`, `annotations`, `body` | 함수 이름, 파라미터 이름, `yard.*` annotation, 함수 본문 |
 | `Loop` | `var`, `start`, `bound`, `depth`, `body` | 루프 노드. `start` 이상 `bound` 미만 반복 |
-| `Array` | `name`, `indices`, `shape`, `elem_size` | 배열 접근. `shape`/`elem_size`는 추론 가능한 경우 cache-line unroll용 metadata로 포함 |
+| `Array` | `name`, `object`, `indices`, `access_path`, `shape`, `elem_size` | 배열 접근. `access_path`는 구조체 field와 배열 index 순서를 보존 |
 | `Scalar` | `name` | 루프 인덱스와 무관한 스칼라 접근 |
-| `Call` | `callee`, `args` | direct call node. Python 백엔드에서 `YARD_INLINE` callee를 call site에 확장 |
+| `Call` | `callee`, `args`, `arg_objects` | direct call node. Python 백엔드에서 `YARD_INLINE` callee를 call site에 확장 |
+
+APE v2 입력에서는 배열 상세 정보가 body node가 아니라
+`metadata.objects`에 있을 수 있습니다. YARDA loader는 `object` id로
+metadata를 조회해 `shape`/`elem_size`를 보완합니다. `access_path`는 reuse
+key 계산 결과를 갑자기 바꾸지 않도록 보존만 하며, inline call expansion 시
+`index` segment의 `value`를 actual argument mapping에 맞춰 치환합니다.
+실제 byte address 계산은 APEX-Cache 같은 downstream에서
+`access_path`와 `metadata`를 함께 사용해야 합니다.
 
 **예시 — 행렬 곱셈 (`test_matmul_g.ll`)**
 
