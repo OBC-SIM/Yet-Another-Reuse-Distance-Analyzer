@@ -73,15 +73,15 @@ def _to_ll(path: Path) -> Path:
     return path
 
 
-def _lat_path(ll_path: Path) -> Path:
-    """foo_g.ll → foo_g_lat.json"""
-    return ll_path.with_suffix("").parent / (ll_path.stem + "_lat.json")
+def _ape_path(ll_path: Path) -> Path:
+    """foo_g.ll → foo_g_ape.json"""
+    return ll_path.with_suffix("").parent / (ll_path.stem + "_ape.json")
 
 
 def run_llvm_pass(ll_path: Path, plugin_path: Path) -> Path:
-    """opt-14 실행하여 _lat.json을 생성하고 그 경로를 반환."""
+    """opt-14 실행하여 _ape.json을 생성하고 그 경로를 반환."""
     abs_ll = ll_path.resolve()
-    out_json = _lat_path(abs_ll)
+    out_json = _ape_path(abs_ll)
     subprocess.run(
         [
             "opt-14",

@@ -243,7 +243,7 @@ def _predict_loop_block(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
 def analyze_blocks(json_path: str) -> List[Tuple[str, ReuseProfile]]:
     """LAT JSON의 블록별 예측 ReuseProfile을 (블록명, 프로파일) 리스트로 반환.
 
-    @param json_path  _lat.json 경로
+    @param json_path  _ape.json 경로
     @return           블록명은 "func  var-loop (bound=N)" 또는 "func  (flat, N accesses)" 형태
     """
     with open(json_path) as f:

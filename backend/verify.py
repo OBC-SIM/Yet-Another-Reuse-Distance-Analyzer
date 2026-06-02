@@ -2,7 +2,7 @@
 verify.py — ground-truth vs. Dilation-prediction comparison.
 
 인자 없이 실행: 내장 테스트 케이스 5개 검증
-파일 지정:      .c → clang-14 → .ll → opt-14 → _lat.json → 루프 블록별 검증
+파일 지정:      .c → clang-14 → .ll → opt-14 → _ape.json → 루프 블록별 검증
 
 Usage:
     python backend/verify.py
@@ -148,7 +148,7 @@ def verify_json(
     List[Tuple[str, ReuseProfile, ReuseProfile]],
     List[Tuple[str, float, float]],
 ]:
-    """_lat.json 내 모든 블록을 검증하고 plot/timing 결과 리스트를 반환."""
+    """_ape.json 내 모든 블록을 검증하고 plot/timing 결과 리스트를 반환."""
     results: List[Tuple[str, ReuseProfile, ReuseProfile]] = []
     timings: List[Tuple[str, float, float]] = []
     function_results: List[Tuple[str, ReuseProfile, ReuseProfile]] = []

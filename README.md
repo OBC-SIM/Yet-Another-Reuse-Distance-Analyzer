@@ -30,7 +30,7 @@ RDH (Reuse Distance Histogram)
 
 ## 출력 형식
 
-`{ll파일명}_lat.json`은 함수별 wrapper를 갖고, 각 함수 wrapper는 `function`, `params`, `annotations`, `body` 필드를 가집니다. `body`는 네 가지 노드 타입으로 구성됩니다.
+`{ll파일명}_ape.json`은 함수별 wrapper를 갖고, 각 함수 wrapper는 `function`, `params`, `annotations`, `body` 필드를 가집니다. `body`는 네 가지 노드 타입으로 구성됩니다.
 
 | 타입 | 필드 | 설명 |
 |------|------|------|
@@ -117,7 +117,7 @@ opt-14 -load-pass-plugin ./build/libLoopAnnotatedTrace.so \
        <name>_g.ll -o /dev/null
 ```
 
-현재 디렉토리에 `<name>_g_lat.json`이 생성됩니다.
+현재 디렉토리에 `<name>_g_ape.json`이 생성됩니다.
 
 ### RTEMS / 사용자 함수만 분석하기
 
@@ -172,7 +172,7 @@ task entry 함수 자체에 `YARD_ANALYZE`를 붙여 별도 root로 분석하세
 ### 3. 결과 확인
 
 ```bash
-python3 -m json.tool <name>_g_lat.json
+python3 -m json.tool <name>_g_ape.json
 ```
 
 ### 4. RDH 예측
@@ -225,12 +225,12 @@ import sys; sys.path.insert(0, 'backend')
 from predictor import analyze, analyze_blocks
 
 # 함수 전체 합산 프로파일
-profile = analyze('<name>_g_lat.json')
+profile = analyze('<name>_g_ape.json')
 print('histogram:', profile.histogram)
 print('cold misses:', len(profile.cold_misses))
 
 # 블록별 프로파일 리스트
-for name, block_profile in analyze_blocks('<name>_g_lat.json'):
+for name, block_profile in analyze_blocks('<name>_g_ape.json'):
     print(name, block_profile.histogram)
 ```
 
