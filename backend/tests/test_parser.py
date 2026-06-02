@@ -105,6 +105,34 @@ class TestParseTrace:
         assert nodes[0].shape == [4, 16]
         assert nodes[0].elem_size == 8
 
+    def test_parse_array_object_id(self):
+        data = [{"type": "Array", "name": "A", "object": "global::A",
+                 "indices": ["i"]}]
+        nodes = parse_trace(data)
+        assert nodes[0].object_id == "global::A"
+
+    def test_parse_v2_metadata_fills_array_shape(self):
+        data = {
+            "schema_version": 2,
+            "metadata": {
+                "objects": {
+                    "global::A": {
+                        "shape": [4, 16],
+                        "elem_size": 8,
+                    }
+                }
+            },
+            "functions": [{
+                "function": "kernel",
+                "body": [{"type": "Array", "name": "A", "object": "global::A",
+                          "indices": ["i", "j"]}],
+            }],
+        }
+        nodes = parse_trace(data)
+        assert nodes[0].shape == [4, 16]
+        assert nodes[0].elem_size == 8
+        assert nodes[0].object_id == "global::A"
+
     def test_parse_loop_node(self):
         data = [{"type": "Loop", "var": "i", "bound": 32, "depth": 1,
                  "body": [{"type": "Array", "name": "A", "indices": ["i"]}]}]

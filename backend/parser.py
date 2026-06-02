@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Any, Dict, List
 import re
+
+from ape_schema import normalize_trace
 
 
 _AFFINE_INDEX = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$")
@@ -26,12 +28,13 @@ class ScalarNode(TraceNode):
 class ArrayNode(TraceNode):
     def __init__(self, name: str, indices: List[str],
                  shape: List[int] | None = None, elem_size: int | None = None,
-                 op: str | None = None):
+                 op: str | None = None, object_id: str | None = None):
         self.name = name
         self.indices = indices
         self.shape = shape
         self.elem_size = elem_size
         self.op = op
+        self.object_id = object_id
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
                cache_line_size: int = 32) -> List[str]:
@@ -117,7 +120,8 @@ def _parse_node(data: dict, sim_bound: int) -> TraceNode:
         return ScalarNode(data["name"], data.get("op"))
     elif t == "Array":
         return ArrayNode(data["name"], data["indices"],
-                         data.get("shape"), data.get("elem_size"), data.get("op"))
+                         data.get("shape"), data.get("elem_size"), data.get("op"),
+                         data.get("object"))
     elif t == "Call":
         return CallNode(data["callee"], data.get("args", []))
     elif t == "Loop":
@@ -132,5 +136,5 @@ def _parse_node(data: dict, sim_bound: int) -> TraceNode:
         raise ValueError(f"Unknown node type: {t}")
 
 
-def parse_trace(json_data: list, sim_bound: int = 2) -> List[TraceNode]:
-    return [_parse_node(node, sim_bound) for node in json_data]
+def parse_trace(json_data: Any, sim_bound: int = 2) -> List[TraceNode]:
+    return [_parse_node(node, sim_bound) for node in normalize_trace(json_data)]

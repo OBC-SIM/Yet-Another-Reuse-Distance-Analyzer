@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Dict, List
+from typing import Any, Dict, List
+
+from ape_schema import normalize_module
 
 
 _AFFINE_NAME = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$")
@@ -59,7 +61,8 @@ def _expand_body(
     return expanded
 
 
-def expand_calls(module: List[dict]) -> List[dict]:
+def expand_calls(module: Any) -> List[dict]:
+    module = normalize_module(module)
     functions = {entry["function"]: entry for entry in module}
     has_roles = any(
         ANALYZE_ANNOTATION in set(func.get("annotations", []))

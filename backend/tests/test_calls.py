@@ -56,3 +56,51 @@ def test_expand_calls_keeps_legacy_json_without_annotations():
     ]
 
     assert [entry["function"] for entry in expand_calls(raw)] == ["helper", "kernel"]
+
+
+def test_expand_calls_accepts_v2_root_object():
+    raw = {
+        "schema_version": 2,
+        "metadata": {"objects": {}},
+        "functions": [
+            {
+                "function": "helper",
+                "params": ["x"],
+                "annotations": ["yard.inline"],
+                "body": [{"type": "Array", "name": "x", "indices": ["0"]}],
+            },
+            {
+                "function": "kernel",
+                "params": ["a"],
+                "annotations": ["yard.analyze"],
+                "body": [{"type": "Call", "callee": "helper", "args": ["a"]}],
+            },
+        ],
+    }
+
+    expanded = expand_calls(raw)
+    assert [entry["function"] for entry in expanded] == ["kernel"]
+    assert expanded[0]["body"] == [{"type": "Array", "name": "a", "indices": ["0"]}]
+
+
+def test_expand_calls_fills_v2_array_metadata():
+    raw = {
+        "schema_version": 2,
+        "metadata": {
+            "objects": {
+                "global::A": {
+                    "shape": [16],
+                    "elem_size": 8,
+                }
+            }
+        },
+        "functions": [{
+            "function": "kernel",
+            "body": [{"type": "Array", "name": "A", "object": "global::A",
+                      "indices": ["i"]}],
+        }],
+    }
+
+    expanded = expand_calls(raw)
+    assert expanded[0]["body"][0]["shape"] == [16]
+    assert expanded[0]["body"][0]["elem_size"] == 8
