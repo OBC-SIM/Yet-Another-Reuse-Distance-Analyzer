@@ -82,18 +82,20 @@ class CallNode(TraceNode):
 
 class LoopBlockNode(TraceNode):
     def __init__(self, var: str, actual_bound: int, sim_bound: int,
-                 depth: int, body: List[TraceNode]):
+                 depth: int, body: List[TraceNode], step: int = 1):
         self.var = var
         self.actual_bound = actual_bound
         self.sim_bound = sim_bound
         self.start = 0
+        self.step = step or 1
         self.depth = depth
         self.body = body
 
     def unroll(self, env: Dict[str, int], granularity: str = "element",
                cache_line_size: int = 32) -> List[str]:
         result = []
-        for i in range(self.start, self.start + self.sim_bound):
+        stop = self.start + self.step * self.sim_bound
+        for i in range(self.start, stop, self.step):
             child_env = {**env, self.var: i}
             for node in self.body:
                 result.extend(node.unroll(child_env, granularity, cache_line_size))
@@ -116,6 +118,18 @@ def index_variable(index: str) -> str | None:
     return None
 
 
+def loop_iteration_count(start: int, bound: int, step: int) -> int:
+    step = step or 1
+    if step > 0:
+        if start >= bound:
+            return 0
+        return (bound - start + step - 1) // step
+    if start <= bound:
+        return 0
+    step_abs = -step
+    return (start - bound + step_abs - 1) // step_abs
+
+
 def _parse_node(data: dict, sim_bound: int) -> TraceNode:
     t = data["type"]
     if t == "Scalar":
@@ -129,9 +143,10 @@ def _parse_node(data: dict, sim_bound: int) -> TraceNode:
     elif t == "Loop":
         body = [_parse_node(child, sim_bound) for child in data["body"]]
         start = data.get("start", 0)
-        actual_bound = max(0, data["bound"] - start)
+        step = data.get("step", 1) or 1
+        actual_bound = loop_iteration_count(start, data["bound"], step)
         node = LoopBlockNode(data["var"], actual_bound, min(sim_bound, actual_bound),
-                             data["depth"], body)
+                             data["depth"], body, step)
         node.start = start
         return node
     else:

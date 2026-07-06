@@ -7,7 +7,13 @@ from calls import expand_calls
 from dilation import DilationContextBuilder, DilationPredictor
 from lru_sim import LRUProfiler, ReuseProfile
 from merger import BlockMerger
-from parser import LoopBlockNode, parse_trace, index_variable, resolve_index
+from parser import (
+    LoopBlockNode,
+    index_variable,
+    loop_iteration_count,
+    parse_trace,
+    resolve_index,
+)
 from stability import validated_stable_rds_2d
 from volatile import predict_volatile_3d_rectangular, predict_volatile_diagonal
 from volatile2d import predict_volatile_2d_rectangular
@@ -64,9 +70,19 @@ def _collect_starts(raw_node: dict, starts: Dict[str, int] | None = None) -> Dic
     return starts
 
 
+def _collect_steps(raw_node: dict, steps: Dict[str, int] | None = None) -> Dict[str, int]:
+    steps = {} if steps is None else steps
+    if raw_node["type"] == "Loop":
+        steps[raw_node["var"]] = raw_node.get("step", 1) or 1
+        for child in raw_node["body"]:
+            _collect_steps(child, steps)
+    return steps
+
+
 def _predict_cold_misses(raw_node: dict) -> set[str]:
     bounds = _collect_bounds(raw_node)
     starts = _collect_starts(raw_node)
+    steps = _collect_steps(raw_node)
     cold: set[str] = set()
     def visit(node: dict) -> None:
         if node["type"] == "Loop":
@@ -82,7 +98,10 @@ def _predict_cold_misses(raw_node: dict) -> set[str]:
                 var = index_variable(idx)
                 if var in bounds and var not in vars_seen:
                     vars_seen.append(var)
-            ranges = [range(starts.get(var, 0), bounds[var]) for var in vars_seen]
+            ranges = [
+                range(starts.get(var, 0), bounds[var], steps.get(var, 1))
+                for var in vars_seen
+            ]
             for values in product(*ranges) if ranges else [()]:
                 env = dict(zip(vars_seen, values))
                 indices = [resolve_index(idx, env) for idx in node["indices"]]
@@ -93,7 +112,11 @@ def _predict_cold_misses(raw_node: dict) -> set[str]:
 
 
 def _predict_1d(raw_node: dict) -> Tuple[ReuseProfile, List[str]]:
-    actual_bound = max(0, raw_node["bound"] - raw_node.get("start", 0))
+    actual_bound = loop_iteration_count(
+        raw_node.get("start", 0),
+        raw_node["bound"],
+        raw_node.get("step", 1),
+    )
     if actual_bound <= 1:
         predicted, trace = _run_sim(raw_node, [actual_bound])
         predicted.cold_misses = _predict_cold_misses(raw_node)

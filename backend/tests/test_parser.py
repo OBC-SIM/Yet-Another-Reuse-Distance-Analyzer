@@ -1,7 +1,14 @@
 import json
 from pathlib import Path
 import pytest
-from parser import ScalarNode, ArrayNode, CallNode, LoopBlockNode, parse_trace
+from parser import (
+    ScalarNode,
+    ArrayNode,
+    CallNode,
+    LoopBlockNode,
+    loop_iteration_count,
+    parse_trace,
+)
 
 TASKS_DIR = Path(__file__).resolve().parent.parent.parent / "tasks"
 
@@ -69,6 +76,17 @@ class TestLoopBlockNode:
                              body=[ArrayNode("A", ["i-1", "i+1"])])
         loop.start = 1
         assert loop.unroll({}) == ["A-0-2", "A-1-3"]
+
+    def test_unroll_respects_step(self):
+        loop = LoopBlockNode("i", actual_bound=4, sim_bound=3, depth=1,
+                             body=[ArrayNode("A", ["i"])], step=32)
+        assert loop.unroll({}) == ["A-0", "A-32", "A-64"]
+
+    def test_unroll_respects_start_and_step(self):
+        loop = LoopBlockNode("i", actual_bound=4, sim_bound=2, depth=1,
+                             body=[ArrayNode("A", ["i"])], step=32)
+        loop.start = 16
+        assert loop.unroll({}) == ["A-16", "A-48"]
 
     def test_unroll_nested_loops(self):
         inner = LoopBlockNode("j", actual_bound=100, sim_bound=2, depth=2,
@@ -169,6 +187,23 @@ class TestParseTrace:
         assert nodes[0].start == 1
         assert nodes[0].unroll({}) == ["A-0", "A-1"]
 
+    def test_parse_loop_step_field(self):
+        data = [{"type": "Loop", "var": "i", "start": 0, "bound": 96, "step": 32,
+                 "depth": 1,
+                 "body": [{"type": "Array", "name": "A", "indices": ["i"]}]}]
+        nodes = parse_trace(data, sim_bound=4)
+        assert nodes[0].actual_bound == 3
+        assert nodes[0].step == 32
+        assert nodes[0].unroll({}) == ["A-0", "A-32", "A-64"]
+
+    def test_parse_loop_step_field_rounds_up_trip_count(self):
+        data = [{"type": "Loop", "var": "i", "start": 0, "bound": 100, "step": 32,
+                 "depth": 1,
+                 "body": [{"type": "Array", "name": "A", "indices": ["i"]}]}]
+        nodes = parse_trace(data, sim_bound=4)
+        assert nodes[0].actual_bound == 4
+        assert nodes[0].unroll({}) == ["A-0", "A-32", "A-64", "A-96"]
+
     def test_parse_loop_body_is_parsed_recursively(self):
         data = [{"type": "Loop", "var": "i", "bound": 10, "depth": 1,
                  "body": [{"type": "Array", "name": "A", "indices": ["i"]}]}]
@@ -195,3 +230,17 @@ class TestParseTrace:
         assert isinstance(nodes[0], LoopBlockNode)
         assert nodes[0].var == "i"
         assert nodes[0].actual_bound == 32
+
+
+class TestLoopIterationCount:
+    def test_positive_step(self):
+        assert loop_iteration_count(0, 96, 32) == 3
+
+    def test_positive_step_rounds_up(self):
+        assert loop_iteration_count(0, 100, 32) == 4
+
+    def test_empty_positive_range(self):
+        assert loop_iteration_count(100, 100, 32) == 0
+
+    def test_negative_step(self):
+        assert loop_iteration_count(96, 0, -32) == 3
