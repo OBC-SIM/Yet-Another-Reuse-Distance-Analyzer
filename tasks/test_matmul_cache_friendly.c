@@ -1,8 +1,8 @@
 #include "yard_analyze.h"
 
-#define M 32
-#define N 32
-#define K 64
+#define M 16
+#define N 256
+#define K 128
 
 float A[M][K], B[K][N], C[M][N];
 
@@ -12,5 +12,12 @@ void matmul_cache_friendly()
 {
   for (int i = 0; i < M; i++)
     for (int k = 0; k < K; k++)
-      for (int j = 0; j < N; j++) C[i][j] += A[i][k] * B[k][j];
+      for (int j = 0; j < N; j++)
+        C[i][j] += A[i][k] * B[k][j];
+}
+
+int main()
+{
+  matmul_cache_friendly();
+  return 0;
 }
