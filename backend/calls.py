@@ -9,8 +9,8 @@ from ape_schema import normalize_module
 
 _AFFINE_NAME = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$")
 _IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
-ANALYZE_ANNOTATION = "yard.analyze"
-INLINE_ANNOTATION = "yard.inline"
+ANALYZE_ANNOTATIONS = {"yard.analyze", "ape.analyze"}
+INLINE_ANNOTATIONS = {"yard.inline", "ape.inline"}
 
 
 def _substitute_name(name: str, mapping: Dict[str, str]) -> str:
@@ -80,8 +80,8 @@ def expand_calls(module: Any) -> List[dict]:
     module = normalize_module(module)
     functions = {entry["function"]: entry for entry in module}
     has_roles = any(
-        ANALYZE_ANNOTATION in set(func.get("annotations", []))
-        or INLINE_ANNOTATION in set(func.get("annotations", []))
+        bool(ANALYZE_ANNOTATIONS & set(func.get("annotations", [])))
+        or bool(INLINE_ANNOTATIONS & set(func.get("annotations", [])))
         for func in module
     )
     expanded = []
@@ -89,6 +89,6 @@ def expand_calls(module: Any) -> List[dict]:
         clone = copy.deepcopy(entry)
         clone["body"] = _expand_body(entry["body"], functions, (entry["function"],))
         annotations = set(entry.get("annotations", []))
-        if not has_roles or ANALYZE_ANNOTATION in annotations:
+        if not has_roles or bool(ANALYZE_ANNOTATIONS & annotations):
             expanded.append(clone)
     return expanded

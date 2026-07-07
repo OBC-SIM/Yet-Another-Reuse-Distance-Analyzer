@@ -83,6 +83,27 @@ def test_expand_calls_accepts_v2_root_object():
     assert expanded[0]["body"] == [{"type": "Array", "name": "a", "indices": ["0"]}]
 
 
+def test_expand_calls_accepts_ape_annotations():
+    raw = [
+        {
+            "function": "helper",
+            "params": ["x"],
+            "annotations": ["ape.inline"],
+            "body": [{"type": "Array", "name": "x", "indices": ["0"]}],
+        },
+        {
+            "function": "kernel",
+            "params": ["a"],
+            "annotations": ["ape.analyze"],
+            "body": [{"type": "Call", "callee": "helper", "args": ["a"]}],
+        },
+    ]
+
+    expanded = expand_calls(raw)
+    assert [entry["function"] for entry in expanded] == ["kernel"]
+    assert expanded[0]["body"] == [{"type": "Array", "name": "a", "indices": ["0"]}]
+
+
 def test_expand_calls_fills_v2_array_metadata():
     raw = {
         "schema_version": 2,
