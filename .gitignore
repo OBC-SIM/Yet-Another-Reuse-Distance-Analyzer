@@ -11,3 +11,4 @@ __pycache__/
 figs/
 .tmp*/
 *.png
+benchmark-results/
