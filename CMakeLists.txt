@@ -9,4 +9,16 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CTest)
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
+add_subdirectory(frontend)
+
+set_target_properties(LoopAnnotatedTrace PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+
+if(TARGET LoopAnnotatedTraceTests)
+    set_target_properties(LoopAnnotatedTraceTests PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    )
+endif()
+
 add_subdirectory(backend)
