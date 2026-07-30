@@ -108,9 +108,10 @@ void matmul(float A[32][64], float B[64][32], float C[32][32]) {
 git clone --recurse-submodules https://github.com/OBC-SIM/Yet-Another-Reuse-Distance-Analyzer
 cd Yet-Another-Reuse-Distance-Analyzer
 
-# C++ 프론트엔드 (frontend/ 서브모듈 기준)
-cmake -S frontend -DLLVM_DIR=$(llvm-config-14 --cmakedir) -B build
+# C++ 프론트엔드와 백엔드 통합 빌드
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
+ctest --test-dir build --output-on-failure
 
 # Python 백엔드 의존성
 pip install pytest matplotlib seaborn
@@ -124,7 +125,9 @@ git submodule update --init --recursive
 
 빌드 산출물:
 - `build/libLoopAnnotatedTrace.so` — opt에 로드할 Pass 플러그인
-- `build/LoopAnnotatedTraceTests` — GTest 바이너리
+- `build/LoopAnnotatedTraceTests` — frontend GTest 바이너리
+- `build/backend/yarda_cpp` — C++ backend CLI
+- `build/backend/yarda_backend_tests` — backend GTest 바이너리
 
 ---
 
@@ -291,10 +294,12 @@ opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
 ### C++ (GTest)
 
 ```bash
-./build/LoopAnnotatedTraceTests
+ctest --test-dir build --output-on-failure
 ```
 
-31개 테스트.
+통합 빌드는 frontend 및 backend의 CTest 테스트 22개를 실행합니다.
+frontend GTest 31개만 직접 실행하려면 `./build/LoopAnnotatedTraceTests`를
+사용합니다.
 
 | 테스트 스위트 | 내용 |
 |---|---|
