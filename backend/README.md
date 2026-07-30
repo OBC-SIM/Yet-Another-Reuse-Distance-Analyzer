@@ -6,13 +6,16 @@ unrolling and the element-granularity Dilation predictor.
 
 ## Build and test
 
-Requirements: CMake 3.20+, a C++17 compiler, nlohmann/json, and GTest.
+Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json, and
+GTest. The root build configures both the frontend submodule and this backend.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+CTest runs the frontend and backend test suites together.
 
 ## Run
 
