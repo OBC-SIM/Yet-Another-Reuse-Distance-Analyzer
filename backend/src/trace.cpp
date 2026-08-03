@@ -2,13 +2,14 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 #include "yarda/calls.hpp"
+
+#include "trace_cache_line.hpp"
 
 namespace yarda
 {
@@ -67,93 +68,14 @@ std::uint64_t iteration_count(std::int64_t start, std::int64_t bound,
                             (start - bound + magnitude - 1) / magnitude);
 }
 
-std::optional<std::int64_t> parse_integer(const std::string & value)
-{
-  try
-  {
-    std::size_t consumed = 0;
-    const auto parsed = std::stoll(value, &consumed);
-    return consumed == value.size() ? std::optional<std::int64_t>(parsed)
-                                    : std::nullopt;
-  }
-  catch (const std::exception &)
-  {
-    return std::nullopt;
-  }
-}
-
-std::int64_t floor_divide(std::int64_t dividend, std::int64_t divisor)
-{
-  auto quotient = dividend / divisor;
-  const auto remainder = dividend % divisor;
-  if (remainder != 0 && dividend < 0)
-  {
-    --quotient;
-  }
-  return quotient;
-}
-
-std::optional<std::string>
-cache_line_key(const Json & node, const std::vector<std::string> & indices,
-               std::size_t line_size)
-{
-  if (!node.contains("elem_size") || line_size == 0)
-  {
-    return std::nullopt;
-  }
-  std::vector<std::int64_t> numeric;
-  for (const auto & index : indices)
-  {
-    const auto parsed = parse_integer(index);
-    if (!parsed)
-    {
-      return std::nullopt;
-    }
-    numeric.push_back(*parsed);
-  }
-
-  std::int64_t linear = 0;
-  if (numeric.size() == 1)
-  {
-    linear = numeric.front();
-  }
-  else if (node.contains("shape") && node["shape"].is_array() &&
-           (node["shape"].size() == numeric.size() ||
-            node["shape"].size() + 1 == numeric.size()))
-  {
-    std::vector<std::int64_t> shape;
-    const auto required = numeric.size() - 1;
-    const auto start = node["shape"].size() - required;
-    for (std::size_t index = start; index < node["shape"].size(); ++index)
-    {
-      shape.push_back(node["shape"][index].get<std::int64_t>());
-    }
-    for (std::size_t position = 0; position < numeric.size(); ++position)
-    {
-      std::int64_t stride = 1;
-      for (std::size_t dimension = position; dimension < shape.size();
-           ++dimension)
-      {
-        stride *= shape[dimension];
-      }
-      linear += numeric[position] * stride;
-    }
-  }
-  else
-  {
-    return std::nullopt;
-  }
-  const auto byte_offset = linear * node["elem_size"].get<std::int64_t>();
-  return node.value("name", "") + "-line-" +
-         std::to_string(
-           floor_divide(byte_offset, static_cast<std::int64_t>(line_size)));
-}
-
 void append_node(const Json & node, const Environment & environment,
                  Granularity granularity, std::size_t line_size,
                  std::vector<std::string> & trace,
                  const std::vector<std::size_t> * simulation_bounds = nullptr,
-                 std::size_t loop_level = 0)
+                 std::size_t loop_level = 0,
+                 const CacheGeometry * geometry = nullptr,
+                 const ObjectAddressModel * objects = nullptr,
+                 CacheLineMappingTable * mappings = nullptr)
 {
   const auto type = node.value("type", "");
   if (type == "Scalar")
@@ -170,7 +92,8 @@ void append_node(const Json & node, const Environment & environment,
     }
     if (granularity == Granularity::CacheLine)
     {
-      if (const auto key = cache_line_key(node, indices, line_size))
+      if (const auto key = detail::trace_cache_line_key(
+            node, indices, line_size, geometry, objects, mappings))
       {
         trace.push_back(*key);
         return;
@@ -205,7 +128,8 @@ void append_node(const Json & node, const Environment & environment,
       for (const auto & child : node.value("body", Json::array()))
       {
         append_node(child, child_environment, granularity, line_size, trace,
-                    simulation_bounds, loop_level + 1);
+                    simulation_bounds, loop_level + 1, geometry, objects,
+                    mappings);
       }
     }
     return;
@@ -213,29 +137,22 @@ void append_node(const Json & node, const Environment & environment,
   throw std::invalid_argument("Unknown LAT node type: " + type);
 }
 
-}  // namespace
-
-std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
-                                            Granularity granularity,
-                                            std::size_t cache_line_size)
+std::vector<std::string> unroll_node(
+  const Json & node, Granularity granularity, std::size_t cache_line_size,
+  const CacheGeometry * geometry = nullptr,
+  const ObjectAddressModel * objects = nullptr,
+  CacheLineMappingTable * mappings = nullptr)
 {
   std::vector<std::string> trace;
-  append_node(node, {}, granularity, cache_line_size, trace);
+  append_node(node, {}, granularity, cache_line_size, trace, nullptr, 0,
+              geometry, objects, mappings);
   return trace;
 }
 
-std::vector<std::string>
-unroll_node_sample(const nlohmann::json & node,
-                   const std::vector<std::size_t> & simulation_bounds)
-{
-  std::vector<std::string> trace;
-  append_node(node, {}, Granularity::Element, 32, trace, &simulation_bounds, 0);
-  return trace;
-}
-
-std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
-                                     Granularity granularity,
-                                     std::size_t cache_line_size)
+std::vector<NamedTrace> block_traces_impl(
+  const nlohmann::json & raw, Granularity granularity,
+  std::size_t cache_line_size, const CacheGeometry * geometry,
+  const ObjectAddressModel * objects, CacheLineMappingTable * mappings)
 {
   const auto module = expand_calls(raw);
   std::vector<NamedTrace> result;
@@ -254,7 +171,8 @@ std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
     };
     for (const auto & node : function.value("body", Json::array()))
     {
-      auto trace = unroll_node_actual(node, granularity, cache_line_size);
+      auto trace = unroll_node(node, granularity, cache_line_size, geometry,
+                               objects, mappings);
       if (node.value("type", "") == "Loop")
       {
         flush_flat();
@@ -270,6 +188,54 @@ std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
     }
     flush_flat();
   }
+  return result;
+}
+
+}  // namespace
+
+std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
+                                            Granularity granularity,
+                                            std::size_t cache_line_size)
+{
+  return unroll_node(node, granularity, cache_line_size);
+}
+
+std::vector<std::string>
+unroll_node_actual(const nlohmann::json & node,
+                   const CacheGeometry & geometry,
+                   const ObjectAddressModel & objects)
+{
+  cache_set_count(geometry);
+  return unroll_node(node, Granularity::CacheLine, geometry.line_size,
+                     &geometry, &objects);
+}
+
+std::vector<std::string>
+unroll_node_sample(const nlohmann::json & node,
+                   const std::vector<std::size_t> & simulation_bounds)
+{
+  std::vector<std::string> trace;
+  append_node(node, {}, Granularity::Element, 32, trace, &simulation_bounds, 0);
+  return trace;
+}
+
+std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
+                                     Granularity granularity,
+                                     std::size_t cache_line_size)
+{
+  return block_traces_impl(raw, granularity, cache_line_size, nullptr, nullptr,
+                           nullptr);
+}
+
+MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
+                                      const CacheGeometry & geometry,
+                                      const ObjectAddressModel & objects)
+{
+  cache_set_count(geometry);
+  MappedTraceResult result;
+  result.traces = block_traces_impl(raw, Granularity::CacheLine,
+                                    geometry.line_size, &geometry, &objects,
+                                    &result.mappings);
   return result;
 }
 
