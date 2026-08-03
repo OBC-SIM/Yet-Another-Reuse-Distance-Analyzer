@@ -1,4 +1,7 @@
 add_library(yarda_backend
+    src/cache_address.cpp
+    src/cache_line_mapping.cpp
+    src/cache_line_mapping_json.cpp
     src/calls.cpp
     src/dilation.cpp
     src/merger.cpp
@@ -7,6 +10,7 @@ add_library(yarda_backend
     src/profile.cpp
     src/schema.cpp
     src/trace.cpp
+    src/trace_cache_line.cpp
 )
 
 target_include_directories(yarda_backend PUBLIC include)
@@ -19,6 +23,7 @@ llvm_map_components_to_libnames(YARDA_ELF_LLVM_LIBS object support)
 add_library(yarda_elf_regions
     src/elf_data_regions.cpp
     src/elf_data_regions_json.cpp
+    src/elf_object_addresses.cpp
     src/elf_program_regions.cpp
 )
 target_include_directories(yarda_elf_regions
@@ -86,6 +91,7 @@ if(BUILD_TESTING)
     )
 
     add_executable(yarda_elf_regions_tests
+        tests/elf_object_addresses_test.cpp
         tests/elf_data_regions_test.cpp
         tests/elf_data_regions_json_test.cpp
     )
@@ -106,6 +112,9 @@ if(BUILD_TESTING)
     )
 
     add_executable(yarda_backend_tests
+        tests/cache_address_test.cpp
+        tests/cache_line_mapping_test.cpp
+        tests/cache_line_mapping_json_test.cpp
         tests/calls_test.cpp
         tests/dilation_test.cpp
         tests/merger_test.cpp
