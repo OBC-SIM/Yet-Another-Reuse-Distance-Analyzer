@@ -17,6 +17,18 @@ target_include_directories(yarda_backend PUBLIC include)
 target_link_libraries(yarda_backend PUBLIC nlohmann_json::nlohmann_json)
 target_compile_options(yarda_backend PRIVATE -Wall -Wextra -Wpedantic)
 
+find_package(yaml-cpp 0.7 REQUIRED CONFIG)
+add_library(yarda_cache_config
+    src/cache/cache_config.cpp
+    src/cache/yaml_config_parser.cpp
+)
+target_include_directories(yarda_cache_config PUBLIC include)
+target_compile_options(yarda_cache_config PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(yarda_cache_config
+    PUBLIC yarda_backend
+    PRIVATE yaml-cpp
+)
+
 find_package(LLVM 14 REQUIRED CONFIG)
 llvm_map_components_to_libnames(YARDA_ELF_LLVM_LIBS object support)
 
@@ -125,4 +137,16 @@ if(BUILD_TESTING)
     )
     target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
     gtest_discover_tests(yarda_backend_tests)
+
+    add_executable(yarda_cache_config_tests
+        tests/cache_config_test.cpp
+        tests/yaml_config_parser_test.cpp
+    )
+    target_link_libraries(yarda_cache_config_tests PRIVATE
+        yarda_cache_config GTest::gtest_main
+    )
+    target_compile_definitions(yarda_cache_config_tests PRIVATE
+        YARDA_CACHE_CONFIG_EXAMPLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/cache.example.yaml"
+    )
+    gtest_discover_tests(yarda_cache_config_tests)
 endif()
