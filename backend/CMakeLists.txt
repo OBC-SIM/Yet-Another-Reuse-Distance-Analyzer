@@ -2,6 +2,7 @@ add_library(yarda_backend
     src/cache/address.cpp
     src/cache/line_mapping.cpp
     src/cache/line_mapping_json.cpp
+    src/cache/lru_rd_analysis.cpp
     src/calls.cpp
     src/dilation.cpp
     src/merger.cpp
@@ -128,6 +129,8 @@ if(BUILD_TESTING)
         tests/cache/address_test.cpp
         tests/cache/line_mapping_test.cpp
         tests/cache/line_mapping_json_test.cpp
+        tests/cache/lru_rd_analysis_test.cpp
+        tests/cache/lru_rd_integration_test.cpp
         tests/calls_test.cpp
         tests/dilation_test.cpp
         tests/merger_test.cpp
