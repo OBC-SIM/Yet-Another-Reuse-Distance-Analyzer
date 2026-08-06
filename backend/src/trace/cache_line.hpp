@@ -7,12 +7,18 @@
 #include <string>
 #include <vector>
 
-#include "yarda/cache_line_mapping.hpp"
+#include "yarda/cache/line_mapping.hpp"
 
 namespace yarda::detail
 {
 
-std::optional<std::string> trace_cache_line_key(
+struct TraceCacheLine
+{
+  std::string key;
+  std::optional<CacheLineMapping> mapping;
+};
+
+std::optional<TraceCacheLine> trace_cache_line(
   const nlohmann::json & node, const std::vector<std::string> & indices,
   std::size_t line_size, const CacheGeometry * geometry,
   const ObjectAddressModel * objects, CacheLineMappingTable * mappings);

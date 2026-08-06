@@ -10,7 +10,8 @@ add_library(yarda_backend
     src/profile.cpp
     src/schema.cpp
     src/trace.cpp
-    src/trace_cache_line.cpp
+    src/trace/cache_line.cpp
+    src/trace/mapped_trace.cpp
 )
 
 target_include_directories(yarda_backend PUBLIC include)
@@ -133,6 +134,7 @@ if(BUILD_TESTING)
         tests/predictor_test.cpp
         tests/profile_test.cpp
         tests/schema_test.cpp
+        tests/trace/mapped_trace_test.cpp
         tests/trace_test.cpp
     )
     target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
