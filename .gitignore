@@ -6,6 +6,7 @@ logs/
 system-prompt-extraction/
 benchmark-results/
 .cache/
+Testing/
 compile_flags.txt
 Testing/
 __pycache__/
