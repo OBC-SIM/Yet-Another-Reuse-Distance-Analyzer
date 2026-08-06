@@ -6,8 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "yarda/cache_line_mapping.hpp"
-
+#include "yarda/cache/line_mapping.hpp"
 namespace yarda
 {
 

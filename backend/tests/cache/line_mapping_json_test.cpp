@@ -1,4 +1,4 @@
-#include "yarda/cache_line_mapping_json.hpp"
+#include "yarda/cache/line_mapping_json.hpp"
 
 #include <gtest/gtest.h>
 
@@ -9,11 +9,9 @@ TEST(CacheLineMappingJsonTest, SerializesRowsInDeterministicObjectOrder)
 {
   yarda::CacheLineMappingTable table;
   table[{"global::B", 8}] = {
-    "global::B", 8, yarda::AddressBasis::ImageRelative,
-    {0x1048, 65, 1, 1, 8}};
+    "global::B", 8, yarda::AddressBasis::ImageRelative, {0x1048, 65, 1, 1, 8}};
   table[{"global::A", 0}] = {
-    "global::A", 0, yarda::AddressBasis::ImageRelative,
-    {0x1000, 64, 1, 0, 0}};
+    "global::A", 0, yarda::AddressBasis::ImageRelative, {0x1000, 64, 1, 0, 0}};
 
   const auto payload = yarda::cache_line_mapping_json(table);
 

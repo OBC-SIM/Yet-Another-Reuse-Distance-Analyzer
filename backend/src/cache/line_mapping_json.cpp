@@ -1,4 +1,4 @@
-#include "yarda/cache_line_mapping_json.hpp"
+#include "yarda/cache/line_mapping_json.hpp"
 
 #include <string>
 
@@ -14,8 +14,7 @@ std::string address_basis_name(AddressBasis basis)
 
 }  // namespace
 
-nlohmann::json
-cache_line_mapping_json(const CacheLineMappingTable & mappings)
+nlohmann::json cache_line_mapping_json(const CacheLineMappingTable & mappings)
 {
   auto result = nlohmann::json::array();
   for (const auto & [key, mapping] : mappings)

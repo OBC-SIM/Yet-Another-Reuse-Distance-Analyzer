@@ -1,4 +1,4 @@
-#include "yarda/cache_line_mapping.hpp"
+#include "yarda/cache/line_mapping.hpp"
 
 #include <limits>
 #include <stdexcept>

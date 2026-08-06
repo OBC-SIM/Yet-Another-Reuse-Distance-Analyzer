@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "yarda/cache_address.hpp"
+#include "yarda/cache/address.hpp"
 
 namespace yarda
 {
