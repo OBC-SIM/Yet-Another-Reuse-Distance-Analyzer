@@ -1,4 +1,4 @@
-#include "yarda/cache_line_mapping.hpp"
+#include "yarda/cache/line_mapping.hpp"
 
 #include <gtest/gtest.h>
 #include <limits>
@@ -46,8 +46,7 @@ TEST(CacheLineMappingTest, RejectsUnknownObject)
 TEST(CacheLineMappingTest, RejectsReconstructedAddressOverflow)
 {
   yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {
-    std::numeric_limits<std::uint64_t>::max(), 2};
+  objects.objects["global::A"] = {std::numeric_limits<std::uint64_t>::max(), 2};
 
   EXPECT_THROW(yarda::map_cache_line("global::A", 1, 1, objects,
                                      yarda::CacheGeometry{64, 512, 8}),

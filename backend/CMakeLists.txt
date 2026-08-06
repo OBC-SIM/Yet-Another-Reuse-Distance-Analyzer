@@ -1,7 +1,7 @@
 add_library(yarda_backend
-    src/cache_address.cpp
-    src/cache_line_mapping.cpp
-    src/cache_line_mapping_json.cpp
+    src/cache/address.cpp
+    src/cache/line_mapping.cpp
+    src/cache/line_mapping_json.cpp
     src/calls.cpp
     src/dilation.cpp
     src/merger.cpp
@@ -124,9 +124,9 @@ if(BUILD_TESTING)
     )
 
     add_executable(yarda_backend_tests
-        tests/cache_address_test.cpp
-        tests/cache_line_mapping_test.cpp
-        tests/cache_line_mapping_json_test.cpp
+        tests/cache/address_test.cpp
+        tests/cache/line_mapping_test.cpp
+        tests/cache/line_mapping_json_test.cpp
         tests/calls_test.cpp
         tests/dilation_test.cpp
         tests/merger_test.cpp

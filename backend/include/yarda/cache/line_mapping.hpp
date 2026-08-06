@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 
-#include "yarda/cache_address.hpp"
+#include "yarda/cache/address.hpp"
 #include "yarda/object_addresses.hpp"
 
 namespace yarda

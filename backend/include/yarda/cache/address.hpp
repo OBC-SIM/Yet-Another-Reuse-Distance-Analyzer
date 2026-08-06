@@ -5,7 +5,12 @@
 namespace yarda
 {
 
-/** @brief Hardware parameters used to partition a data-cache address. */
+/**
+ * @brief Hardware parameters used to partition a data-cache address.
+ * @property line_size Cache line size in bytes (power of two).
+ * @property line_count Total number of cache lines in the cache (power of two).
+ * @property associativity Number of lines per set (power of two).
+ */
 struct CacheGeometry
 {
   std::uint64_t line_size = 0;

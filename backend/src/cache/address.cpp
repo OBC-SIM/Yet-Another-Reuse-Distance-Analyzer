@@ -1,4 +1,4 @@
-#include "yarda/cache_address.hpp"
+#include "yarda/cache/address.hpp"
 
 #include <stdexcept>
 
