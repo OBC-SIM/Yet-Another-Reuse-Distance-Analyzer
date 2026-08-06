@@ -32,7 +32,20 @@ struct CoreMapping
   std::string l1;
 };
 
-/** @brief Hardware and policy parameters for one named cache level. */
+/**
+ * @brief Hardware and policy parameters for one named cache level.
+ * @property name Stable identifier for this cache level in the hierarchy.
+ * @property role L1, LLC, or other role in the hierarchy.
+ * @property private_to Optional core ID for a private cache; otherwise shared.
+ * @property size_bytes Total capacity in bytes.
+ * @property line_size Cache line size in bytes.
+ * @property associativity Number of lines per set.
+ * @property replacement Line replacement policy for this cache level.
+ * @property write_policy Write propagation policy for this cache level.
+ * @property write_allocate Whether to allocate on write misses.
+ * @property delay_cycles Access latency in cycles for this cache level.
+ * @property next Name of the next cache or memory in the hierarchy.
+ */
 struct CacheConfig
 {
   std::string name;
