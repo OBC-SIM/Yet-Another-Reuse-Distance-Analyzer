@@ -1,11 +1,11 @@
-#include "trace_cache_line.hpp"
+#include "cache_line.hpp"
 
 #include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "yarda/cache_line_mapping.hpp"
+#include "yarda/cache/line_mapping.hpp"
 
 namespace yarda::detail
 {
@@ -76,7 +76,8 @@ linear_index(const Json & node, const std::vector<std::int64_t> & indices)
   for (std::size_t position = 0; position < indices.size(); ++position)
   {
     std::int64_t stride = 1;
-    for (std::size_t dimension = position; dimension < shape.size(); ++dimension)
+    for (std::size_t dimension = position; dimension < shape.size();
+         ++dimension)
     {
       if (__builtin_mul_overflow(stride, shape[dimension], &stride))
       {
@@ -95,7 +96,7 @@ linear_index(const Json & node, const std::vector<std::int64_t> & indices)
 
 }  // namespace
 
-std::optional<std::string> trace_cache_line_key(
+std::optional<TraceCacheLine> trace_cache_line(
   const nlohmann::json & node, const std::vector<std::string> & indices,
   std::size_t line_size, const CacheGeometry * geometry,
   const ObjectAddressModel * objects, CacheLineMappingTable * mappings)
@@ -161,12 +162,14 @@ std::optional<std::string> trace_cache_line_key(
       mappings->emplace(
         std::make_pair(mapping.object_id, mapping.object_byte_offset), mapping);
     }
-    return "cache-tag-" + std::to_string(mapping.decoded.tag) + "-set-" +
-           std::to_string(mapping.decoded.set_index);
+    return TraceCacheLine{"cache-tag-" + std::to_string(mapping.decoded.tag) +
+                            "-set-" + std::to_string(mapping.decoded.set_index),
+                          mapping};
   }
-  return node.value("name", "") + "-line-" +
-         std::to_string(floor_divide(
-           byte_offset, static_cast<std::int64_t>(line_size)));
+  return TraceCacheLine{node.value("name", "") + "-line-" +
+                          std::to_string(floor_divide(
+                            byte_offset, static_cast<std::int64_t>(line_size))),
+                        std::nullopt};
 }
 
 }  // namespace yarda::detail

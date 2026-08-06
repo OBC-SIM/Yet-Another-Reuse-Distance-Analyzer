@@ -7,9 +7,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "trace/cache_line.hpp"
 #include "yarda/calls.hpp"
-
-#include "trace_cache_line.hpp"
 
 namespace yarda
 {
@@ -75,7 +74,8 @@ void append_node(const Json & node, const Environment & environment,
                  std::size_t loop_level = 0,
                  const CacheGeometry * geometry = nullptr,
                  const ObjectAddressModel * objects = nullptr,
-                 CacheLineMappingTable * mappings = nullptr)
+                 CacheLineMappingTable * mappings = nullptr,
+                 std::vector<CacheLineMapping> * mapped_accesses = nullptr)
 {
   const auto type = node.value("type", "");
   if (type == "Scalar")
@@ -92,10 +92,14 @@ void append_node(const Json & node, const Environment & environment,
     }
     if (granularity == Granularity::CacheLine)
     {
-      if (const auto key = detail::trace_cache_line_key(
+      if (const auto cache_line = detail::trace_cache_line(
             node, indices, line_size, geometry, objects, mappings))
       {
-        trace.push_back(*key);
+        trace.push_back(cache_line->key);
+        if (mapped_accesses != nullptr && cache_line->mapping)
+        {
+          mapped_accesses->push_back(*cache_line->mapping);
+        }
         return;
       }
     }
@@ -129,7 +133,7 @@ void append_node(const Json & node, const Environment & environment,
       {
         append_node(child, child_environment, granularity, line_size, trace,
                     simulation_bounds, loop_level + 1, geometry, objects,
-                    mappings);
+                    mappings, mapped_accesses);
       }
     }
     return;
@@ -141,18 +145,20 @@ std::vector<std::string> unroll_node(
   const Json & node, Granularity granularity, std::size_t cache_line_size,
   const CacheGeometry * geometry = nullptr,
   const ObjectAddressModel * objects = nullptr,
-  CacheLineMappingTable * mappings = nullptr)
+  CacheLineMappingTable * mappings = nullptr,
+  std::vector<CacheLineMapping> * mapped_accesses = nullptr)
 {
   std::vector<std::string> trace;
   append_node(node, {}, granularity, cache_line_size, trace, nullptr, 0,
-              geometry, objects, mappings);
+              geometry, objects, mappings, mapped_accesses);
   return trace;
 }
 
 std::vector<NamedTrace> block_traces_impl(
   const nlohmann::json & raw, Granularity granularity,
   std::size_t cache_line_size, const CacheGeometry * geometry,
-  const ObjectAddressModel * objects, CacheLineMappingTable * mappings)
+  const ObjectAddressModel * objects, CacheLineMappingTable * mappings,
+  std::vector<NamedMappedTrace> * mapped_traces = nullptr)
 {
   const auto module = expand_calls(raw);
   std::vector<NamedTrace> result;
@@ -160,30 +166,43 @@ std::vector<NamedTrace> block_traces_impl(
   {
     const auto function_name = function.at("function").get<std::string>();
     std::vector<std::string> flat;
+    std::vector<CacheLineMapping> flat_mapped;
     const auto flush_flat = [&]() {
       if (!flat.empty())
       {
-        result.push_back({function_name + "  (flat, " +
-                            std::to_string(flat.size()) + " accesses)",
-                          std::move(flat)});
+        const auto name = function_name + "  (flat, " +
+                          std::to_string(flat.size()) + " accesses)";
+        result.push_back({name, std::move(flat)});
+        if (mapped_traces != nullptr && !flat_mapped.empty())
+        {
+          mapped_traces->push_back({name, std::move(flat_mapped)});
+        }
         flat.clear();
+        flat_mapped.clear();
       }
     };
     for (const auto & node : function.value("body", Json::array()))
     {
+      std::vector<CacheLineMapping> node_mapped;
       auto trace = unroll_node(node, granularity, cache_line_size, geometry,
-                               objects, mappings);
+                               objects, mappings, &node_mapped);
       if (node.value("type", "") == "Loop")
       {
         flush_flat();
-        result.push_back(
-          {function_name + "  " + node.value("var", "") +
-             "-loop (bound=" + std::to_string(node.value("bound", 0)) + ")",
-           std::move(trace)});
+        const auto name =
+          function_name + "  " + node.value("var", "") +
+          "-loop (bound=" + std::to_string(node.value("bound", 0)) + ")";
+        result.push_back({name, std::move(trace)});
+        if (mapped_traces != nullptr && !node_mapped.empty())
+        {
+          mapped_traces->push_back({name, std::move(node_mapped)});
+        }
       }
       else
       {
         flat.insert(flat.end(), trace.begin(), trace.end());
+        flat_mapped.insert(flat_mapped.end(), node_mapped.begin(),
+                           node_mapped.end());
       }
     }
     flush_flat();
@@ -200,10 +219,9 @@ std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
   return unroll_node(node, granularity, cache_line_size);
 }
 
-std::vector<std::string>
-unroll_node_actual(const nlohmann::json & node,
-                   const CacheGeometry & geometry,
-                   const ObjectAddressModel & objects)
+std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
+                                            const CacheGeometry & geometry,
+                                            const ObjectAddressModel & objects)
 {
   cache_set_count(geometry);
   return unroll_node(node, Granularity::CacheLine, geometry.line_size,
@@ -224,7 +242,7 @@ std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
                                      std::size_t cache_line_size)
 {
   return block_traces_impl(raw, granularity, cache_line_size, nullptr, nullptr,
-                           nullptr);
+                           nullptr, nullptr);
 }
 
 MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
@@ -235,7 +253,7 @@ MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
   MappedTraceResult result;
   result.traces = block_traces_impl(raw, Granularity::CacheLine,
                                     geometry.line_size, &geometry, &objects,
-                                    &result.mappings);
+                                    &result.mappings, &result.mapped_traces);
   return result;
 }
 
