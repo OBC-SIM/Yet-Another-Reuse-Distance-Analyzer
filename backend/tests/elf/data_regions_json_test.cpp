@@ -1,8 +1,8 @@
-#include "yarda/elf_data_regions_json.hpp"
+#include "yarda/elf/data_regions_json.hpp"
 
 #include <gtest/gtest.h>
 
-#include "yarda/elf_data_regions.hpp"
+#include "yarda/elf/data_regions.hpp"
 
 namespace
 {

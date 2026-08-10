@@ -1,4 +1,4 @@
-#include "yarda/elf_data_regions.hpp"
+#include "yarda/elf/data_regions.hpp"
 
 #include <algorithm>
 #include <llvm/BinaryFormat/ELF.h>
@@ -11,7 +11,7 @@
 #include <string>
 #include <tuple>
 
-#include "elf_program_regions.hpp"
+#include "program_regions.hpp"
 
 namespace yarda
 {

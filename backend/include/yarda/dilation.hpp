@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "yarda/profile.hpp"
+#include "yarda/reuse/profile.hpp"
 
 namespace yarda
 {

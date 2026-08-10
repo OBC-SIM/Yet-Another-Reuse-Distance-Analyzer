@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "yarda/elf_data_regions.hpp"
+#include "yarda/elf/data_regions.hpp"
 
 namespace yarda
 {

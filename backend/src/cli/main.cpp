@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "yarda/predictor.hpp"
-#include "yarda/profile.hpp"
-#include "yarda/trace.hpp"
+#include "yarda/reuse/profile.hpp"
+#include "yarda/trace/trace.hpp"
 
 namespace
 {

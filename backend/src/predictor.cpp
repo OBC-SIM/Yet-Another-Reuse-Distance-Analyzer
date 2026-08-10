@@ -8,10 +8,10 @@
 #include <utility>
 
 #include "predictor_internal.hpp"
-#include "yarda/calls.hpp"
+#include "yarda/trace/calls.hpp"
 #include "yarda/dilation.hpp"
 #include "yarda/merger.hpp"
-#include "yarda/trace.hpp"
+#include "yarda/trace/trace.hpp"
 
 namespace yarda
 {

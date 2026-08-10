@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "yarda/cache/address.hpp"
-#include "yarda/object_addresses.hpp"
+#include "yarda/elf/address_model.hpp"
 
 namespace yarda
 {

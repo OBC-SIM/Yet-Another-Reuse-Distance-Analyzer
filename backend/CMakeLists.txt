@@ -3,14 +3,14 @@ add_library(yarda_backend
     src/cache/line_mapping.cpp
     src/cache/line_mapping_json.cpp
     src/cache/lru_rd_analysis.cpp
-    src/calls.cpp
+    src/trace/calls.cpp
     src/dilation.cpp
     src/merger.cpp
     src/predictor.cpp
     src/predictor_3d.cpp
-    src/profile.cpp
-    src/schema.cpp
-    src/trace.cpp
+    src/reuse/profile.cpp
+    src/trace/schema.cpp
+    src/trace/trace.cpp
     src/trace/cache_line.cpp
     src/trace/mapped_trace.cpp
 )
@@ -35,10 +35,10 @@ find_package(LLVM 14 REQUIRED CONFIG)
 llvm_map_components_to_libnames(YARDA_ELF_LLVM_LIBS object support)
 
 add_library(yarda_elf_regions
-    src/elf_data_regions.cpp
-    src/elf_data_regions_json.cpp
-    src/elf_object_addresses.cpp
-    src/elf_program_regions.cpp
+    src/elf/data_regions.cpp
+    src/elf/data_regions_json.cpp
+    src/elf/object_addresses.cpp
+    src/elf/program_regions.cpp
 )
 target_include_directories(yarda_elf_regions
     PUBLIC include
@@ -52,11 +52,11 @@ target_link_libraries(yarda_elf_regions
     PRIVATE ${YARDA_ELF_LLVM_LIBS}
 )
 
-add_executable(yarda_elf_regions_cli src/elf_regions_main.cpp)
+add_executable(yarda_elf_regions_cli src/cli/elf_regions_main.cpp)
 set_target_properties(yarda_elf_regions_cli PROPERTIES OUTPUT_NAME yarda_elf_regions)
 target_link_libraries(yarda_elf_regions_cli PRIVATE yarda_elf_regions)
 
-add_executable(yarda_cpp src/main.cpp)
+add_executable(yarda_cpp src/cli/main.cpp)
 target_link_libraries(yarda_cpp PRIVATE yarda_backend)
 
 if(BUILD_TESTING)
@@ -65,7 +65,7 @@ if(BUILD_TESTING)
     find_program(YARDA_CLANGXX_EXECUTABLE NAMES clang++-14 REQUIRED)
     find_program(YARDA_LLVM_OBJCOPY_EXECUTABLE NAMES llvm-objcopy-14 REQUIRED)
     set(YARDA_ELF_FIXTURE_SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/elf_data_fixture.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/elf/data_fixture.cpp)
     set(YARDA_ELF_PIE_FIXTURE ${CMAKE_CURRENT_BINARY_DIR}/yarda_elf_fixture_pie)
     set(YARDA_ELF_EXEC_FIXTURE ${CMAKE_CURRENT_BINARY_DIR}/yarda_elf_fixture_exec)
     set(YARDA_ELF_RELOCATABLE_FIXTURE ${CMAKE_CURRENT_BINARY_DIR}/yarda_elf_fixture.o)
@@ -105,9 +105,9 @@ if(BUILD_TESTING)
     )
 
     add_executable(yarda_elf_regions_tests
-        tests/elf_object_addresses_test.cpp
-        tests/elf_data_regions_test.cpp
-        tests/elf_data_regions_json_test.cpp
+        tests/elf/object_addresses_test.cpp
+        tests/elf/data_regions_test.cpp
+        tests/elf/data_regions_json_test.cpp
     )
     add_dependencies(yarda_elf_regions_tests yarda_elf_region_fixtures)
     target_link_libraries(yarda_elf_regions_tests PRIVATE
@@ -131,21 +131,21 @@ if(BUILD_TESTING)
         tests/cache/line_mapping_json_test.cpp
         tests/cache/lru_rd_analysis_test.cpp
         tests/cache/lru_rd_integration_test.cpp
-        tests/calls_test.cpp
+        tests/trace/calls_test.cpp
         tests/dilation_test.cpp
         tests/merger_test.cpp
         tests/predictor_test.cpp
-        tests/profile_test.cpp
-        tests/schema_test.cpp
+        tests/reuse/profile_test.cpp
+        tests/trace/schema_test.cpp
         tests/trace/mapped_trace_test.cpp
-        tests/trace_test.cpp
+        tests/trace/trace_test.cpp
     )
     target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
     gtest_discover_tests(yarda_backend_tests)
 
     add_executable(yarda_cache_config_tests
-        tests/cache_config_test.cpp
-        tests/yaml_config_parser_test.cpp
+        tests/cache/cache_config_test.cpp
+        tests/cache/yaml_config_parser_test.cpp
     )
     target_link_libraries(yarda_cache_config_tests PRIVATE
         yarda_cache_config GTest::gtest_main

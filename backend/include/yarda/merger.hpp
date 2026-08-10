@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "yarda/profile.hpp"
+#include "yarda/reuse/profile.hpp"
 
 namespace yarda
 {

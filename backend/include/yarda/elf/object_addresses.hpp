@@ -1,7 +1,7 @@
 #pragma once
 
-#include "yarda/elf_data_regions.hpp"
-#include "yarda/object_addresses.hpp"
+#include "yarda/elf/address_model.hpp"
+#include "yarda/elf/data_regions.hpp"
 
 namespace yarda
 {
