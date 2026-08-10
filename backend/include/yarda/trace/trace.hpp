@@ -46,17 +46,6 @@ std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
                                             const ObjectAddressModel & objects);
 
 /**
- * @brief Expand nested loops with per-depth simulation bounds.
- *
- * @param node LAT node after call expansion.
- * @param simulation_bounds Maximum iterations for each loop depth.
- * @return Ordered element-reference keys.
- */
-std::vector<std::string>
-unroll_node_sample(const nlohmann::json & node,
-                   const std::vector<std::size_t> & simulation_bounds);
-
-/**
  * @brief Generate ordered block traces for every analyzed function.
  *
  * @param raw Legacy or APE v2 LAT module.

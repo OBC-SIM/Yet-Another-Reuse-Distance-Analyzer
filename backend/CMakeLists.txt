@@ -4,10 +4,6 @@ add_library(yarda_backend
     src/cache/line_mapping_json.cpp
     src/cache/lru_rd_analysis.cpp
     src/trace/calls.cpp
-    src/dilation.cpp
-    src/merger.cpp
-    src/predictor.cpp
-    src/predictor_3d.cpp
     src/reuse/profile.cpp
     src/trace/schema.cpp
     src/trace/trace.cpp
@@ -125,6 +121,18 @@ if(BUILD_TESTING)
         COMMAND yarda_elf_regions_cli ${YARDA_ELF_PIE_FIXTURE}
     )
 
+    set(YARDA_CPP_CLI_FIXTURE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/unroll_fixture.json)
+    add_test(NAME yarda_cpp_unroll_smoke
+        COMMAND yarda_cpp ${YARDA_CPP_CLI_FIXTURE} --mode unroll
+    )
+    add_test(NAME yarda_cpp_rejects_predict_mode
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_CLI_FIXTURE}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/reject_predict_mode.cmake
+    )
+
     add_executable(yarda_backend_tests
         tests/cache/address_test.cpp
         tests/cache/line_mapping_test.cpp
@@ -132,9 +140,6 @@ if(BUILD_TESTING)
         tests/cache/lru_rd_analysis_test.cpp
         tests/cache/lru_rd_integration_test.cpp
         tests/trace/calls_test.cpp
-        tests/dilation_test.cpp
-        tests/merger_test.cpp
-        tests/predictor_test.cpp
         tests/reuse/profile_test.cpp
         tests/trace/schema_test.cpp
         tests/trace/mapped_trace_test.cpp
