@@ -9,8 +9,8 @@
 `feat/cpp-backend`에서는 성능 병목이던 Python backend를 C++17로
 포팅했습니다. LLVM frontend가 생성한 LAT JSON을 직접 입력받아
 legacy/APE v2 schema 정규화, annotated call expansion, element/cache-line
-trace 생성, Fenwick 기반 O(N log N) exact RDH 계산, 1D/2D/3D Dilation
-예측과 JSON export를 수행합니다.
+trace 생성, Fenwick 기반 O(N log N) exact RDH 계산과 JSON export를
+수행합니다.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -20,10 +20,6 @@ ctest --test-dir build --output-on-failure
 ./build/backend/yarda_cpp tasks/polybench_atax_g_ape.json \
   --mode unroll --granularity cache-line --cache-line-size 32 \
   --export atax_rdh.json
-
-./build/backend/yarda_cpp tasks/polybench_atax_g_ape.json \
-  --mode predict --granularity element \
-  --export atax_predicted_rdh.json
 ```
 
 세부 인터페이스와 현재 지원 범위는 `backend/README.md`를 참고하세요.

@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "yarda/predictor.hpp"
 #include "yarda/reuse/profile.hpp"
 #include "yarda/trace/trace.hpp"
 
@@ -21,7 +20,6 @@ using Json = nlohmann::json;
 struct Options
 {
   std::string input;
-  std::string mode = "unroll";
   yarda::Granularity granularity = yarda::Granularity::Element;
   std::size_t cache_line_size = 32;
   std::string export_path;
@@ -29,7 +27,7 @@ struct Options
 
 void print_usage()
 {
-  std::cout << "Usage: yarda_cpp LAT.json [--mode unroll|predict]"
+  std::cout << "Usage: yarda_cpp LAT.json [--mode unroll]"
             << " [--granularity element|cache-line]"
             << " [--cache-line-size N] [--export PATH]\n";
 }
@@ -49,7 +47,11 @@ Options parse_options(int argc, char ** argv)
     };
     if (argument == "--mode")
     {
-      options.mode = next(argument);
+      const auto mode = next(argument);
+      if (mode != "unroll")
+      {
+        throw std::invalid_argument("unknown mode: " + mode);
+      }
     }
     else if (argument == "--granularity")
     {
@@ -96,16 +98,6 @@ Options parse_options(int argc, char ** argv)
   if (options.input.empty())
   {
     throw std::invalid_argument("LAT input path is required");
-  }
-  if (options.mode != "unroll" && options.mode != "predict")
-  {
-    throw std::invalid_argument("unknown mode: " + options.mode);
-  }
-  if (options.mode == "predict" &&
-      options.granularity != yarda::Granularity::Element)
-  {
-    throw std::invalid_argument(
-      "cache-line granularity is supported only in unroll mode");
   }
   if (options.cache_line_size == 0)
   {
@@ -161,42 +153,27 @@ int main(int argc, char ** argv)
 
     yarda::ReuseProfile program;
     Json block_payload = Json::array();
-    if (options.mode == "predict")
+    const auto blocks =
+      yarda::block_traces(raw, options.granularity, options.cache_line_size);
+    std::vector<std::string> program_trace;
+    for (const auto & block : blocks)
     {
-      const auto prediction = yarda::predict_module(raw);
-      program = prediction.program;
-      for (const auto & block : prediction.blocks)
-      {
-        block_payload.push_back({
-          {"name", block.name},
-          {"profile", profile_json(block.profile)},
-        });
-      }
+      const auto profile = yarda::calculate_reuse_profile(block.accesses);
+      program_trace.insert(program_trace.end(), block.accesses.begin(),
+                           block.accesses.end());
+      block_payload.push_back({
+        {"name", block.name},
+        {"profile", profile_json(profile)},
+      });
     }
-    else
-    {
-      const auto blocks =
-        yarda::block_traces(raw, options.granularity, options.cache_line_size);
-      std::vector<std::string> program_trace;
-      for (const auto & block : blocks)
-      {
-        const auto profile = yarda::calculate_reuse_profile(block.accesses);
-        program_trace.insert(program_trace.end(), block.accesses.begin(),
-                             block.accesses.end());
-        block_payload.push_back({
-          {"name", block.name},
-          {"profile", profile_json(profile)},
-        });
-      }
-      program = yarda::calculate_reuse_profile(program_trace);
-    }
+    program = yarda::calculate_reuse_profile(program_trace);
     print_profile(program);
 
     if (!options.export_path.empty())
     {
       const Json payload = {
         {"file", options.input},
-        {"mode", options.mode},
+        {"mode", "unroll"},
         {"granularity", options.granularity == yarda::Granularity::CacheLine
                           ? "cache-line"
                           : "element"},

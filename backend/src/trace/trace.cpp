@@ -1,6 +1,5 @@
 #include "yarda/trace/trace.hpp"
 
-#include <algorithm>
 #include <cstdint>
 #include <sstream>
 #include <stdexcept>
@@ -70,8 +69,6 @@ std::uint64_t iteration_count(std::int64_t start, std::int64_t bound,
 void append_node(const Json & node, const Environment & environment,
                  Granularity granularity, std::size_t line_size,
                  std::vector<std::string> & trace,
-                 const std::vector<std::size_t> * simulation_bounds = nullptr,
-                 std::size_t loop_level = 0,
                  const CacheGeometry * geometry = nullptr,
                  const ObjectAddressModel * objects = nullptr,
                  CacheLineMappingTable * mappings = nullptr,
@@ -120,10 +117,6 @@ void append_node(const Json & node, const Environment & environment,
     const auto step =
       node.value("step", 1LL) == 0 ? 1LL : node.value("step", 1LL);
     auto count = iteration_count(start, bound, step);
-    if (simulation_bounds != nullptr && loop_level < simulation_bounds->size())
-    {
-      count = std::min<std::uint64_t>(count, (*simulation_bounds)[loop_level]);
-    }
     for (std::uint64_t iteration = 0; iteration < count; ++iteration)
     {
       auto child_environment = environment;
@@ -132,8 +125,7 @@ void append_node(const Json & node, const Environment & environment,
       for (const auto & child : node.value("body", Json::array()))
       {
         append_node(child, child_environment, granularity, line_size, trace,
-                    simulation_bounds, loop_level + 1, geometry, objects,
-                    mappings, mapped_accesses);
+                    geometry, objects, mappings, mapped_accesses);
       }
     }
     return;
@@ -149,8 +141,8 @@ std::vector<std::string> unroll_node(
   std::vector<CacheLineMapping> * mapped_accesses = nullptr)
 {
   std::vector<std::string> trace;
-  append_node(node, {}, granularity, cache_line_size, trace, nullptr, 0,
-              geometry, objects, mappings, mapped_accesses);
+  append_node(node, {}, granularity, cache_line_size, trace, geometry, objects,
+              mappings, mapped_accesses);
   return trace;
 }
 
@@ -226,15 +218,6 @@ std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
   cache_set_count(geometry);
   return unroll_node(node, Granularity::CacheLine, geometry.line_size,
                      &geometry, &objects);
-}
-
-std::vector<std::string>
-unroll_node_sample(const nlohmann::json & node,
-                   const std::vector<std::size_t> & simulation_bounds)
-{
-  std::vector<std::string> trace;
-  append_node(node, {}, Granularity::Element, 32, trace, &simulation_bounds, 0);
-  return trace;
 }
 
 std::vector<NamedTrace> block_traces(const nlohmann::json & raw,

@@ -1,0 +1,14 @@
+[
+  {
+    "function": "kernel",
+    "body": [
+      {
+        "type": "Array",
+        "name": "A",
+        "indices": ["0"],
+        "shape": [1],
+        "elem_size": 4
+      }
+    ]
+  }
+]

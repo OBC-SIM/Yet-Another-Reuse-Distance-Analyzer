@@ -1,6 +1,7 @@
 build/
 logs/
 *.json
+!backend/tests/cli/unroll_fixture.json
 *.ll
 *.log
 system-prompt-extraction/
