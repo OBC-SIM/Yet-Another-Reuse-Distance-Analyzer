@@ -1,4 +1,4 @@
-#include "yarda/elf_object_addresses.hpp"
+#include "yarda/elf/object_addresses.hpp"
 
 #include <stdexcept>
 #include <string>

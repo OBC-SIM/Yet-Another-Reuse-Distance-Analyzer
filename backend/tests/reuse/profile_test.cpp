@@ -1,4 +1,4 @@
-#include "yarda/profile.hpp"
+#include "yarda/reuse/profile.hpp"
 
 #include <algorithm>
 #include <cstddef>

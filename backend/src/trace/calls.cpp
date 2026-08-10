@@ -1,4 +1,4 @@
-#include "yarda/calls.hpp"
+#include "yarda/trace/calls.hpp"
 
 #include <regex>
 #include <stdexcept>
@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "yarda/schema.hpp"
+#include "yarda/trace/schema.hpp"
 
 namespace yarda
 {

@@ -1,4 +1,4 @@
-#include "yarda/trace.hpp"
+#include "yarda/trace/trace.hpp"
 
 #include <nlohmann/json.hpp>
 

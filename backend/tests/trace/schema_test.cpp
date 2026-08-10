@@ -1,4 +1,4 @@
-#include "yarda/schema.hpp"
+#include "yarda/trace/schema.hpp"
 
 #include <nlohmann/json.hpp>
 

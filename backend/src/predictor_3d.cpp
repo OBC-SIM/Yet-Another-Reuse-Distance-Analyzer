@@ -10,7 +10,7 @@
 
 #include "predictor_internal.hpp"
 #include "yarda/dilation.hpp"
-#include "yarda/trace.hpp"
+#include "yarda/trace/trace.hpp"
 
 namespace yarda::detail
 {

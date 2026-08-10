@@ -1,4 +1,4 @@
-#include "elf_program_regions.hpp"
+#include "program_regions.hpp"
 
 #include <algorithm>
 #include <cstdint>

@@ -1,4 +1,4 @@
-#include "yarda/trace.hpp"
+#include "yarda/trace/trace.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -7,8 +7,8 @@
 #include <string>
 #include <unordered_map>
 
-#include "trace/cache_line.hpp"
-#include "yarda/calls.hpp"
+#include "cache_line.hpp"
+#include "yarda/trace/calls.hpp"
 
 namespace yarda
 {
