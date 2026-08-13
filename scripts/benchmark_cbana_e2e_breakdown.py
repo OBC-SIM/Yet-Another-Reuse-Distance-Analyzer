@@ -33,7 +33,8 @@ RESULTS = ROOT / "benchmark-results" / "cbana-polybench-e2e"
 TOOLS = ("Cachegrind", "YARDA (Python)", "YARDA (C++)", "CASA")
 COLORS = ("#dd8452", "#8172b3", "#4c72b0", "#55a868")
 REPETITIONS = 5
-CACHE_YAML = """cores:
+CACHE_YAML = """schema_version: 1
+cores:
   count: 1
   mapping:
     - id: 0
@@ -148,7 +149,7 @@ def backend_times(lat: Path, cache: Path, binary: Path, cachegrind: Path) -> dic
     python_seconds, _ = command_time(python_command(lat))
     cpp_seconds, _ = command_time([
         str(CPP_BACKEND), str(lat), "--mode", "unroll", "--granularity",
-        "cache-line", "--cache-line-size", "64",
+        "cache-line", "--cache", str(cache),
     ])
     return {
         "Cachegrind": cachegrind_time(binary, cachegrind),

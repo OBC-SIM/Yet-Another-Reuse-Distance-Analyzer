@@ -21,6 +21,7 @@ from polybench_suite import PreparedWorkload, discover_workloads, prepare_worklo
 
 ROOT = Path(__file__).resolve().parent.parent
 CPP_BACKEND = ROOT / "build" / "backend" / "yarda_cpp"
+CACHE_CONFIG = ROOT / "backend" / "config" / "cache.example.yaml"
 RESULTS = ROOT / "benchmark-results" / "cbana-polybench-supported"
 TOOLS = ("Cachegrind", "YARDA (Python)", "YARDA (C++)")
 CACHE_LINE_SIZE = 64
@@ -87,8 +88,8 @@ def cpp_command(lat: Path) -> list[str]:
         "unroll",
         "--granularity",
         "cache-line",
-        "--cache-line-size",
-        str(CACHE_LINE_SIZE),
+        "--cache",
+        str(CACHE_CONFIG),
     ]
 
 

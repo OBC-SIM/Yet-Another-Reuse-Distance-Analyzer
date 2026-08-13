@@ -22,6 +22,7 @@ from polybench_suite import PreparedWorkload, discover_workloads, prepare_worklo
 
 ROOT = Path(__file__).resolve().parent.parent
 CPP_BACKEND = ROOT / "build" / "backend" / "yarda_cpp"
+CACHE_CONFIG = ROOT / "backend" / "config" / "cache.32b.yaml"
 RESULTS = ROOT / "benchmark-results" / "polybench-4.2.1-mini"
 TOOLS = ("Cachegrind", "YARDA (Python)", "YARDA (C++)")
 CATEGORIES = ("Data mining", "Linear algebra kernels", "BLAS & solvers",
@@ -54,7 +55,7 @@ def python_command(lat: Path) -> list[str]:
 def cpp_command(lat: Path) -> list[str]:
     """Return C++ YARDA's exact cache-line analysis command."""
     return [str(CPP_BACKEND), str(lat), "--mode", "unroll",
-            "--granularity", "cache-line", "--cache-line-size", "32"]
+            "--granularity", "cache-line", "--cache", str(CACHE_CONFIG)]
 
 
 def cachegrind_command(artifact: PreparedWorkload) -> list[str]:
