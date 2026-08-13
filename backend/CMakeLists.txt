@@ -53,7 +53,7 @@ set_target_properties(yarda_elf_regions_cli PROPERTIES OUTPUT_NAME yarda_elf_reg
 target_link_libraries(yarda_elf_regions_cli PRIVATE yarda_elf_regions)
 
 add_executable(yarda_cpp src/cli/main.cpp)
-target_link_libraries(yarda_cpp PRIVATE yarda_backend)
+target_link_libraries(yarda_cpp PRIVATE yarda_cache_config)
 
 if(BUILD_TESTING)
     find_package(GTest REQUIRED)
@@ -125,6 +125,20 @@ if(BUILD_TESTING)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/unroll_fixture.json)
     add_test(NAME yarda_cpp_unroll_smoke
         COMMAND yarda_cpp ${YARDA_CPP_CLI_FIXTURE} --mode unroll
+    )
+    add_test(NAME yarda_cpp_cache_config_smoke
+        COMMAND yarda_cpp ${YARDA_CPP_CLI_FIXTURE}
+            --mode unroll
+            --granularity cache-line
+            --cache ${CMAKE_CURRENT_SOURCE_DIR}/config/cache.example.yaml
+    )
+    add_test(NAME yarda_cpp_requires_cache_config
+        COMMAND yarda_cpp ${YARDA_CPP_CLI_FIXTURE}
+            --mode unroll
+            --granularity cache-line
+    )
+    set_tests_properties(yarda_cpp_requires_cache_config PROPERTIES
+        WILL_FAIL TRUE
     )
     add_test(NAME yarda_cpp_rejects_predict_mode
         COMMAND ${CMAKE_COMMAND}
