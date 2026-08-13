@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "yarda/cache/cache_config.hpp"
+#include "yarda/cache/yaml_config_parser.hpp"
 #include "yarda/reuse/profile.hpp"
 #include "yarda/trace/trace.hpp"
 
@@ -21,7 +23,7 @@ struct Options
 {
   std::string input;
   yarda::Granularity granularity = yarda::Granularity::Element;
-  std::size_t cache_line_size = 32;
+  std::string cache_path;
   std::string export_path;
 };
 
@@ -29,7 +31,7 @@ void print_usage()
 {
   std::cout << "Usage: yarda_cpp LAT.json [--mode unroll]"
             << " [--granularity element|cache-line]"
-            << " [--cache-line-size N] [--export PATH]\n";
+            << " [--cache FILE] [--export PATH]\n";
 }
 
 Options parse_options(int argc, char ** argv)
@@ -69,9 +71,9 @@ Options parse_options(int argc, char ** argv)
         throw std::invalid_argument("unknown granularity: " + value);
       }
     }
-    else if (argument == "--cache-line-size")
+    else if (argument == "--cache")
     {
-      options.cache_line_size = std::stoull(next(argument));
+      options.cache_path = next(argument);
     }
     else if (argument == "--export")
     {
@@ -99,9 +101,11 @@ Options parse_options(int argc, char ** argv)
   {
     throw std::invalid_argument("LAT input path is required");
   }
-  if (options.cache_line_size == 0)
+  if (options.granularity == yarda::Granularity::CacheLine &&
+      options.cache_path.empty())
   {
-    throw std::invalid_argument("cache-line size must be positive");
+    throw std::invalid_argument(
+      "--cache is required for cache-line granularity");
   }
   return options;
 }
@@ -151,10 +155,18 @@ int main(int argc, char ** argv)
     Json raw;
     input >> raw;
 
+    std::size_t cache_line_size = 0;
+    if (!options.cache_path.empty())
+    {
+      const auto config = yarda::parse_cache_config(options.cache_path);
+      const auto & l1 = yarda::entry_cache_config(config, 0);
+      cache_line_size = yarda::make_cache_geometry(l1).line_size;
+    }
+
     yarda::ReuseProfile program;
     Json block_payload = Json::array();
     const auto blocks =
-      yarda::block_traces(raw, options.granularity, options.cache_line_size);
+      yarda::block_traces(raw, options.granularity, cache_line_size);
     std::vector<std::string> program_trace;
     for (const auto & block : blocks)
     {
@@ -178,7 +190,7 @@ int main(int argc, char ** argv)
                           ? "cache-line"
                           : "element"},
         {"cache_line_size", options.granularity == yarda::Granularity::CacheLine
-                              ? Json(options.cache_line_size)
+                              ? Json(cache_line_size)
                               : Json(nullptr)},
         {"program", profile_json(program)},
         {"blocks", block_payload},
