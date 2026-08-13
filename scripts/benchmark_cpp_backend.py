@@ -19,6 +19,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "tasks"
 CPP_BACKEND = ROOT / "build" / "backend" / "yarda_cpp"
+CACHE_CONFIG = ROOT / "backend" / "config" / "cache.32b.yaml"
 RESULTS = ROOT / "benchmark-results" / "cpp-backend-comparison"
 WORKLOADS = ("polybench_2mm", "polybench_atax", "polybench_correlation",
              "polybench_gemm", "polybench_jacobi")
@@ -71,7 +72,7 @@ def python_command(lat: Path) -> list[str]:
 def cpp_command(lat: Path) -> list[str]:
     """Return C++ YARDA's exact 32-byte cache-line unroll command."""
     return [str(CPP_BACKEND), str(lat), "--mode", "unroll",
-            "--granularity", "cache-line", "--cache-line-size", "32"]
+            "--granularity", "cache-line", "--cache", str(CACHE_CONFIG)]
 
 
 def cachegrind_command(binary: Path, workload: str) -> list[str]:
