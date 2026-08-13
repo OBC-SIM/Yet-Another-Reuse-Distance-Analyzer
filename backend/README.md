@@ -23,7 +23,7 @@ CTest runs the frontend and backend test suites together.
 ./build/backend/yarda_cpp tasks/polybench_atax_g_ape.json \
   --mode unroll \
   --granularity cache-line \
-  --cache-line-size 32 \
+  --cache backend/config/cache.32b.yaml \
   --export atax_rdh.json
 ```
 
@@ -31,4 +31,5 @@ The unroll path implements LAT v1/v2 normalization, annotated direct-call
 expansion, block profiles, and Python-compatible JSON export. Exact unrolling
 uses a Fenwick tree for O(N log N) reuse-distance profiling. `--mode unroll`
 remains accepted for command-line compatibility; `--mode predict` is not
-supported.
+supported. Cache-line granularity requires a versioned YAML hierarchy passed
+through `--cache`; core 0's configured L1 line size defines trace grouping.
