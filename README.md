@@ -18,7 +18,8 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 
 ./build/backend/yarda_cpp tasks/polybench_atax_g_ape.json \
-  --mode unroll --granularity cache-line --cache-line-size 32 \
+  --mode unroll --granularity cache-line \
+  --cache backend/config/cache.32b.yaml \
   --export atax_rdh.json
 ```
 
