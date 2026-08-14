@@ -162,14 +162,13 @@ std::optional<TraceCacheLine> trace_cache_line(
       mappings->emplace(
         std::make_pair(mapping.object_id, mapping.object_byte_offset), mapping);
     }
-    return TraceCacheLine{"cache-tag-" + std::to_string(mapping.decoded.tag) +
-                            "-set-" + std::to_string(mapping.decoded.set_index),
-                          mapping};
+    return TraceCacheLine{std::nullopt, mapping};
   }
-  return TraceCacheLine{node.value("name", "") + "-line-" +
-                          std::to_string(floor_divide(
-                            byte_offset, static_cast<std::int64_t>(line_size))),
-                        std::nullopt};
+  return TraceCacheLine{
+    node.value("name", "") + "-line-" +
+      std::to_string(
+        floor_divide(byte_offset, static_cast<std::int64_t>(line_size))),
+    std::nullopt};
 }
 
 }  // namespace yarda::detail

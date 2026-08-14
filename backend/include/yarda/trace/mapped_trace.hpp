@@ -10,13 +10,6 @@
 namespace yarda
 {
 
-/** @brief Ordered string accesses associated with one reported block. */
-struct NamedTrace
-{
-  std::string name;
-  std::vector<std::string> accesses;
-};
-
 /** @brief Ordered mapped accesses associated with one reported block. */
 struct NamedMappedTrace
 {
@@ -24,11 +17,10 @@ struct NamedMappedTrace
   std::vector<CacheLineMapping> accesses;
 };
 
-/** @brief Exact string traces, typed accesses, and unique mapping rows. */
+/** @brief Exact typed traces and unique mapping rows. */
 struct MappedTraceResult
 {
-  std::vector<NamedTrace> traces;
-  std::vector<NamedMappedTrace> mapped_traces;
+  std::vector<NamedMappedTrace> traces;
   CacheLineMappingTable mappings;
 };
 

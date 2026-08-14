@@ -20,6 +20,13 @@ enum class Granularity
   CacheLine,
 };
 
+/** @brief Ordered string accesses associated with one reported block. */
+struct NamedTrace
+{
+  std::string name;
+  std::vector<std::string> accesses;
+};
+
 /**
  * @brief Expand one LAT node using its actual loop bounds.
  *
@@ -38,12 +45,12 @@ std::vector<std::string> unroll_node_actual(
  * @param node LAT node after call expansion.
  * @param geometry Cache geometry used to decode Tag, Index, and Offset.
  * @param objects Linked global object addresses (borrowed, ownership retained).
- * @return Ordered cache-line keys represented by Tag and set index.
+ * @return Ordered typed cache-line mappings.
  * @throws std::invalid_argument for unresolved or unsupported global accesses.
  */
-std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
-                                            const CacheGeometry & geometry,
-                                            const ObjectAddressModel & objects);
+std::vector<CacheLineMapping>
+unroll_node_actual(const nlohmann::json & node, const CacheGeometry & geometry,
+                   const ObjectAddressModel & objects);
 
 /**
  * @brief Generate ordered block traces for every analyzed function.

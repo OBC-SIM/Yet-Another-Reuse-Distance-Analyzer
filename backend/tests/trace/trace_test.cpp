@@ -60,6 +60,30 @@ TEST(TraceTest, UsesPythonFloorDivisionForNegativeOffsets)
   EXPECT_EQ(trace, (std::vector<std::string>{"A-line--1"}));
 }
 
+TEST(TraceTest, ReturnsTypedMappingForLinkedGlobalAccess)
+{
+  const Json access = {
+    {"type", "Array"},
+    {"name", "A"},
+    {"object", "global::A"},
+    {"indices", Json::array({"0"})},
+    {"shape", Json::array({1})},
+    {"elem_size", 4},
+  };
+  yarda::ObjectAddressModel objects;
+  objects.objects["global::A"] = {0x1030, 4};
+
+  const auto trace = yarda::unroll_node_actual(
+    access, yarda::CacheGeometry{64, 512, 8}, objects);
+
+  ASSERT_EQ(trace.size(), 1);
+  EXPECT_EQ(trace[0].object_id, "global::A");
+  EXPECT_EQ(trace[0].object_byte_offset, 0U);
+  EXPECT_EQ(trace[0].decoded.tag, 1U);
+  EXPECT_EQ(trace[0].decoded.set_index, 0U);
+  EXPECT_EQ(trace[0].decoded.line_offset, 0x30U);
+}
+
 TEST(TraceTest, MapsDifferentGlobalObjectsToSharedCacheLine)
 {
   const Json module = Json::array({{
@@ -87,9 +111,13 @@ TEST(TraceTest, MapsDifferentGlobalObjectsToSharedCacheLine)
     module, yarda::CacheGeometry{64, 512, 8}, objects);
 
   ASSERT_EQ(result.traces.size(), 1);
-  EXPECT_EQ(result.traces[0].accesses,
-            (std::vector<std::string>{"cache-tag-1-set-0",
-                                      "cache-tag-1-set-0"}));
+  ASSERT_EQ(result.traces[0].accesses.size(), 2);
+  EXPECT_EQ(result.traces[0].accesses[0].object_id, "global::A");
+  EXPECT_EQ(result.traces[0].accesses[1].object_id, "global::B");
+  EXPECT_EQ(result.traces[0].accesses[0].decoded.tag, 1U);
+  EXPECT_EQ(result.traces[0].accesses[1].decoded.tag, 1U);
+  EXPECT_EQ(result.traces[0].accesses[0].decoded.set_index, 0U);
+  EXPECT_EQ(result.traces[0].accesses[1].decoded.set_index, 0U);
   ASSERT_EQ(result.mappings.size(), 2);
   EXPECT_EQ(result.mappings.at({"global::A", 0}).decoded.line_offset, 0x30U);
   EXPECT_EQ(result.mappings.at({"global::B", 0}).decoded.line_offset, 0x38U);

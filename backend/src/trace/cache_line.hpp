@@ -14,7 +14,7 @@ namespace yarda::detail
 
 struct TraceCacheLine
 {
-  std::string key;
+  std::optional<std::string> key;
   std::optional<CacheLineMapping> mapping;
 };
 

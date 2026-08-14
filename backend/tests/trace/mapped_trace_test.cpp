@@ -41,8 +41,8 @@ TEST(MappedTraceTest, PreservesMappedAccessOrder)
   const auto result = yarda::mapped_block_traces(
     module, yarda::CacheGeometry{64, 512, 8}, objects);
 
-  ASSERT_EQ(result.mapped_traces.size(), 1);
-  const auto & accesses = result.mapped_traces.front().accesses;
+  ASSERT_EQ(result.traces.size(), 1);
+  const auto & accesses = result.traces.front().accesses;
   ASSERT_EQ(accesses.size(), 3);
   EXPECT_EQ(accesses[0].object_id, "global::A");
   EXPECT_EQ(accesses[1].object_id, "global::B");
@@ -86,9 +86,9 @@ TEST(MappedTraceTest, FlattensMappedBlocksInProgramOrder)
   const auto mapped = yarda::mapped_block_traces(
     module, yarda::CacheGeometry{64, 512, 8}, objects);
 
-  const auto accesses = yarda::flatten_mapped_traces(mapped.mapped_traces);
+  const auto accesses = yarda::flatten_mapped_traces(mapped.traces);
 
-  ASSERT_EQ(mapped.mapped_traces.size(), 2);
+  ASSERT_EQ(mapped.traces.size(), 2);
   ASSERT_EQ(accesses.size(), 2);
   EXPECT_EQ(accesses[0].object_id, "global::A");
   EXPECT_EQ(accesses[1].object_id, "global::B");
