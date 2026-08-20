@@ -14,6 +14,12 @@ namespace
 
 using Json = nlohmann::json;
 
+struct ByteAccess
+{
+  std::int64_t offset;
+  std::int64_t size;
+};
+
 std::optional<std::int64_t> parse_integer(const std::string & value)
 {
   try
@@ -94,81 +100,108 @@ linear_index(const Json & node, const std::vector<std::int64_t> & indices)
   return linear;
 }
 
-}  // namespace
-
-std::optional<TraceCacheLine> trace_cache_line(
-  const nlohmann::json & node, const std::vector<std::string> & indices,
-  std::size_t line_size, const CacheGeometry * geometry,
-  const ObjectAddressModel * objects, CacheLineMappingTable * mappings)
+std::optional<std::vector<std::int64_t>>
+parse_indices(const std::vector<std::string> & indices)
 {
-  const auto object_id = node.value("object", "");
-  const bool mapped_global = geometry != nullptr && objects != nullptr &&
-                             object_id.rfind("global::", 0) == 0;
-  if (!node.contains("elem_size") || line_size == 0)
-  {
-    if (mapped_global)
-    {
-      throw std::invalid_argument("global access lacks element size: " +
-                                  object_id);
-    }
-    return std::nullopt;
-  }
-  if (mapped_global && has_field_path(node))
-  {
-    throw std::invalid_argument(
-      "structured global access mapping is not supported: " + object_id);
-  }
-
   std::vector<std::int64_t> numeric;
   for (const auto & index : indices)
   {
     const auto parsed = parse_integer(index);
     if (!parsed)
     {
-      if (mapped_global)
-      {
-        throw std::invalid_argument("global access index is not exact: " +
-                                    object_id);
-      }
       return std::nullopt;
     }
     numeric.push_back(*parsed);
   }
-  const auto linear = linear_index(node, numeric);
+  return numeric;
+}
+
+std::optional<ByteAccess>
+resolve_byte_access(const Json & node,
+                    const std::vector<std::int64_t> & indices)
+{
+  const auto linear = linear_index(node, indices);
   const auto element_size = node["elem_size"].get<std::int64_t>();
   std::int64_t byte_offset = 0;
   if (!linear || element_size <= 0 ||
       __builtin_mul_overflow(*linear, element_size, &byte_offset))
   {
-    if (mapped_global)
-    {
-      throw std::invalid_argument("global access offset is invalid: " +
-                                  object_id);
-    }
     return std::nullopt;
   }
-  if (mapped_global)
+  return ByteAccess{byte_offset, element_size};
+}
+
+}  // namespace
+
+std::optional<std::string> trace_cache_line_key(
+  const nlohmann::json & node, const std::vector<std::string> & indices,
+  std::size_t line_size)
+{
+  if (!node.contains("elem_size") || line_size == 0)
   {
-    if (byte_offset < 0)
-    {
-      throw std::invalid_argument("global access offset is negative: " +
-                                  object_id);
-    }
-    const auto mapping = map_cache_line(
-      object_id, static_cast<std::uint64_t>(byte_offset),
-      static_cast<std::uint64_t>(element_size), *objects, *geometry);
-    if (mappings != nullptr)
-    {
-      mappings->emplace(
-        std::make_pair(mapping.object_id, mapping.object_byte_offset), mapping);
-    }
-    return TraceCacheLine{std::nullopt, mapping};
+    return std::nullopt;
   }
-  return TraceCacheLine{
-    node.value("name", "") + "-line-" +
-      std::to_string(
-        floor_divide(byte_offset, static_cast<std::int64_t>(line_size))),
-    std::nullopt};
+  const auto numeric = parse_indices(indices);
+  if (!numeric)
+  {
+    return std::nullopt;
+  }
+  const auto access = resolve_byte_access(node, *numeric);
+  if (!access)
+  {
+    return std::nullopt;
+  }
+  return node.value("name", "") + "-line-" +
+         std::to_string(floor_divide(
+           access->offset, static_cast<std::int64_t>(line_size)));
+}
+
+CacheLineMapper::CacheLineMapper(const CacheGeometry & geometry,
+                                 const ObjectAddressModel & objects)
+  : geometry_(geometry), objects_(objects)
+{
+  cache_set_count(geometry_);
+}
+
+std::optional<CacheLineMapping>
+CacheLineMapper::map(const nlohmann::json & node,
+                     const std::vector<std::string> & indices) const
+{
+  const auto object_id = node.value("object", "");
+  if (object_id.rfind("global::", 0) != 0)
+  {
+    return std::nullopt;
+  }
+  if (!node.contains("elem_size"))
+  {
+    throw std::invalid_argument("global access lacks element size: " +
+                                object_id);
+  }
+  if (has_field_path(node))
+  {
+    throw std::invalid_argument(
+      "structured global access mapping is not supported: " + object_id);
+  }
+  const auto numeric = parse_indices(indices);
+  if (!numeric)
+  {
+    throw std::invalid_argument("global access index is not exact: " +
+                                object_id);
+  }
+  const auto access = resolve_byte_access(node, *numeric);
+  if (!access)
+  {
+    throw std::invalid_argument("global access offset is invalid: " +
+                                object_id);
+  }
+  if (access->offset < 0)
+  {
+    throw std::invalid_argument("global access offset is negative: " +
+                                object_id);
+  }
+  return map_cache_line(object_id, static_cast<std::uint64_t>(access->offset),
+                        static_cast<std::uint64_t>(access->size), objects_,
+                        geometry_);
 }
 
 }  // namespace yarda::detail

@@ -12,15 +12,23 @@
 namespace yarda::detail
 {
 
-struct TraceCacheLine
-{
-  std::optional<std::string> key;
-  std::optional<CacheLineMapping> mapping;
-};
-
-std::optional<TraceCacheLine> trace_cache_line(
+std::optional<std::string> trace_cache_line_key(
   const nlohmann::json & node, const std::vector<std::string> & indices,
-  std::size_t line_size, const CacheGeometry * geometry,
-  const ObjectAddressModel * objects, CacheLineMappingTable * mappings);
+  std::size_t line_size);
+
+class CacheLineMapper
+{
+public:
+  CacheLineMapper(const CacheGeometry & geometry,
+                  const ObjectAddressModel & objects);
+
+  std::optional<CacheLineMapping>
+  map(const nlohmann::json & node,
+      const std::vector<std::string> & indices) const;
+
+private:
+  const CacheGeometry & geometry_;
+  const ObjectAddressModel & objects_;
+};
 
 }  // namespace yarda::detail

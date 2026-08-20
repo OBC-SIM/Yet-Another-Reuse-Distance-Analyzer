@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "yarda/trace/mapped_trace.hpp"
+
 namespace
 {
 
