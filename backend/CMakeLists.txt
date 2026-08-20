@@ -9,6 +9,7 @@ add_library(yarda_backend
     src/trace/trace.cpp
     src/trace/cache_line.cpp
     src/trace/mapped_trace.cpp
+    src/trace/unroller.cpp
 )
 
 target_include_directories(yarda_backend PUBLIC include)

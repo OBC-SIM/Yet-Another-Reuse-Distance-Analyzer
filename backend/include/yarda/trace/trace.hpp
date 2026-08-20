@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "yarda/trace/mapped_trace.hpp"
-
 namespace yarda
 {
 
@@ -38,19 +36,6 @@ struct NamedTrace
 std::vector<std::string> unroll_node_actual(
   const nlohmann::json & node, Granularity granularity = Granularity::Element,
   std::size_t cache_line_size = 32);
-
-/**
- * @brief Expand one LAT node with linked global cache-address mapping.
- *
- * @param node LAT node after call expansion.
- * @param geometry Cache geometry used to decode Tag, Index, and Offset.
- * @param objects Linked global object addresses (borrowed, ownership retained).
- * @return Ordered typed cache-line mappings.
- * @throws std::invalid_argument for unresolved or unsupported global accesses.
- */
-std::vector<CacheLineMapping>
-unroll_node_actual(const nlohmann::json & node, const CacheGeometry & geometry,
-                   const ObjectAddressModel & objects);
 
 /**
  * @brief Generate ordered block traces for every analyzed function.
