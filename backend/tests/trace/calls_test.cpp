@@ -127,6 +127,70 @@ TEST(CallsTest, PropagatesActualObjectThroughNestedInlineCalls)
   EXPECT_EQ(expanded[0]["body"][0]["shape"], Json::array({16}));
 }
 
+TEST(CallsTest, RejectsTooFewArguments)
+{
+  const Json module = Json::array({
+    {
+      {"function", "touch"},
+      {"params", Json::array({"x", "idx"})},
+      {"body", Json::array()},
+    },
+    {
+      {"function", "kernel"},
+      {"body", Json::array({{
+                 {"type", "Call"},
+                 {"callee", "touch"},
+                 {"args", Json::array({"A"})},
+               }})},
+    },
+  });
+
+  EXPECT_THROW(yarda::expand_calls(module), std::invalid_argument);
+}
+
+TEST(CallsTest, RejectsTooManyArguments)
+{
+  const Json module = Json::array({
+    {
+      {"function", "touch"},
+      {"params", Json::array({"x"})},
+      {"body", Json::array()},
+    },
+    {
+      {"function", "kernel"},
+      {"body", Json::array({{
+                 {"type", "Call"},
+                 {"callee", "touch"},
+                 {"args", Json::array({"A", "i"})},
+               }})},
+    },
+  });
+
+  EXPECT_THROW(yarda::expand_calls(module), std::invalid_argument);
+}
+
+TEST(CallsTest, RejectsMismatchedArgumentObjects)
+{
+  const Json module = Json::array({
+    {
+      {"function", "touch"},
+      {"params", Json::array({"x", "idx"})},
+      {"body", Json::array()},
+    },
+    {
+      {"function", "kernel"},
+      {"body", Json::array({{
+                 {"type", "Call"},
+                 {"callee", "touch"},
+                 {"args", Json::array({"A", "i"})},
+                 {"arg_objects", Json::array({"global::A"})},
+               }})},
+    },
+  });
+
+  EXPECT_THROW(yarda::expand_calls(module), std::invalid_argument);
+}
+
 TEST(CallsTest, RejectsRecursion)
 {
   const Json module = Json::array({{

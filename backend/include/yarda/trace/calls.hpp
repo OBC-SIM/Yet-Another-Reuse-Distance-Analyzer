@@ -10,7 +10,8 @@ namespace yarda
  *
  * @param raw Legacy or APE v2 LAT module.
  * @return Normalized function entries without Call nodes.
- * @throws std::invalid_argument for unknown callees or recursion.
+ * @throws std::invalid_argument for unknown callees, recursion, or argument
+ * count mismatches.
  */
 nlohmann::json expand_calls(const nlohmann::json & raw);
 
