@@ -3,7 +3,6 @@
 #include <nlohmann/json.hpp>
 
 #include <cstddef>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -12,7 +11,7 @@
 namespace yarda::detail
 {
 
-std::optional<std::string> trace_cache_line_key(
+std::vector<std::string> trace_cache_line_keys(
   const nlohmann::json & node, const std::vector<std::string> & indices,
   std::size_t line_size);
 
@@ -22,7 +21,7 @@ public:
   CacheLineMapper(const CacheGeometry & geometry,
                   const ObjectAddressModel & objects);
 
-  std::optional<CacheLineMapping>
+  std::vector<CacheLineMapping>
   map(const nlohmann::json & node,
       const std::vector<std::string> & indices) const;
 

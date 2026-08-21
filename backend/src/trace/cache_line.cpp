@@ -1,6 +1,7 @@
 #include "cache_line.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -133,27 +134,43 @@ resolve_byte_access(const Json & node,
 
 }  // namespace
 
-std::optional<std::string> trace_cache_line_key(
+std::vector<std::string> trace_cache_line_keys(
   const nlohmann::json & node, const std::vector<std::string> & indices,
   std::size_t line_size)
 {
   if (!node.contains("elem_size") || line_size == 0)
   {
-    return std::nullopt;
+    return {};
   }
   const auto numeric = parse_indices(indices);
   if (!numeric)
   {
-    return std::nullopt;
+    return {};
   }
   const auto access = resolve_byte_access(node, *numeric);
   if (!access)
   {
-    return std::nullopt;
+    return {};
   }
-  return node.value("name", "") + "-line-" +
-         std::to_string(floor_divide(
-           access->offset, static_cast<std::int64_t>(line_size)));
+  std::int64_t last_byte = 0;
+  if (__builtin_add_overflow(access->offset, access->size - 1, &last_byte))
+  {
+    return {};
+  }
+  const auto divisor = static_cast<std::int64_t>(line_size);
+  const auto first_line = floor_divide(access->offset, divisor);
+  const auto last_line = floor_divide(last_byte, divisor);
+  std::vector<std::string> keys;
+  for (auto line = first_line;; ++line)
+  {
+    keys.push_back(node.value("name", "") + "-line-" +
+                   std::to_string(line));
+    if (line == last_line)
+    {
+      break;
+    }
+  }
+  return keys;
 }
 
 CacheLineMapper::CacheLineMapper(const CacheGeometry & geometry,
@@ -163,14 +180,14 @@ CacheLineMapper::CacheLineMapper(const CacheGeometry & geometry,
   cache_set_count(geometry_);
 }
 
-std::optional<CacheLineMapping>
+std::vector<CacheLineMapping>
 CacheLineMapper::map(const nlohmann::json & node,
                      const std::vector<std::string> & indices) const
 {
   const auto object_id = node.value("object", "");
   if (object_id.rfind("global::", 0) != 0)
   {
-    return std::nullopt;
+    return {};
   }
   if (!node.contains("elem_size"))
   {
@@ -199,9 +216,10 @@ CacheLineMapper::map(const nlohmann::json & node,
     throw std::invalid_argument("global access offset is negative: " +
                                 object_id);
   }
-  return map_cache_line(object_id, static_cast<std::uint64_t>(access->offset),
-                        static_cast<std::uint64_t>(access->size), objects_,
-                        geometry_);
+  return map_cache_lines(object_id,
+                         static_cast<std::uint64_t>(access->offset),
+                         static_cast<std::uint64_t>(access->size), objects_,
+                         geometry_);
 }
 
 }  // namespace yarda::detail

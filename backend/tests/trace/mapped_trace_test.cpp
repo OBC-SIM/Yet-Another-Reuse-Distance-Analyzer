@@ -96,4 +96,35 @@ TEST(MappedTraceTest, FlattensMappedBlocksInProgramOrder)
   EXPECT_EQ(accesses[1].decoded.set_index, 2U);
 }
 
+TEST(MappedTraceTest, PreservesEveryLineOfOneStructSizedAccess)
+{
+  const Json module = Json::array({{
+    {"function", "kernel"},
+    {"body", Json::array({{
+               {"type", "Array"},
+               {"name", "records"},
+               {"object", "global::records"},
+               {"indices", Json::array({"5"})},
+               {"shape", Json::array({6})},
+               {"elem_size", 12},
+             }})},
+  }});
+  yarda::ObjectAddressModel objects;
+  objects.objects["global::records"] = {0x1000, 72};
+
+  const auto result = yarda::mapped_block_traces(
+    module, yarda::CacheGeometry{64, 512, 8}, objects);
+
+  ASSERT_EQ(result.traces.size(), 1);
+  const auto & accesses = result.traces.front().accesses;
+  ASSERT_EQ(accesses.size(), 2);
+  EXPECT_EQ(accesses[0].object_byte_offset, 60U);
+  EXPECT_EQ(accesses[0].decoded.address, 0x103cU);
+  EXPECT_EQ(accesses[1].object_byte_offset, 64U);
+  EXPECT_EQ(accesses[1].decoded.address, 0x1040U);
+  EXPECT_EQ(result.mappings.size(), 2);
+  EXPECT_EQ(result.mappings.at({"global::records", 64}).decoded.line_offset,
+            0U);
+}
+
 }  // namespace

@@ -62,6 +62,23 @@ TEST(TraceTest, UsesPythonFloorDivisionForNegativeOffsets)
   EXPECT_EQ(trace, (std::vector<std::string>{"A-line--1"}));
 }
 
+TEST(TraceTest, MapsOneStructSizedAccessToEveryRelativeCacheLine)
+{
+  const Json access = {
+    {"type", "Array"},
+    {"name", "records"},
+    {"indices", Json::array({"5"})},
+    {"shape", Json::array({6})},
+    {"elem_size", 12},
+  };
+
+  const auto trace =
+    yarda::unroll_node_actual(access, yarda::Granularity::CacheLine, 64);
+
+  EXPECT_EQ(trace,
+            (std::vector<std::string>{"records-line-0", "records-line-1"}));
+}
+
 TEST(TraceTest, ReturnsTypedMappingForLinkedGlobalAccess)
 {
   const Json access = {

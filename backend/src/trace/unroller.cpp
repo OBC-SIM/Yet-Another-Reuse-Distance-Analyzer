@@ -1,6 +1,7 @@
 #include "unroller.hpp"
 
 #include <cstdint>
+#include <iterator>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -128,11 +129,11 @@ TraceUnroller::unroll(const nlohmann::json & node) const
     }
     if (granularity_ == Granularity::CacheLine)
     {
-      const auto cache_line =
-        trace_cache_line_key(access, indices, cache_line_size_);
-      if (cache_line)
+      const auto cache_lines =
+        trace_cache_line_keys(access, indices, cache_line_size_);
+      if (!cache_lines.empty())
       {
-        trace.push_back(*cache_line);
+        trace.insert(trace.end(), cache_lines.begin(), cache_lines.end());
         return;
       }
     }
@@ -164,10 +165,10 @@ MappedTraceUnroller::unroll(const nlohmann::json & node) const
     {
       return;
     }
-    if (const auto mapping = mapper_.map(access, indices))
-    {
-      accesses.push_back(*mapping);
-    }
+    auto mappings = mapper_.map(access, indices);
+    accesses.insert(accesses.end(),
+                    std::make_move_iterator(mappings.begin()),
+                    std::make_move_iterator(mappings.end()));
   };
   visit_node(node, {}, emit);
   return accesses;
