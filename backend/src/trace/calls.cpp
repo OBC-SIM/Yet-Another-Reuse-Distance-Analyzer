@@ -163,8 +163,21 @@ Json expand_body(const Json & body, const Functions & functions,
       const auto params = function.value("params", Json::array());
       const auto args = node.value("args", Json::array());
       const auto arg_objects = node.value("arg_objects", Json::array());
-      for (std::size_t index = 0; index < std::min(params.size(), args.size());
-           ++index)
+      if (params.size() != args.size())
+      {
+        throw std::invalid_argument("Call arity mismatch for " + callee +
+                                    ": expected " +
+                                    std::to_string(params.size()) + ", got " +
+                                    std::to_string(args.size()));
+      }
+      if (node.contains("arg_objects") && arg_objects.size() != args.size())
+      {
+        throw std::invalid_argument("Call object arity mismatch for " + callee +
+                                    ": expected " +
+                                    std::to_string(args.size()) + ", got " +
+                                    std::to_string(arg_objects.size()));
+      }
+      for (std::size_t index = 0; index < params.size(); ++index)
       {
         const auto parameter = params[index].get<std::string>();
         names[parameter] = args[index].get<std::string>();
