@@ -31,6 +31,51 @@ Json matrix_loop()
   };
 }
 
+Json structured_span_module()
+{
+  return {
+    {"schema_version", 2},
+    {"metadata",
+     {{"objects",
+       {{"global::record",
+         {{"kind", "struct"}, {"elem_type", "Record"}, {"elem_size", 68}}}}},
+      {"structs",
+       {{"Record",
+         {{"name", "Record"},
+          {"size", 68},
+          {"fields", Json::array({{{"name", "head"},
+                                   {"index", 0},
+                                   {"offset", 52},
+                                   {"size", 4},
+                                   {"kind", "scalar"},
+                                   {"elem_size", 4}},
+                                  {{"name", "tail"},
+                                   {"index", 1},
+                                   {"offset", 60},
+                                   {"size", 8},
+                                   {"kind", "scalar"},
+                                   {"elem_size", 8}}})}}}}}}},
+    {"functions",
+     Json::array(
+       {{{"function", "kernel"},
+         {"body",
+          Json::array({{{"type", "Array"},
+                        {"name", "record.head"},
+                        {"object", "global::record"},
+                        {"indices", Json::array()},
+                        {"access_path", Json::array({{{"kind", "field"},
+                                                      {"name", "head"},
+                                                      {"index", 0}}})}},
+                       {{"type", "Array"},
+                        {"name", "record.tail"},
+                        {"object", "global::record"},
+                        {"indices", Json::array()},
+                        {"access_path", Json::array({{{"kind", "field"},
+                                                      {"name", "tail"},
+                                                      {"index", 1}}})}}})}}})},
+  };
+}
+
 TEST(TraceTest, UnrollsActualLoopBounds)
 {
   const auto trace = yarda::unroll_node_actual(matrix_loop());
@@ -77,6 +122,20 @@ TEST(TraceTest, MapsOneStructSizedAccessToEveryRelativeCacheLine)
 
   EXPECT_EQ(trace,
             (std::vector<std::string>{"records-line-0", "records-line-1"}));
+}
+
+TEST(TraceTest, MapsStructuredFieldsToObjectRelativeCacheLines)
+{
+  const auto traces = yarda::block_traces(structured_span_module(),
+                                          yarda::Granularity::CacheLine, 64);
+
+  ASSERT_EQ(traces.size(), 1);
+  const std::vector<std::string> expected = {
+    "global::record-line-0",
+    "global::record-line-0",
+    "global::record-line-1",
+  };
+  EXPECT_EQ(traces[0].accesses, expected);
 }
 
 TEST(TraceTest, ReturnsTypedMappingForLinkedGlobalAccess)
@@ -158,7 +217,7 @@ TEST(TraceTest, RejectsUnresolvedMappedGlobalObject)
                std::invalid_argument);
 }
 
-TEST(TraceTest, RejectsStructuredGlobalAccessUntilPathOffsetsAreSupported)
+TEST(TraceTest, RejectsStructuredDirectNodeWithoutLayoutMetadata)
 {
   Json access = {
     {"type", "Array"},
@@ -173,6 +232,9 @@ TEST(TraceTest, RejectsStructuredGlobalAccessUntilPathOffsetsAreSupported)
   yarda::ObjectAddressModel objects;
   objects.objects["global::value"] = {0x1000, 4};
 
+  EXPECT_THROW(
+    yarda::unroll_node_actual(access, yarda::Granularity::CacheLine, 64),
+    std::invalid_argument);
   EXPECT_THROW(yarda::unroll_node_actual(
                  access, yarda::CacheGeometry{64, 512, 8}, objects),
                std::invalid_argument);

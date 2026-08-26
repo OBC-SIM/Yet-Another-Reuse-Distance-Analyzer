@@ -15,20 +15,23 @@ namespace yarda::detail
 class TraceUnroller
 {
 public:
-  TraceUnroller(Granularity granularity, std::size_t cache_line_size);
+  TraceUnroller(Granularity granularity, std::size_t cache_line_size,
+                const AccessLayoutResolver & layouts);
 
   std::vector<std::string> unroll(const nlohmann::json & node) const;
 
 private:
   Granularity granularity_;
   std::size_t cache_line_size_;
+  const AccessLayoutResolver & layouts_;
 };
 
 class MappedTraceUnroller
 {
 public:
   MappedTraceUnroller(const CacheGeometry & geometry,
-                      const ObjectAddressModel & objects);
+                      const ObjectAddressModel & objects,
+                      const AccessLayoutResolver & layouts);
 
   std::vector<CacheLineMapping> unroll(const nlohmann::json & node) const;
 

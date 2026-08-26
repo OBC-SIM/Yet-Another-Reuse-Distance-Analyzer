@@ -32,6 +32,9 @@ struct NamedTrace
  * @param granularity Element or cache-line reference identity.
  * @param cache_line_size Cache-line size in bytes.
  * @return Ordered reference keys.
+ * @throws std::invalid_argument if CacheLine granularity is requested for a
+ * structured field path. This direct-node overload has no module metadata;
+ * use block_traces for structured cache-line accesses.
  */
 std::vector<std::string> unroll_node_actual(
   const nlohmann::json & node, Granularity granularity = Granularity::Element,
@@ -44,6 +47,8 @@ std::vector<std::string> unroll_node_actual(
  * @param granularity Element or cache-line reference identity.
  * @param cache_line_size Cache-line size in bytes.
  * @return Named loop and flat traces in module order.
+ * @throws std::invalid_argument for malformed or unsupported structured
+ * layout metadata, including pointer-backed structured objects.
  */
 std::vector<NamedTrace> block_traces(
   const nlohmann::json & raw, Granularity granularity = Granularity::Element,

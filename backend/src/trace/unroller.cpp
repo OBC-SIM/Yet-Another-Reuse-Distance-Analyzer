@@ -111,8 +111,11 @@ void visit_node(const Json & node, const Environment & environment,
 }  // namespace
 
 TraceUnroller::TraceUnroller(Granularity granularity,
-                             std::size_t cache_line_size)
-  : granularity_(granularity), cache_line_size_(cache_line_size)
+                             std::size_t cache_line_size,
+                             const AccessLayoutResolver & layouts)
+  : granularity_(granularity)
+  , cache_line_size_(cache_line_size)
+  , layouts_(layouts)
 {
 }
 
@@ -130,7 +133,7 @@ TraceUnroller::unroll(const nlohmann::json & node) const
     if (granularity_ == Granularity::CacheLine)
     {
       const auto cache_lines =
-        trace_cache_line_keys(access, indices, cache_line_size_);
+        trace_cache_line_keys(access, indices, cache_line_size_, layouts_);
       if (!cache_lines.empty())
       {
         trace.insert(trace.end(), cache_lines.begin(), cache_lines.end());
@@ -150,8 +153,9 @@ TraceUnroller::unroll(const nlohmann::json & node) const
 }
 
 MappedTraceUnroller::MappedTraceUnroller(const CacheGeometry & geometry,
-                                         const ObjectAddressModel & objects)
-  : mapper_(geometry, objects)
+                                         const ObjectAddressModel & objects,
+                                         const AccessLayoutResolver & layouts)
+  : mapper_(geometry, objects, layouts)
 {
 }
 
