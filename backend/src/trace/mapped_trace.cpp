@@ -41,18 +41,21 @@ std::vector<CacheLineMapping>
 unroll_node_actual(const nlohmann::json & node, const CacheGeometry & geometry,
                    const ObjectAddressModel & objects)
 {
-  return detail::MappedTraceUnroller(geometry, objects).unroll(node);
+  const detail::AccessLayoutResolver layouts;
+  return detail::MappedTraceUnroller(geometry, objects, layouts).unroll(node);
 }
 
 MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
                                       const CacheGeometry & geometry,
                                       const ObjectAddressModel & objects)
 {
-  const detail::MappedTraceUnroller unroller(geometry, objects);
+  const detail::AccessLayoutResolver layouts(raw);
+  const detail::MappedTraceUnroller unroller(geometry, objects, layouts);
   MappedTraceResult result;
   result.traces =
     detail::build_block_traces<NamedMappedTrace, CacheLineMapping>(
-      raw, [&unroller](const nlohmann::json & node) {
+      raw,
+      [&unroller](const nlohmann::json & node) {
         return unroller.unroll(node);
       },
       detail::EmptyLoopPolicy::Omit);

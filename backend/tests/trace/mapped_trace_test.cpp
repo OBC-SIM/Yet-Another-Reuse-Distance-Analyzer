@@ -9,6 +9,37 @@ namespace
 
 using Json = nlohmann::json;
 
+Json structured_span_module()
+{
+  return {
+    {"metadata",
+     {{"objects",
+       {{"global::record",
+         {{"kind", "struct"}, {"elem_type", "Record"}, {"elem_size", 68}}}}},
+      {"structs",
+       {{"Record",
+         {{"name", "Record"},
+          {"size", 68},
+          {"fields", Json::array({{{"name", "tail"},
+                                   {"index", 0},
+                                   {"offset", 60},
+                                   {"size", 8},
+                                   {"kind", "scalar"},
+                                   {"elem_size", 8}}})}}}}}}},
+    {"functions",
+     Json::array(
+       {{{"function", "kernel"},
+         {"body",
+          Json::array({{{"type", "Array"},
+                        {"name", "record.tail"},
+                        {"object", "global::record"},
+                        {"indices", Json::array()},
+                        {"access_path", Json::array({{{"kind", "field"},
+                                                      {"name", "tail"},
+                                                      {"index", 0}}})}}})}}})},
+  };
+}
+
 TEST(MappedTraceTest, PreservesMappedAccessOrder)
 {
   const Json module = Json::array({{
@@ -125,6 +156,23 @@ TEST(MappedTraceTest, PreservesEveryLineOfOneStructSizedAccess)
   EXPECT_EQ(result.mappings.size(), 2);
   EXPECT_EQ(result.mappings.at({"global::records", 64}).decoded.line_offset,
             0U);
+}
+
+TEST(MappedTraceTest, MapsStructuredFieldSpanToExactObjectOffsets)
+{
+  yarda::ObjectAddressModel objects;
+  objects.objects["global::record"] = {0x1000, 68};
+
+  const auto result = yarda::mapped_block_traces(
+    structured_span_module(), yarda::CacheGeometry{64, 512, 8}, objects);
+
+  ASSERT_EQ(result.traces.size(), 1);
+  const auto & accesses = result.traces[0].accesses;
+  ASSERT_EQ(accesses.size(), 2);
+  EXPECT_EQ(accesses[0].object_byte_offset, 60U);
+  EXPECT_EQ(accesses[0].decoded.address, 0x103cU);
+  EXPECT_EQ(accesses[1].object_byte_offset, 64U);
+  EXPECT_EQ(accesses[1].decoded.address, 0x1040U);
 }
 
 }  // namespace

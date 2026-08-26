@@ -7,6 +7,9 @@ add_library(yarda_backend
     src/reuse/profile.cpp
     src/trace/schema.cpp
     src/trace/trace.cpp
+    src/trace/access_layout.cpp
+    src/trace/access_layout_legacy.cpp
+    src/trace/access_layout_structured.cpp
     src/trace/cache_line.cpp
     src/trace/mapped_trace.cpp
     src/trace/unroller.cpp
@@ -156,6 +159,7 @@ if(BUILD_TESTING)
         tests/cache/lru_rd_integration_test.cpp
         tests/trace/calls_test.cpp
         tests/reuse/profile_test.cpp
+        tests/trace/access_layout_test.cpp
         tests/trace/schema_test.cpp
         tests/trace/mapped_trace_test.cpp
         tests/trace/trace_test.cpp
