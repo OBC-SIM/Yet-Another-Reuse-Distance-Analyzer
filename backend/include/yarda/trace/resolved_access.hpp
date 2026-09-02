@@ -9,6 +9,7 @@
 #include "yarda/access_operation.hpp"
 #include "yarda/elf/address_model.hpp"
 #include "yarda/trace/resolution_error.hpp"
+#include "yarda/trace/task_trace.hpp"
 #include "yarda/trace/trace_coverage.hpp"
 
 namespace yarda
@@ -29,7 +30,12 @@ struct ResolvedAccess
   AddressBasis address_basis = AddressBasis::Absolute;
   /** @brief Memory operation performed by the source access. */
   AccessOperation operation = AccessOperation::Unknown;
-  /** @brief Module-wide source emission position of this access. */
+  /**
+   * @brief Source emission position within the enclosing trace scope.
+   *
+   * The block API assigns module-wide ordinals. The task API restarts the
+   * ordinal at zero for each analyzed root.
+   */
   std::uint64_t source_access_ordinal = 0;
 };
 
@@ -51,6 +57,18 @@ struct ResolvedTraceResult
   TraceCoverage coverage;
 };
 
+/** @brief Geometry-independent accesses belonging to one analyzed task. */
+using ResolvedTaskTrace = TaskTrace<ResolvedAccess>;
+
+/** @brief Task-isolated resolved traces from one LAT module. */
+struct ResolvedTaskTraceResult
+{
+  /** @brief Analyzed tasks in deterministic module order. */
+  std::vector<ResolvedTaskTrace> tasks;
+  /** @brief Aggregate coverage across every selected task. */
+  TraceCoverage coverage;
+};
+
 /**
  * @brief Expand LAT accesses and resolve them to linked byte addresses.
  *
@@ -67,5 +85,26 @@ struct ResolvedTraceResult
  */
 ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
                                           const ObjectAddressModel & objects);
+
+/**
+ * @brief Resolve one ordered access trace for every analyzed task root.
+ *
+ * Only known callees marked `ape.inline` or `yard.inline` are expanded at
+ * their call sites; known non-inline calls are opaque and outside access
+ * coverage, while unknown targets are rejected. Source ordinals restart at
+ * zero for each task, while result coverage aggregates all selected tasks.
+ * Empty analyzed roots remain present as empty tasks. Every visited access
+ * must resolve.
+ *
+ * @param raw APE v2 LAT module with canonical object metadata.
+ * @param objects Linked global object addresses (borrowed, ownership retained).
+ * @return Task-isolated resolved traces in deterministic module order.
+ * @throws std::invalid_argument if no explicitly analyzed root exists, or for
+ * malformed LAT input, ambiguous or overlapping function roles, unknown call
+ * targets, or invalid inline-call expansion.
+ * @throws ResolutionError for unsupported storage or unresolved byte ranges.
+ */
+ResolvedTaskTraceResult resolved_task_traces(
+  const nlohmann::json & raw, const ObjectAddressModel & objects);
 
 }  // namespace yarda

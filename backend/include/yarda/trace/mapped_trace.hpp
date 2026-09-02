@@ -7,6 +7,8 @@
 
 #include "yarda/cache/line_mapping.hpp"
 #include "yarda/trace/resolution_error.hpp"
+#include "yarda/trace/resolved_access.hpp"
+#include "yarda/trace/task_trace.hpp"
 #include "yarda/trace/trace_coverage.hpp"
 
 namespace yarda
@@ -29,6 +31,20 @@ struct MappedTraceResult
   /** @brief Deduplicated address rows keyed by object ID and byte offset. */
   CacheLineMappingTable mappings;
   /** @brief Complete source-to-cache-line coverage for this result. */
+  TraceCoverage coverage;
+};
+
+/** @brief Cache-line references belonging to one analyzed task. */
+using MappedTaskTrace = TaskTrace<CacheLineMapping>;
+
+/** @brief Task-isolated mapped traces and unique address rows. */
+struct MappedTaskTraceResult
+{
+  /** @brief Analyzed tasks in deterministic module order. */
+  std::vector<MappedTaskTrace> tasks;
+  /** @brief Deduplicated address rows shared across the module. */
+  CacheLineMappingTable mappings;
+  /** @brief Aggregate coverage across every selected task. */
   TraceCoverage coverage;
 };
 
@@ -58,5 +74,36 @@ flatten_mapped_traces(const std::vector<NamedMappedTrace> & traces);
 MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
                                       const CacheGeometry & geometry,
                                       const ObjectAddressModel & objects);
+
+/**
+ * @brief Map already resolved task accesses at one cache geometry.
+ *
+ * Task boundaries and task-local source ordinals remain unchanged. Every
+ * source access produces one or more ordered cache-line references.
+ *
+ * @param resolved Geometry-independent task traces.
+ * @param geometry Cache geometry used to decode Tag, Index, and Offset.
+ * @return Task-isolated mapped traces and deterministic address-only rows.
+ * @throws std::invalid_argument for invalid geometry, incomplete coverage,
+ * empty or duplicate task identities, or invalid resolved ranges.
+ * @throws std::overflow_error if a resolved range overflows.
+ */
+MappedTaskTraceResult map_resolved_task_traces(
+  const ResolvedTaskTraceResult & resolved, const CacheGeometry & geometry);
+
+/**
+ * @brief Resolve and map every analyzed task without merging task boundaries.
+ *
+ * @param raw APE v2 LAT module containing canonical object IDs.
+ * @param geometry Cache geometry used to decode Tag, Index, and Offset.
+ * @param objects Linked global object addresses (borrowed, ownership retained).
+ * @return Task-isolated cache-line traces with complete coverage.
+ * @throws std::invalid_argument for invalid geometry, malformed LAT input,
+ * ambiguous task identities, or call expansion.
+ * @throws ResolutionError for unsupported storage or unresolved byte ranges.
+ */
+MappedTaskTraceResult mapped_task_traces(const nlohmann::json & raw,
+                                         const CacheGeometry & geometry,
+                                         const ObjectAddressModel & objects);
 
 }  // namespace yarda

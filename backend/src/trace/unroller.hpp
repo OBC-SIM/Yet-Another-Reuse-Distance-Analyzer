@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -37,12 +38,16 @@ public:
   std::vector<ResolvedAccess> unroll(const nlohmann::json & node,
                                      const std::string & task_id);
 
+  /** Reset source ordinals without discarding aggregate resolution coverage. */
+  void begin_task() noexcept;
+
   const TraceCoverage & coverage() const noexcept;
 
 private:
   const ObjectAddressModel & objects_;
   const AccessLayoutResolver & layouts_;
   TraceCoverage coverage_;
+  std::uint64_t next_source_access_ordinal_ = 0;
 };
 
 }  // namespace yarda::detail
