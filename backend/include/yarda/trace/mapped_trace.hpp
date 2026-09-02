@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "yarda/cache/line_mapping.hpp"
+#include "yarda/trace/resolution_error.hpp"
+#include "yarda/trace/trace_coverage.hpp"
 
 namespace yarda
 {
@@ -26,24 +28,9 @@ struct MappedTraceResult
   std::vector<NamedMappedTrace> traces;
   /** @brief Deduplicated address rows keyed by object ID and byte offset. */
   CacheLineMappingTable mappings;
+  /** @brief Complete source-to-cache-line coverage for this result. */
+  TraceCoverage coverage;
 };
-
-/**
- * @brief Expand one LAT node with linked global cache-address mapping.
- *
- * @param node LAT node after call expansion.
- * @param geometry Cache geometry used to decode Tag, Index, and Offset.
- * @param objects Linked global object addresses (borrowed, ownership retained).
- * @return Ordered typed cache-line mappings retaining resolved provenance.
- * Source access ordinals start at zero for this node and count omitted scalar
- * and non-global accesses.
- * @throws std::invalid_argument for unresolved global accesses or structured
- * field paths. This direct-node overload has no module metadata; use
- * mapped_block_traces for structured accesses.
- */
-std::vector<CacheLineMapping>
-unroll_node_actual(const nlohmann::json & node, const CacheGeometry & geometry,
-                   const ObjectAddressModel & objects);
 
 /**
  * @brief Concatenate mapped blocks without resetting program access order.
@@ -62,11 +49,11 @@ flatten_mapped_traces(const std::vector<NamedMappedTrace> & traces);
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Named cache-line traces retaining resolved provenance and
  * deterministic address-only mapping-table rows. Source access ordinals are
- * module-wide across functions and count scalar or non-global accesses omitted
- * from the returned mapped traces. Scalar accesses retain the legacy behavior
- * of being omitted, including when their layout metadata is absent.
- * @throws std::invalid_argument for unresolved global accesses or malformed
- * or unsupported structured metadata, including pointer-backed objects.
+ * module-wide across functions. Every visited access must resolve; unsupported
+ * or unresolved accesses fail the operation instead of being omitted.
+ * @throws std::invalid_argument for invalid geometry, malformed LAT input,
+ * or call expansion.
+ * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
                                       const CacheGeometry & geometry,

@@ -67,4 +67,18 @@ std::optional<ByteAccess> AccessLayoutResolver::resolve(
   return resolve_structured_access(node, indices, objects_, structs_);
 }
 
+std::optional<std::string>
+AccessLayoutResolver::object_kind(const std::string & object_id) const
+{
+  if (!objects_.is_object() || !objects_.contains(object_id) ||
+      !objects_.at(object_id).is_object())
+  {
+    return std::nullopt;
+  }
+  const auto & metadata = objects_.at(object_id);
+  return metadata.contains("kind") && metadata.at("kind").is_string()
+           ? std::optional<std::string>(metadata.at("kind").get<std::string>())
+           : std::optional<std::string>(std::string{});
+}
+
 }  // namespace yarda::detail

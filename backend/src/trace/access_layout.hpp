@@ -32,6 +32,8 @@ public:
   resolve(const nlohmann::json & node,
           const std::vector<std::string> & indices) const;
 
+  std::optional<std::string> object_kind(const std::string & object_id) const;
+
 private:
   nlohmann::json objects_;
   nlohmann::json structs_;

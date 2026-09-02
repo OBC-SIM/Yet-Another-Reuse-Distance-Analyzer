@@ -7,6 +7,8 @@
 #include <limits>
 #include <stdexcept>
 
+#include "yarda/trace/resolution_error.hpp"
+
 namespace
 {
 
@@ -98,18 +100,24 @@ Json ordinal_module()
                 {"name", object},
                 {"object", object},
                 {"indices", Json::array({"0"})},
-                {"shape", Json::array({1})},
-                {"elem_size", 4},
                 {"op", operation}};
   };
-  return Json::array(
-    {{{"function", "first"},
-      {"body",
-       Json::array({array("global::A", "load"),
-                    {{"type", "Scalar"}, {"name", "local"}, {"op", "load"}},
-                    array("global::B", "store")})}},
-     {{"function", "second"},
-      {"body", Json::array({array("global::A", "load")})}}});
+  return {
+    {"metadata",
+     {{"objects",
+       {{"global::A",
+         {{"kind", "array"}, {"shape", Json::array({1})}, {"elem_size", 4}}},
+        {"global::B",
+         {{"kind", "array"},
+          {"shape", Json::array({1})},
+          {"elem_size", 4}}}}}}},
+    {"functions",
+     Json::array({{{"function", "first"},
+                   {"body", Json::array({array("global::A", "load"),
+                                         array("global::B", "store")})}},
+                  {{"function", "second"},
+                   {"body", Json::array({array("global::A", "load")})}}})},
+  };
 }
 
 TEST(ResolvedAccessTest, ResolvesGlobalScalarMetadataAndOperation)
@@ -168,10 +176,11 @@ TEST(ResolvedAccessTest, RejectsAccessPastLinkedObjectExtent)
       yarda::resolved_block_traces(structured_module(), objects));
     FAIL() << "expected object extent rejection";
   }
-  catch (const std::invalid_argument & error)
+  catch (const yarda::ResolutionError & error)
   {
-    EXPECT_STREQ(error.what(),
-                 "access exceeds ELF object extent: global::values");
+    EXPECT_EQ(error.category(), yarda::ResolutionCategory::Unresolved);
+    EXPECT_EQ(error.source_access_ordinal(), 1U);
+    EXPECT_EQ(error.object_id(), "global::values");
   }
 }
 
@@ -182,7 +191,7 @@ TEST(ResolvedAccessTest, RejectsLinkedAddressRangeOverflow)
     std::numeric_limits<std::uint64_t>::max() - 1, 4};
 
   EXPECT_THROW(yarda::resolved_block_traces(scalar_module(), objects),
-               std::overflow_error);
+               yarda::ResolutionError);
 }
 
 TEST(ResolvedAccessTest, RejectsUnresolvedElfObject)
@@ -194,9 +203,10 @@ TEST(ResolvedAccessTest, RejectsUnresolvedElfObject)
     static_cast<void>(yarda::resolved_block_traces(scalar_module(), objects));
     FAIL() << "expected unresolved ELF object rejection";
   }
-  catch (const std::invalid_argument & error)
+  catch (const yarda::ResolutionError & error)
   {
-    EXPECT_STREQ(error.what(), "ELF object is unresolved: global::flag");
+    EXPECT_EQ(error.category(), yarda::ResolutionCategory::Unresolved);
+    EXPECT_EQ(error.object_id(), "global::flag");
   }
 }
 
@@ -212,13 +222,14 @@ TEST(ResolvedAccessTest, RejectsReconstructedAddressOverflow)
       yarda::resolved_block_traces(structured_module(), objects));
     FAIL() << "expected reconstructed address overflow";
   }
-  catch (const std::overflow_error & error)
+  catch (const yarda::ResolutionError & error)
   {
-    EXPECT_STREQ(error.what(), "ELF object address overflow: global::outer");
+    EXPECT_EQ(error.category(), yarda::ResolutionCategory::Unresolved);
+    EXPECT_EQ(error.object_id(), "global::outer");
   }
 }
 
-TEST(ResolvedAccessTest, PreservesOrdinalsAcrossSkippedAccessesAndFunctions)
+TEST(ResolvedAccessTest, PreservesModuleWideOrdinalsAcrossFunctions)
 {
   yarda::ObjectAddressModel objects;
   objects.objects["global::A"] = {0x1000, 4};
@@ -230,23 +241,27 @@ TEST(ResolvedAccessTest, PreservesOrdinalsAcrossSkippedAccessesAndFunctions)
   ASSERT_EQ(result.traces[0].accesses.size(), 2);
   ASSERT_EQ(result.traces[1].accesses.size(), 1);
   EXPECT_EQ(result.traces[0].accesses[0].source_access_ordinal, 0U);
-  EXPECT_EQ(result.traces[0].accesses[1].source_access_ordinal, 2U);
-  EXPECT_EQ(result.traces[1].accesses[0].source_access_ordinal, 3U);
+  EXPECT_EQ(result.traces[0].accesses[1].source_access_ordinal, 1U);
+  EXPECT_EQ(result.traces[1].accesses[0].source_access_ordinal, 2U);
 }
 
-TEST(ResolvedAccessTest, MarksMissingOperationAsUnknown)
+TEST(ResolvedAccessTest, RejectsMissingOperation)
 {
   auto module = scalar_module();
   module["functions"][0]["body"][0].erase("op");
   yarda::ObjectAddressModel objects;
   objects.objects["global::flag"] = {0x1010, 4};
 
-  const auto result = yarda::resolved_block_traces(module, objects);
-
-  ASSERT_EQ(result.traces.size(), 1);
-  ASSERT_EQ(result.traces[0].accesses.size(), 1);
-  EXPECT_EQ(result.traces[0].accesses[0].operation,
-            yarda::AccessOperation::Unknown);
+  try
+  {
+    static_cast<void>(yarda::resolved_block_traces(module, objects));
+    FAIL() << "expected missing operation rejection";
+  }
+  catch (const yarda::ResolutionError & error)
+  {
+    EXPECT_EQ(error.category(), yarda::ResolutionCategory::Unresolved);
+    EXPECT_EQ(error.source_access_ordinal(), 0U);
+  }
 }
 
 TEST(ResolvedAccessTest, RejectsNegativeGlobalOffset)
@@ -255,11 +270,17 @@ TEST(ResolvedAccessTest, RejectsNegativeGlobalOffset)
                        {"name", "A[-1]"},
                        {"object", "global::A"},
                        {"indices", Json::array({"-1"})},
-                       {"shape", Json::array({4})},
-                       {"elem_size", 4},
                        {"op", "load"}};
-  const Json module =
-    Json::array({{{"function", "kernel"}, {"body", Json::array({access})}}});
+  const Json module = {
+    {"metadata",
+     {{"objects",
+       {{"global::A",
+         {{"kind", "array"},
+          {"shape", Json::array({4})},
+          {"elem_size", 4}}}}}}},
+    {"functions",
+     Json::array({{{"function", "kernel"}, {"body", Json::array({access})}}})},
+  };
   yarda::ObjectAddressModel objects;
   objects.objects["global::A"] = {0x1000, 16};
 
@@ -268,9 +289,10 @@ TEST(ResolvedAccessTest, RejectsNegativeGlobalOffset)
     static_cast<void>(yarda::resolved_block_traces(module, objects));
     FAIL() << "expected negative offset rejection";
   }
-  catch (const std::invalid_argument & error)
+  catch (const yarda::ResolutionError & error)
   {
-    EXPECT_STREQ(error.what(), "global access offset is negative: global::A");
+    EXPECT_EQ(error.category(), yarda::ResolutionCategory::Unresolved);
+    EXPECT_EQ(error.object_id(), "global::A");
   }
 }
 

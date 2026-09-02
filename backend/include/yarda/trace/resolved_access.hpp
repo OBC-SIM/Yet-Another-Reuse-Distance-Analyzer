@@ -8,6 +8,8 @@
 
 #include "yarda/access_operation.hpp"
 #include "yarda/elf/address_model.hpp"
+#include "yarda/trace/resolution_error.hpp"
+#include "yarda/trace/trace_coverage.hpp"
 
 namespace yarda
 {
@@ -27,7 +29,7 @@ struct ResolvedAccess
   AddressBasis address_basis = AddressBasis::Absolute;
   /** @brief Memory operation performed by the source access. */
   AccessOperation operation = AccessOperation::Unknown;
-  /** @brief Emission position including accesses omitted from this trace. */
+  /** @brief Module-wide source emission position of this access. */
   std::uint64_t source_access_ordinal = 0;
 };
 
@@ -45,6 +47,8 @@ struct ResolvedTraceResult
 {
   /** @brief Named resolved traces in deterministic module order. */
   std::vector<NamedResolvedTrace> traces;
+  /** @brief Complete source-to-linked-address coverage for this result. */
+  TraceCoverage coverage;
 };
 
 /**
@@ -52,16 +56,14 @@ struct ResolvedTraceResult
  *
  * The result retains source access size, operation, and deterministic emission
  * ordinal without applying cache geometry. Ordinals are module-wide for this
- * API and count non-global accesses omitted from the returned traces. Legacy
- * non-global accesses remain outside this API until strict coverage handling
- * is introduced.
+ * API. Every visited access must resolve; unsupported or unresolved accesses
+ * fail the operation instead of being omitted.
  *
- * @param raw Legacy or APE v2 LAT module.
+ * @param raw APE v2 LAT module with canonical object metadata.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Named geometry-independent access traces in deterministic order.
- * @throws std::invalid_argument for unresolved global objects or invalid
- * access layouts.
- * @throws std::overflow_error if linked address reconstruction overflows.
+ * @throws std::invalid_argument for malformed LAT input or call expansion.
+ * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
                                           const ObjectAddressModel & objects);

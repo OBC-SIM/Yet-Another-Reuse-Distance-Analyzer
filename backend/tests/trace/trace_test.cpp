@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "yarda/trace/mapped_trace.hpp"
@@ -12,6 +13,19 @@ namespace
 {
 
 using Json = nlohmann::json;
+
+Json array_metadata(int extent, int element_size)
+{
+  return {{"kind", "array"},
+          {"shape", Json::array({extent})},
+          {"elem_size", element_size}};
+}
+
+Json strict_module(Json functions, Json objects)
+{
+  return {{"metadata", {{"objects", std::move(objects)}}},
+          {"functions", std::move(functions)}};
+}
 
 Json matrix_loop()
 {
@@ -138,34 +152,9 @@ TEST(TraceTest, MapsStructuredFieldsToObjectRelativeCacheLines)
   EXPECT_EQ(traces[0].accesses, expected);
 }
 
-TEST(TraceTest, ReturnsTypedMappingForLinkedGlobalAccess)
-{
-  const Json access = {
-    {"type", "Array"},
-    {"name", "A"},
-    {"object", "global::A"},
-    {"indices", Json::array({"0"})},
-    {"shape", Json::array({1})},
-    {"elem_size", 4},
-  };
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {0x1030, 4};
-
-  const auto trace = yarda::unroll_node_actual(
-    access, yarda::CacheGeometry{64, 512, 8}, objects);
-
-  ASSERT_EQ(trace.size(), 1);
-  EXPECT_EQ(trace[0].object_id, "global::A");
-  EXPECT_EQ(trace[0].object_byte_offset, 0U);
-  EXPECT_EQ(trace[0].decoded.tag, 1U);
-  EXPECT_EQ(trace[0].decoded.set_index, 0U);
-  EXPECT_EQ(trace[0].decoded.line_offset, 0x30U);
-  EXPECT_EQ(trace[0].source_access_ordinal, 0U);
-}
-
 TEST(TraceTest, MapsDifferentGlobalObjectsToSharedCacheLine)
 {
-  const Json module = Json::array({{
+  const Json functions = Json::array({{
     {"function", "kernel"},
     {"body", Json::array({
                {{"type", "Array"},
@@ -173,15 +162,20 @@ TEST(TraceTest, MapsDifferentGlobalObjectsToSharedCacheLine)
                 {"object", "global::A"},
                 {"indices", Json::array({"0"})},
                 {"shape", Json::array({1})},
-                {"elem_size", 4}},
+                {"elem_size", 4},
+                {"op", "load"}},
                {{"type", "Array"},
                 {"name", "B"},
                 {"object", "global::B"},
                 {"indices", Json::array({"0"})},
                 {"shape", Json::array({1})},
-                {"elem_size", 4}},
+                {"elem_size", 4},
+                {"op", "load"}},
              })},
   }});
+  const auto module =
+    strict_module(functions, {{"global::A", array_metadata(1, 4)},
+                              {"global::B", array_metadata(1, 4)}});
   yarda::ObjectAddressModel objects;
   objects.objects["global::A"] = {0x1030, 4};
   objects.objects["global::B"] = {0x1038, 4};
@@ -204,18 +198,23 @@ TEST(TraceTest, MapsDifferentGlobalObjectsToSharedCacheLine)
 
 TEST(TraceTest, RejectsUnresolvedMappedGlobalObject)
 {
-  Json access = {
+  const Json access = {
     {"type", "Array"},
     {"name", "A"},
     {"object", "global::A"},
     {"indices", Json::array({"0"})},
     {"shape", Json::array({1})},
     {"elem_size", 4},
+    {"op", "load"},
   };
 
-  EXPECT_THROW(yarda::unroll_node_actual(
-                 access, yarda::CacheGeometry{64, 512, 8}, {}),
-               std::invalid_argument);
+  const auto module = strict_module(
+    Json::array({{{"function", "kernel"}, {"body", Json::array({access})}}}),
+    {{"global::A", array_metadata(1, 4)}});
+
+  EXPECT_THROW(
+    yarda::mapped_block_traces(module, yarda::CacheGeometry{64, 512, 8}, {}),
+    std::invalid_argument);
 }
 
 TEST(TraceTest, RejectsStructuredDirectNodeWithoutLayoutMetadata)
@@ -227,35 +226,34 @@ TEST(TraceTest, RejectsStructuredDirectNodeWithoutLayoutMetadata)
     {"indices", Json::array({"0"})},
     {"shape", Json::array({1})},
     {"elem_size", 4},
+    {"op", "load"},
     {"access_path",
      Json::array({{{"kind", "field"}, {"name", "items"}, {"index", 0}}})},
   };
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::value"] = {0x1000, 4};
-
   EXPECT_THROW(
     yarda::unroll_node_actual(access, yarda::Granularity::CacheLine, 64),
     std::invalid_argument);
-  EXPECT_THROW(yarda::unroll_node_actual(
-                 access, yarda::CacheGeometry{64, 512, 8}, objects),
-               std::invalid_argument);
 }
 
 TEST(TraceTest, RejectsNegativeMappedGlobalOffset)
 {
-  Json access = {
+  const Json access = {
     {"type", "Array"},
     {"name", "A"},
     {"object", "global::A"},
     {"indices", Json::array({"-1"})},
     {"shape", Json::array({1})},
     {"elem_size", 4},
+    {"op", "load"},
   };
   yarda::ObjectAddressModel objects;
   objects.objects["global::A"] = {0x1000, 4};
+  const auto module = strict_module(
+    Json::array({{{"function", "kernel"}, {"body", Json::array({access})}}}),
+    {{"global::A", array_metadata(1, 4)}});
 
-  EXPECT_THROW(yarda::unroll_node_actual(
-                 access, yarda::CacheGeometry{64, 512, 8}, objects),
+  EXPECT_THROW(yarda::mapped_block_traces(
+                 module, yarda::CacheGeometry{64, 512, 8}, objects),
                std::invalid_argument);
 }
 

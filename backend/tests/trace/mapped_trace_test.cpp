@@ -3,11 +3,25 @@
 #include <nlohmann/json.hpp>
 
 #include <gtest/gtest.h>
+#include <utility>
 
 namespace
 {
 
 using Json = nlohmann::json;
+
+Json array_metadata(int extent, int element_size)
+{
+  return {{"kind", "array"},
+          {"shape", Json::array({extent})},
+          {"elem_size", element_size}};
+}
+
+Json strict_module(Json functions, Json objects)
+{
+  return {{"metadata", {{"objects", std::move(objects)}}},
+          {"functions", std::move(functions)}};
+}
 
 Json structured_span_module()
 {
@@ -34,6 +48,7 @@ Json structured_span_module()
                         {"name", "record.tail"},
                         {"object", "global::record"},
                         {"indices", Json::array()},
+                        {"op", "load"},
                         {"access_path", Json::array({{{"kind", "field"},
                                                       {"name", "tail"},
                                                       {"index", 0}}})}}})}}})},
@@ -42,7 +57,7 @@ Json structured_span_module()
 
 TEST(MappedTraceTest, PreservesMappedAccessOrder)
 {
-  const Json module = Json::array({{
+  const Json functions = Json::array({{
     {"function", "kernel"},
     {"body", Json::array({
                {{"type", "Array"},
@@ -50,21 +65,27 @@ TEST(MappedTraceTest, PreservesMappedAccessOrder)
                 {"object", "global::A"},
                 {"indices", Json::array({"0"})},
                 {"shape", Json::array({16})},
-                {"elem_size", 4}},
+                {"elem_size", 4},
+                {"op", "load"}},
                {{"type", "Array"},
                 {"name", "B"},
                 {"object", "global::B"},
                 {"indices", Json::array({"0"})},
                 {"shape", Json::array({16})},
-                {"elem_size", 4}},
+                {"elem_size", 4},
+                {"op", "load"}},
                {{"type", "Array"},
                 {"name", "A"},
                 {"object", "global::A"},
                 {"indices", Json::array({"1"})},
                 {"shape", Json::array({16})},
-                {"elem_size", 4}},
+                {"elem_size", 4},
+                {"op", "load"}},
              })},
   }});
+  const auto module =
+    strict_module(functions, {{"global::A", array_metadata(16, 4)},
+                              {"global::B", array_metadata(16, 4)}});
   yarda::ObjectAddressModel objects;
   objects.objects["global::A"] = {0x1000, 64};
   objects.objects["global::B"] = {0x1080, 64};
@@ -98,17 +119,21 @@ TEST(MappedTraceTest, FlattensMappedBlocksInProgramOrder)
                  {"indices", Json::array({"0"})},
                  {"shape", Json::array({1})},
                  {"elem_size", 4},
+                 {"op", "load"},
                }})},
     };
   };
 
-  const Json module = Json::array({{
+  const Json functions = Json::array({{
     {"function", "kernel"},
     {"body", Json::array({
                loop("i", "A", "global::A"),
                loop("j", "B", "global::B"),
              })},
   }});
+  const auto module =
+    strict_module(functions, {{"global::A", array_metadata(1, 4)},
+                              {"global::B", array_metadata(1, 4)}});
 
   yarda::ObjectAddressModel objects;
   objects.objects["global::A"] = {0x1000, 4};
@@ -129,7 +154,7 @@ TEST(MappedTraceTest, FlattensMappedBlocksInProgramOrder)
 
 TEST(MappedTraceTest, PreservesEveryLineOfOneStructSizedAccess)
 {
-  const Json module = Json::array({{
+  const Json functions = Json::array({{
     {"function", "kernel"},
     {"body", Json::array({{
                {"type", "Array"},
@@ -141,6 +166,8 @@ TEST(MappedTraceTest, PreservesEveryLineOfOneStructSizedAccess)
                {"op", "store"},
              }})},
   }});
+  const auto module =
+    strict_module(functions, {{"global::records", array_metadata(6, 12)}});
   yarda::ObjectAddressModel objects;
   objects.objects["global::records"] = {0x1000, 72};
 

@@ -17,7 +17,7 @@ enum class EmptyLoopPolicy
   Omit,
 };
 
-template<typename Named, typename Access, typename Unroll>
+template <typename Named, typename Access, typename Unroll>
 std::vector<Named> build_block_traces(const nlohmann::json & raw,
                                       const Unroll & unroll,
                                       EmptyLoopPolicy empty_loop_policy)
@@ -37,10 +37,9 @@ std::vector<Named> build_block_traces(const nlohmann::json & raw,
         flat.clear();
       }
     };
-    for (const auto & node :
-         function.value("body", nlohmann::json::array()))
+    for (const auto & node : function.value("body", nlohmann::json::array()))
     {
-      auto accesses = unroll(node);
+      auto accesses = unroll(function_name, node);
       if (node.value("type", "") == "Loop")
       {
         flush_flat();
