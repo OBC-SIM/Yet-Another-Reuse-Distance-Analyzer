@@ -2,6 +2,8 @@ build/
 logs/
 *.json
 !backend/tests/cli/unroll_fixture.json
+!backend/tests/cli/task_mapping_fixture.json
+!backend/tests/cli/missing_symbol_fixture.json
 *.ll
 *.log
 system-prompt-extraction/

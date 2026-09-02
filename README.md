@@ -23,6 +23,8 @@ reuse-distance histogram(RDH)을 계산하는 C++17 정적 분석기입니다.
 - 한 접근이 여러 cache line에 걸치면 모든 line을 순서대로 생성합니다.
 - versioned YAML cache 설정을 파싱하고 core 0 L1 line size를 CLI의
   cache-line granularity에 적용합니다.
+- `--elf`로 `ET_EXEC` symbol과 canonical global object를 연결해 task별
+  linked address/set/tag/offset과 coverage·exclusion을 JSON으로 출력합니다.
 - 별도 ELF 도구와 C++ API로 `ET_EXEC`/`ET_DYN`의 data region과 object symbol,
   linked address basis를 읽을 수 있습니다.
 - C++ 라이브러리에는 linked global address mapping과 set-local exact LRU RD
@@ -38,9 +40,10 @@ LLVM IR
     │ opt-14 + libLoopAnnotatedTrace.so
     ▼
 APE/LAT v2 JSON
-    │ yarda_cpp --mode unroll
-    ▼
-element 또는 relative cache-line RDH
+    ├── yarda_cpp --mode unroll
+    │       └── element 또는 relative cache-line RDH
+    └── yarda_cpp --elf PROGRAM.elf --cache CACHE.yaml
+            └── ET_EXEC linked-address task mapping JSON
 ```
 
 `yarda_cpp`는 현재 LAT JSON을 직접 입력받습니다. C source나 LLVM IR을
@@ -132,9 +135,22 @@ cd ..
 
 현재 main CLI는 일반 배열에는 LAT reference name, structured access에는
 canonical object ID를 사용하고, resolved relative byte offset을 cache-line
-index로 변환합니다. `--cache`에서 core 0 L1 line size를 읽지만, 아직 ELF
-linked address의 set/tag이나 다단계 cache hit/miss를 main CLI 결과에
-포함하지는 않습니다.
+index로 변환합니다. `--elf`를 지정하면 canonical global object를 `ET_EXEC`
+symbol에 연결하고 core 0 L1 geometry의 linked address, set, tag, offset을
+task별 JSON으로 출력합니다. 다단계 cache hit/miss는 아직 계산하지 않습니다.
+
+### 5. ELF-linked task mapping
+
+```bash
+./build/backend/yarda_cpp task_ape.json \
+  --elf task.elf \
+  --cache backend/config/cache.32b.yaml \
+  --export /tmp/task.mapping.json
+```
+
+ELF 경로는 `APE_ANALYZE`/`YARD_ANALYZE` root를 독립 task로 유지하고 모든
+지원 access를 먼저 linked byte address로 해석한 뒤 cache line으로 매핑합니다.
+`ET_DYN`/PIE는 load bias가 없으므로 거부합니다.
 
 ## `yarda_cpp` CLI
 
@@ -142,6 +158,7 @@ linked address의 set/tag이나 다단계 cache hit/miss를 main CLI 결과에
 Usage: yarda_cpp LAT.json [--mode unroll]
                          [--granularity element|cache-line]
                          [--cache FILE]
+                         [--elf FILE]
                          [--export PATH]
 ```
 
@@ -149,10 +166,15 @@ Usage: yarda_cpp LAT.json [--mode unroll]
 |---|---|
 | `LAT.json` | legacy 또는 APE/LAT v2 입력 파일 |
 | `--mode unroll` | 유일하게 지원되는 mode. 생략해도 동일하게 동작 |
-| `--granularity element` | element/reference key 단위 RDH. 기본값 |
+| `--granularity element` | non-ELF element/reference key 단위 RDH. 기본값 |
 | `--granularity cache-line` | relative cache-line reference key 단위 RDH |
-| `--cache FILE` | version 1 YAML cache hierarchy. cache-line 모드에서 필수 |
+| `--cache FILE` | version 1 YAML cache hierarchy. cache-line 및 ELF 경로에서 필수 |
+| `--elf FILE` | `ET_EXEC` symbol을 이용한 task별 cache-line linked-address mapping 선택 |
 | `--export PATH` | deterministic JSON 결과 저장 경로 |
+
+`--elf` 경로는 본질적으로 cache-line mapping을 수행합니다. granularity를
+생략하거나 `--granularity cache-line`을 사용할 수 있으며, 명시적인
+`--granularity element`는 거부합니다.
 
 `predict`, `--plot`, `--save`, `--cache-line-size`, C/LLVM 입력 자동 변환은
 현재 C++ CLI에서 지원하지 않습니다.
@@ -187,6 +209,15 @@ Usage: yarda_cpp LAT.json [--mode unroll]
 `blocks`는 각 loop/flat block의 profile입니다. Histogram key는 JSON object
 key이므로 문자열로 직렬화됩니다.
 
+ELF mapping export는 `mode: "elf-task-mapping"`과
+`address_basis: "linked_absolute"`를 사용합니다. 각 task에는 resolution
+coverage, known non-inline static call-site 제외 수, ordered resolved accesses,
+그리고 source/line ordinal과 load/store를 보존한 mapped line references가
+포함됩니다. `known_non_inline_static_call_sites`는 inline expansion 후의 정적
+호출 지점 수이며 루프 반복 횟수를 곱하지 않습니다. 다른 analyze root 호출도
+caller의 opaque site로 세고 callee는 별도 task로 출력합니다. `--export`를
+생략하면 같은 JSON을 stdout으로 출력합니다.
+
 ## 분석 대상 annotation
 
 현재 frontend source pass는 `ape.*` annotation을 사용합니다. C++ backend는
@@ -217,7 +248,9 @@ void kernel(float *array)
 
 - `APE_ANALYZE`: 최종 report를 생성할 root function
 - `APE_INLINE`: analyzed root의 direct call site에 펼칠 helper function
-- annotation이 하나도 없으면 모든 정의된 function을 분석
+- annotation이 하나도 없으면 legacy `--mode unroll` 경로만 모든 정의된
+  function을 분석합니다. `--elf` 경로는 `APE_ANALYZE`/`YARD_ANALYZE` root를
+  반드시 요구합니다.
 - indirect call, function pointer call, recursion은 지원하지 않음
 
 `APE_INLINE` parameter의 storage identity는 `Call.arg_objects`를 통해 actual
@@ -267,8 +300,8 @@ backend API와 CLI 설명은 [`backend/README.md`](backend/README.md)를
 - TLS: ELF만으로 runtime address를 결정할 수 없어 제외
 
 이 주소는 linked virtual/image address이며 자동으로 물리 주소가 되지
-않습니다. 현재 `yarda_cpp`에는 `--elf`가 없으므로 ELF 결과와 LAT task trace를
-연결하는 기능은 아직 library/test 수준입니다.
+않습니다. `yarda_cpp --elf` 분석 경로는 load bias가 필요 없는 `ET_EXEC`의
+absolute linked address만 허용합니다.
 
 ## 현재 범위와 제한
 
@@ -278,13 +311,13 @@ backend API와 CLI 설명은 [`backend/README.md`](backend/README.md)를
 - annotated non-recursive direct call expansion
 - 실제 loop bound와 순서를 사용하는 exact unroll
 - element/relative cache-line RDH
+- `ET_EXEC` global symbol 기반 task별 linked-address mapping
+- source access와 cache-line provenance 및 mapping coverage 보고
 - structured global access의 padding-aware byte offset 및 multi-line span
 - deterministic console/JSON 결과
 
 ### 현재 main CLI에 아직 없는 기능
 
-- `--elf`를 통한 LAT object와 linked ELF symbol 연결
-- task별 독립 cache state와 mapping coverage 보고
 - L1 miss filtering과 L2 request stream
 - hierarchy first-hit/EHC/AMC 및 traffic metric
 - path-sensitive CFG와 indirect call
@@ -292,9 +325,10 @@ backend API와 CLI 설명은 [`backend/README.md`](backend/README.md)를
 - cache timing, coherence, prefetch, DMA, instruction-cache 모델
 
 현재 논문 임계 경로의 linked-address 분석 대상은 canonical object ID와 정적
-layout을 가진 배열·구조체 global access입니다. Scalar와 non-global storage는
-조용히 전체 cache behavior로 간주하지 않아야 하며, 향후 CLI mapping에서는
-제외 수와 사유를 명시적으로 보고하는 것이 전제입니다.
+layout을 가진 scalar·array·structure global access입니다. Non-global,
+pointer-backed, runtime-dependent access는 조용히 생략하지 않고 전체 CLI
+호출을 categorized resolution error로 실패시킵니다. 알려진 non-inline static
+call site는 access coverage와 분리된 exclusion count로 보고합니다.
 
 ## 테스트
 
@@ -341,11 +375,9 @@ tasks/                          C benchmark and LAT fixtures
 
 ## 다음 구현 순서
 
-1. C++ CLI에 ELF input과 geometry-independent resolved access event 연결
-2. unsupported/excluded access coverage와 task boundary 보존
-3. operation-aware L1/L2 hierarchy 분석 및 독립 C++ reference oracle
-4. deterministic hierarchy export와 paper experiment runner
-5. path-aware LAT와 stack-frame address reconstruction은 이후 별도 작업
+1. operation-aware L1/L2 hierarchy 분석 및 독립 C++ reference oracle
+2. deterministic hierarchy export와 paper experiment runner
+3. path-aware LAT와 stack-frame address reconstruction은 이후 별도 작업
 
 분석 로직과 reference model은 계속 C++로 구현합니다. Python port나 parity
 작업은 현재 계획에 포함하지 않습니다.

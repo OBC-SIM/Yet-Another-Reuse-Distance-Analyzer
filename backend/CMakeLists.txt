@@ -16,6 +16,7 @@ add_library(yarda_backend
     src/trace/resolved_access.cpp
     src/trace/resolved_mapping.cpp
     src/trace/unroller.cpp
+    src/trace/task_mapping_json.cpp
 )
 
 target_include_directories(yarda_backend PUBLIC include)
@@ -60,7 +61,7 @@ set_target_properties(yarda_elf_regions_cli PROPERTIES OUTPUT_NAME yarda_elf_reg
 target_link_libraries(yarda_elf_regions_cli PRIVATE yarda_elf_regions)
 
 add_executable(yarda_cpp src/cli/main.cpp)
-target_link_libraries(yarda_cpp PRIVATE yarda_cache_config)
+target_link_libraries(yarda_cpp PRIVATE yarda_cache_config yarda_elf_regions)
 
 if(BUILD_TESTING)
     find_package(GTest REQUIRED)
@@ -84,6 +85,7 @@ if(BUILD_TESTING)
     add_custom_command(
         OUTPUT ${YARDA_ELF_EXEC_FIXTURE}
         COMMAND ${YARDA_CLANGXX_EXECUTABLE} -g -fno-pie -no-pie
+                -Wl,--section-start=.yarda_map=0x60001c
                 ${YARDA_ELF_FIXTURE_SOURCE} -o ${YARDA_ELF_EXEC_FIXTURE}
         DEPENDS ${YARDA_ELF_FIXTURE_SOURCE}
     )
@@ -154,6 +156,98 @@ if(BUILD_TESTING)
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/reject_predict_mode.cmake
     )
 
+    set(YARDA_CPP_TASK_MAPPING_FIXTURE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/task_mapping_fixture.json)
+    set(YARDA_CPP_MISSING_SYMBOL_FIXTURE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/missing_symbol_fixture.json)
+    set(YARDA_CPP_TASK_MAPPING_OUTPUT
+        ${CMAKE_CURRENT_BINARY_DIR}/task_mapping_result.json)
+    set(YARDA_CPP_CACHE_32B
+        ${CMAKE_CURRENT_SOURCE_DIR}/config/cache.32b.yaml)
+    add_test(NAME yarda_cpp_maps_elf_tasks
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -DYARDA_OUTPUT=${YARDA_CPP_TASK_MAPPING_OUTPUT}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/check_task_mapping.cmake
+    )
+    add_test(NAME yarda_cpp_maps_elf_tasks_to_stdout
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/check_task_mapping.cmake
+    )
+    add_test(NAME yarda_cpp_elf_requires_cache
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}
+            -DEXPECTED_ERROR=--cache.is.required.with.--elf
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+    )
+    add_test(NAME yarda_cpp_rejects_pie_elf
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${YARDA_ELF_PIE_FIXTURE}
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -DEXPECTED_ERROR=--elf.task.mapping.requires.an.ET_EXEC.image
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+    )
+    add_test(NAME yarda_cpp_rejects_malformed_elf
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -DEXPECTED_ERROR=input.is.not.a.valid.object.file
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+    )
+    add_test(NAME yarda_cpp_rejects_missing_elf
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${CMAKE_CURRENT_BINARY_DIR}/missing.elf
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -DEXPECTED_ERROR=ELF.input.does.not.exist
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+    )
+    add_test(NAME yarda_cpp_rejects_missing_elf_symbol
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_MISSING_SYMBOL_FIXTURE}
+            -DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -DEXPECTED_ERROR=ELF.object.symbol.is.unavailable
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+    )
+    add_test(NAME yarda_cpp_rejects_elf_element_granularity
+        COMMAND ${CMAKE_COMMAND}
+            -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+            -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+            -DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}
+            -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+            -DYARDA_GRANULARITY=element
+            -DEXPECTED_ERROR=incompatible.with.--elf
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+    )
+    if(EXISTS "/dev/full")
+        add_test(NAME yarda_cpp_rejects_failed_export
+            COMMAND ${CMAKE_COMMAND}
+                -DYARDA_CPP=$<TARGET_FILE:yarda_cpp>
+                -DYARDA_INPUT=${YARDA_CPP_TASK_MAPPING_FIXTURE}
+                -DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}
+                -DYARDA_CACHE=${YARDA_CPP_CACHE_32B}
+                -DYARDA_EXPORT=/dev/full
+                -DEXPECTED_ERROR=failed.to.write.export.path
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/expect_cli_error.cmake
+        )
+    endif()
+
     add_executable(yarda_backend_tests
         tests/cache/address_test.cpp
         tests/cache/line_mapping_test.cpp
@@ -171,6 +265,8 @@ if(BUILD_TESTING)
         tests/trace/strict_input_test.cpp
         tests/trace/strict_resolution_test.cpp
         tests/trace/strict_unroller_test.cpp
+        tests/trace/task_exclusion_test.cpp
+        tests/trace/task_mapping_json_test.cpp
         tests/trace/task_trace_test.cpp
         tests/trace/task_trace_validation_test.cpp
         tests/trace/trace_test.cpp

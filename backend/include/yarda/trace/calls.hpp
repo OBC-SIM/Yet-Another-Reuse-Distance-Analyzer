@@ -19,12 +19,15 @@ nlohmann::json expand_calls(const nlohmann::json & raw);
  * @brief Expand inline-annotated calls under explicitly analyzed task roots.
  *
  * Calls to known module functions without `ape.inline` or `yard.inline` are
- * treated as opaque and excluded from the task trace. Unknown targets are
- * rejected. At least one function must carry `ape.analyze` or `yard.analyze`;
- * this API has no legacy all-functions fallback.
+ * retained as opaque markers for task-level exclusion accounting and excluded
+ * from the resolved access trace. Unknown targets are rejected. At least one
+ * function must carry `ape.analyze` or `yard.analyze`; this API has no legacy
+ * all-functions fallback.
  *
  * @param raw APE v2 LAT module.
- * @return Analyzed root functions with eligible direct calls expanded.
+ * @return Analyzed root functions with eligible direct calls expanded. Opaque
+ * `Call` markers remain, including inside `Loop` bodies, and must be removed
+ * before trace unrolling.
  * @throws std::invalid_argument if no analyzed root exists, if one function
  * has both analyze and inline roles, or for empty or duplicate function
  * identities, unknown targets, recursion, or argument count mismatches in an

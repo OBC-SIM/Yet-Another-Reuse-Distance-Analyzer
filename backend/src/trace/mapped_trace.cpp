@@ -37,6 +37,7 @@ void validate_resolved_task_result(const ResolvedTaskTraceResult & resolved)
   }
   std::unordered_set<std::string> task_ids;
   TraceCoverage aggregate;
+  std::uint64_t excluded_opaque_call_sites = 0;
   for (const auto & task : resolved.tasks)
   {
     if (task.task_id.empty() || !task_ids.insert(task.task_id).second)
@@ -53,12 +54,17 @@ void validate_resolved_task_result(const ResolvedTaskTraceResult & resolved)
     aggregate.source_accesses += task.coverage.source_accesses;
     aggregate.resolved_accesses += task.coverage.resolved_accesses;
     aggregate.rejected_accesses += task.coverage.rejected_accesses;
+    excluded_opaque_call_sites += task.excluded_opaque_call_sites;
   }
   if (!resolved.coverage.complete() ||
       resolved.coverage.emitted_line_references != 0 ||
       !equal_coverage(aggregate, resolved.coverage))
   {
     throw std::invalid_argument("resolved task aggregate coverage is invalid");
+  }
+  if (excluded_opaque_call_sites != resolved.excluded_opaque_call_sites)
+  {
+    throw std::invalid_argument("resolved task exclusions are inconsistent");
   }
 }
 
@@ -145,6 +151,7 @@ MappedTaskTraceResult map_resolved_task_traces(
   validate_resolved_task_result(resolved);
   MappedTaskTraceResult result;
   result.coverage = resolved.coverage;
+  result.excluded_opaque_call_sites = resolved.excluded_opaque_call_sites;
   result.coverage.emitted_line_references = 0;
   for (const auto & task : resolved.tasks)
   {
@@ -152,8 +159,9 @@ MappedTaskTraceResult map_resolved_task_traces(
     auto coverage = task.coverage;
     coverage.emitted_line_references = accesses.size();
     result.coverage.emitted_line_references += accesses.size();
-    result.tasks.push_back(
-      {task.task_id, std::move(accesses), std::move(coverage)});
+    result.tasks.push_back({task.task_id, std::move(accesses),
+                            std::move(coverage),
+                            task.excluded_opaque_call_sites});
   }
   collect_mappings(result.tasks, result.mappings);
   return result;

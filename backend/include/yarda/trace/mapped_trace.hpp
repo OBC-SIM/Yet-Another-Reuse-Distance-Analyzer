@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,8 @@ struct MappedTaskTraceResult
   CacheLineMappingTable mappings;
   /** @brief Aggregate coverage across every selected task. */
   TraceCoverage coverage;
+  /** @brief Aggregate static call sites omitted as known opaque calls. */
+  std::uint64_t excluded_opaque_call_sites = 0;
 };
 
 /**
@@ -98,8 +101,9 @@ MappedTaskTraceResult map_resolved_task_traces(
  * @param geometry Cache geometry used to decode Tag, Index, and Offset.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Task-isolated cache-line traces with complete coverage.
- * @throws std::invalid_argument for invalid geometry, malformed LAT input,
- * ambiguous task identities, or call expansion.
+ * @throws std::invalid_argument for invalid geometry or any condition rejected
+ * by resolved_task_traces, including a missing analyzed root, overlapping
+ * roles, ambiguous identities, unknown targets, or malformed LAT input.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 MappedTaskTraceResult mapped_task_traces(const nlohmann::json & raw,

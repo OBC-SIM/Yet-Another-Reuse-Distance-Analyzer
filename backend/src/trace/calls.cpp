@@ -153,6 +153,7 @@ Json expand_body(const Json & body, const Functions & functions,
       }
       if (analyzed_tasks && !detail::call_roles::is_inline(target->second))
       {
+        expanded.push_back(std::move(node));
         continue;
       }
       if (stack.count(callee))

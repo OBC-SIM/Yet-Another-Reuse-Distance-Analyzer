@@ -25,8 +25,19 @@ TEST(ElfObjectAddressesTest, RejectsAmbiguousSymbolNames)
   yarda::ElfDataRegions image;
   image.symbols = {{"A", 0x1000, 64, 0}, {"A", 0x2000, 64, 1}};
 
-  EXPECT_THROW(yarda::build_elf_object_addresses(image),
-               std::invalid_argument);
+  EXPECT_THROW(yarda::build_elf_object_addresses(image), std::invalid_argument);
+}
+
+TEST(ElfObjectAddressesTest, CollapsesIdenticalSymbolTableDuplicates)
+{
+  yarda::ElfDataRegions image;
+  image.symbols = {{"A", 0x1000, 64, 0}, {"A", 0x1000, 64, 0}};
+
+  const auto model = yarda::build_elf_object_addresses(image);
+
+  ASSERT_EQ(model.objects.size(), 1U);
+  EXPECT_EQ(model.objects.at("global::A").base, 0x1000U);
+  EXPECT_EQ(model.objects.at("global::A").size, 64U);
 }
 
 TEST(ElfObjectAddressesTest, RejectsImagesWithoutObjectSymbols)

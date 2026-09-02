@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,8 @@ struct TaskTrace
   std::vector<Access> accesses;
   /** @brief Source-to-output coverage restricted to this task. */
   TraceCoverage coverage;
+  /** @brief Expanded static call sites omitted as known opaque calls. */
+  std::uint64_t excluded_opaque_call_sites = 0;
 };
 
 }  // namespace yarda

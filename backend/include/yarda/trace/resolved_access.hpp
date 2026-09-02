@@ -67,6 +67,8 @@ struct ResolvedTaskTraceResult
   std::vector<ResolvedTaskTrace> tasks;
   /** @brief Aggregate coverage across every selected task. */
   TraceCoverage coverage;
+  /** @brief Aggregate static call sites omitted as known opaque calls. */
+  std::uint64_t excluded_opaque_call_sites = 0;
 };
 
 /**
@@ -91,8 +93,11 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
  *
  * Only known callees marked `ape.inline` or `yard.inline` are expanded at
  * their call sites; known non-inline calls are opaque and outside access
- * coverage, while unknown targets are rejected. Source ordinals restart at
- * zero for each task, while result coverage aggregates all selected tasks.
+ * coverage, while unknown targets are rejected. Opaque static call sites are
+ * counted separately for every task. Source ordinals restart at zero for each
+ * task, while result coverage aggregates all selected tasks. A call to another
+ * analyzed root remains a caller-local opaque site; the callee is also emitted
+ * independently as its own task.
  * Empty analyzed roots remain present as empty tasks. Every visited access
  * must resolve.
  *
