@@ -2,11 +2,8 @@
 
 #include <cstdint>
 #include <limits>
-#include <stdexcept>
 #include <string>
 #include <vector>
-
-#include "yarda/cache/line_mapping.hpp"
 
 namespace yarda::detail
 {
@@ -59,43 +56,6 @@ std::vector<std::string> trace_cache_line_keys(
     }
   }
   return keys;
-}
-
-CacheLineMapper::CacheLineMapper(const CacheGeometry & geometry,
-                                 const ObjectAddressModel & objects,
-                                 const AccessLayoutResolver & layouts)
-  : geometry_(geometry), objects_(objects), layouts_(layouts)
-{
-  cache_set_count(geometry_);
-}
-
-std::vector<CacheLineMapping> CacheLineMapper::map(
-  const nlohmann::json & node, const std::vector<std::string> & indices) const
-{
-  const auto object_id = node.value("object", "");
-  if (object_id.rfind("global::", 0) != 0)
-  {
-    return {};
-  }
-  const auto access = layouts_.resolve(node, indices);
-  if (!access)
-  {
-    if (!node.contains("elem_size"))
-    {
-      throw std::invalid_argument("global access lacks element size: " +
-                                  object_id);
-    }
-    throw std::invalid_argument("global access offset is invalid: " +
-                                object_id);
-  }
-  if (access->offset < 0)
-  {
-    throw std::invalid_argument("global access offset is negative: " +
-                                object_id);
-  }
-  return map_cache_lines(object_id, static_cast<std::uint64_t>(access->offset),
-                         static_cast<std::uint64_t>(access->size), objects_,
-                         geometry_);
 }
 
 }  // namespace yarda::detail

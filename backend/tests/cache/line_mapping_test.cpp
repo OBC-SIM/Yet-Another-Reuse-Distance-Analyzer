@@ -9,12 +9,11 @@ namespace
 
 TEST(CacheLineMappingTest, MapsObjectOffsetToDecodedCacheAddress)
 {
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {0x1000, 128};
   const yarda::CacheGeometry geometry{64, 512, 8};
+  const yarda::CacheLineAddressRange range{"global::A", 0x34, 4, 0x1034,
+                                           yarda::AddressBasis::Absolute};
 
-  const auto mappings =
-    yarda::map_cache_lines("global::A", 0x34, 4, objects, geometry);
+  const auto mappings = yarda::map_cache_lines(range, geometry);
 
   ASSERT_EQ(mappings.size(), 1);
   const auto & mapping = mappings.front();
@@ -28,11 +27,11 @@ TEST(CacheLineMappingTest, MapsObjectOffsetToDecodedCacheAddress)
 
 TEST(CacheLineMappingTest, MapsEveryLineTouchedByStructSizedAccess)
 {
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::records"] = {0x1000, 72};
+  const yarda::CacheLineAddressRange range{"global::records", 60, 12, 0x103c,
+                                           yarda::AddressBasis::Absolute};
 
-  const auto mappings = yarda::map_cache_lines(
-    "global::records", 60, 12, objects, yarda::CacheGeometry{64, 512, 8});
+  const auto mappings =
+    yarda::map_cache_lines(range, yarda::CacheGeometry{64, 512, 8});
 
   ASSERT_EQ(mappings.size(), 2);
   EXPECT_EQ(mappings[0].object_byte_offset, 60U);
@@ -45,11 +44,11 @@ TEST(CacheLineMappingTest, MapsEveryLineTouchedByStructSizedAccess)
 
 TEST(CacheLineMappingTest, MapsAccessWiderThanTwoLines)
 {
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {0x103c, 132};
+  const yarda::CacheLineAddressRange range{"global::A", 0, 132, 0x103c,
+                                           yarda::AddressBasis::Absolute};
 
-  const auto mappings = yarda::map_cache_lines(
-    "global::A", 0, 132, objects, yarda::CacheGeometry{64, 512, 8});
+  const auto mappings =
+    yarda::map_cache_lines(range, yarda::CacheGeometry{64, 512, 8});
 
   ASSERT_EQ(mappings.size(), 3);
   EXPECT_EQ(mappings[0].object_byte_offset, 0U);
@@ -60,54 +59,23 @@ TEST(CacheLineMappingTest, MapsAccessWiderThanTwoLines)
 
 TEST(CacheLineMappingTest, KeepsExactBoundaryAccessInOneLine)
 {
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {0x1000, 64};
+  const yarda::CacheLineAddressRange range{"global::A", 0, 64, 0x1000,
+                                           yarda::AddressBasis::Absolute};
 
-  const auto mappings = yarda::map_cache_lines(
-    "global::A", 0, 64, objects, yarda::CacheGeometry{64, 512, 8});
+  const auto mappings =
+    yarda::map_cache_lines(range, yarda::CacheGeometry{64, 512, 8});
 
   ASSERT_EQ(mappings.size(), 1);
   EXPECT_EQ(mappings.front().decoded.address, 0x1000U);
 }
 
-TEST(CacheLineMappingTest, RejectsAccessPastObjectExtent)
+TEST(CacheLineMappingTest, RejectsLinkedAddressRangeOverflow)
 {
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {0x1000, 16};
+  const yarda::CacheLineAddressRange range{
+    "global::A", 0, 4, std::numeric_limits<std::uint64_t>::max() - 1,
+    yarda::AddressBasis::Absolute};
 
-  EXPECT_THROW(yarda::map_cache_lines("global::A", 14, 4, objects,
-                                      yarda::CacheGeometry{64, 512, 8}),
-               std::invalid_argument);
-}
-
-TEST(CacheLineMappingTest, RejectsUnknownObject)
-{
-  const yarda::ObjectAddressModel objects;
-
-  EXPECT_THROW(yarda::map_cache_lines("global::missing", 0, 4, objects,
-                                      yarda::CacheGeometry{64, 512, 8}),
-               std::invalid_argument);
-}
-
-TEST(CacheLineMappingTest, RejectsReconstructedAddressOverflow)
-{
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {std::numeric_limits<std::uint64_t>::max(), 2};
-
-  EXPECT_THROW(yarda::map_cache_lines("global::A", 1, 1, objects,
-                                      yarda::CacheGeometry{64, 512, 8}),
-               std::overflow_error);
-}
-
-TEST(CacheLineMappingTest, RejectsAccessEndAddressOverflow)
-{
-  yarda::ObjectAddressModel objects;
-  objects.objects["global::A"] = {
-    std::numeric_limits<std::uint64_t>::max() - 1, 3};
-
-  EXPECT_THROW(yarda::map_cache_lines("global::A", 0, 3, objects,
-                                      yarda::CacheGeometry{64, 512, 8}),
-               std::overflow_error);
+  EXPECT_THROW(yarda::map_cache_lines(range, {64, 8, 2}), std::overflow_error);
 }
 
 }  // namespace

@@ -3,51 +3,49 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace yarda
 {
-
-std::vector<CacheLineMapping>
-map_cache_lines(const std::string & object_id,
-                std::uint64_t object_byte_offset, std::uint64_t access_size,
-                const ObjectAddressModel & objects,
-                const CacheGeometry & geometry)
+std::vector<CacheLineMapping> map_cache_lines(
+  const CacheLineAddressRange & range, const CacheGeometry & geometry)
 {
-  const auto object = objects.objects.find(object_id);
-  if (object == objects.objects.end())
+  if (range.object_id.empty() || range.access_size == 0)
   {
-    throw std::invalid_argument("ELF object is unresolved: " + object_id);
+    throw std::invalid_argument("cache-line address range is invalid");
   }
-  if (access_size == 0 || object_byte_offset >= object->second.size ||
-      access_size > object->second.size - object_byte_offset)
+  if (range.access_size - 1 >
+      std::numeric_limits<std::uint64_t>::max() - range.linked_byte_address)
   {
-    throw std::invalid_argument("access exceeds ELF object extent: " +
-                                object_id);
+    throw std::overflow_error("linked address range overflows");
   }
-  if (object->second.base >
-      std::numeric_limits<std::uint64_t>::max() - object_byte_offset)
+  if (range.access_size - 1 >
+      std::numeric_limits<std::uint64_t>::max() - range.object_byte_offset)
   {
-    throw std::overflow_error("ELF object address overflow: " + object_id);
-  }
-  const auto address = object->second.base + object_byte_offset;
-  if (access_size - 1 >
-      std::numeric_limits<std::uint64_t>::max() - address)
-  {
-    throw std::overflow_error("ELF object address overflow: " + object_id);
+    throw std::overflow_error("object offset range overflows");
   }
 
   std::vector<CacheLineMapping> mappings;
-  auto current_address = address;
-  auto current_object_offset = object_byte_offset;
-  auto remaining = access_size;
+  auto current_address = range.linked_byte_address;
+  auto current_object_offset = range.object_byte_offset;
+  auto remaining = range.access_size;
+  std::uint64_t line_span_ordinal = 0;
   while (remaining != 0)
   {
-    const auto decoded = decode_cache_address(current_address, geometry);
-    mappings.push_back(
-      {object_id, current_object_offset, objects.basis, decoded});
+    CacheLineMapping mapping;
+    mapping.object_id = range.object_id;
+    mapping.object_byte_offset = current_object_offset;
+    mapping.address_basis = range.address_basis;
+    mapping.decoded = decode_cache_address(current_address, geometry);
+    mapping.source_object_byte_offset = range.object_byte_offset;
+    mapping.source_access_size = range.access_size;
+    mapping.source_linked_byte_address = range.linked_byte_address;
+    mapping.line_span_ordinal = line_span_ordinal++;
+    mappings.push_back(std::move(mapping));
 
-    const auto available = geometry.line_size - decoded.line_offset;
+    const auto available =
+      geometry.line_size - mappings.back().decoded.line_offset;
     const auto consumed = std::min(remaining, available);
     remaining -= consumed;
     if (remaining != 0)

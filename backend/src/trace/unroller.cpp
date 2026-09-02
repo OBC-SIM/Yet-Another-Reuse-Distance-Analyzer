@@ -1,11 +1,13 @@
 #include "unroller.hpp"
 
 #include <cstdint>
-#include <iterator>
+#include <limits>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace yarda::detail
@@ -63,6 +65,71 @@ std::uint64_t iteration_count(std::int64_t start, std::int64_t bound,
   return start <= bound ? 0
                         : static_cast<std::uint64_t>(
                             (start - bound + magnitude - 1) / magnitude);
+}
+
+AccessOperation access_operation(const Json & node)
+{
+  const auto operation = node.value("op", "");
+  if (operation == "load")
+  {
+    return AccessOperation::Load;
+  }
+  if (operation == "store")
+  {
+    return AccessOperation::Store;
+  }
+  return AccessOperation::Unknown;
+}
+
+std::optional<ResolvedAccess> resolve_access(
+  const Json & node, const std::vector<std::string> & indices,
+  std::uint64_t source_access_ordinal, const ObjectAddressModel & objects,
+  const AccessLayoutResolver & layouts)
+{
+  const auto object_id = node.value("object", "");
+  if (object_id.rfind("global::", 0) != 0)
+  {
+    return std::nullopt;
+  }
+  const auto access = layouts.resolve(node, indices);
+  if (!access)
+  {
+    throw std::invalid_argument("global access layout is unresolved: " +
+                                object_id);
+  }
+  if (access->offset < 0)
+  {
+    throw std::invalid_argument("global access offset is negative: " +
+                                object_id);
+  }
+  const auto offset = static_cast<std::uint64_t>(access->offset);
+  const auto size = static_cast<std::uint64_t>(access->size);
+  const auto object = objects.objects.find(object_id);
+  if (object == objects.objects.end())
+  {
+    throw std::invalid_argument("ELF object is unresolved: " + object_id);
+  }
+  if (offset >= object->second.size || size > object->second.size - offset)
+  {
+    throw std::invalid_argument("access exceeds ELF object extent: " +
+                                object_id);
+  }
+  if (object->second.base > std::numeric_limits<std::uint64_t>::max() - offset)
+  {
+    throw std::overflow_error("ELF object address overflow: " + object_id);
+  }
+  const auto address = object->second.base + offset;
+  if (size - 1 > std::numeric_limits<std::uint64_t>::max() - address)
+  {
+    throw std::overflow_error("ELF object address overflow: " + object_id);
+  }
+  return ResolvedAccess{object_id,
+                        offset,
+                        size,
+                        address,
+                        objects.basis,
+                        access_operation(node),
+                        source_access_ordinal};
 }
 
 template<typename Emit>
@@ -152,27 +219,31 @@ TraceUnroller::unroll(const nlohmann::json & node) const
   return trace;
 }
 
-MappedTraceUnroller::MappedTraceUnroller(const CacheGeometry & geometry,
-                                         const ObjectAddressModel & objects,
-                                         const AccessLayoutResolver & layouts)
-  : mapper_(geometry, objects, layouts)
+ResolvedTraceUnroller::ResolvedTraceUnroller(
+  const ObjectAddressModel & objects, const AccessLayoutResolver & layouts,
+  ScalarAccessPolicy scalar_policy)
+  : objects_(objects), layouts_(layouts), scalar_policy_(scalar_policy)
 {
 }
 
-std::vector<CacheLineMapping>
-MappedTraceUnroller::unroll(const nlohmann::json & node) const
+std::vector<ResolvedAccess>
+ResolvedTraceUnroller::unroll(const nlohmann::json & node)
 {
-  std::vector<CacheLineMapping> accesses;
+  std::vector<ResolvedAccess> accesses;
   const auto emit = [&](const Json & access,
                         const std::vector<std::string> & indices) {
-    if (access.value("type", "") == "Scalar")
+    const auto ordinal = next_source_access_ordinal_++;
+    if (scalar_policy_ == ScalarAccessPolicy::Omit &&
+        access.value("type", "") == "Scalar")
     {
       return;
     }
-    auto mappings = mapper_.map(access, indices);
-    accesses.insert(accesses.end(),
-                    std::make_move_iterator(mappings.begin()),
-                    std::make_move_iterator(mappings.end()));
+    auto resolved =
+      resolve_access(access, indices, ordinal, objects_, layouts_);
+    if (resolved)
+    {
+      accesses.push_back(std::move(*resolved));
+    }
   };
   visit_node(node, {}, emit);
   return accesses;

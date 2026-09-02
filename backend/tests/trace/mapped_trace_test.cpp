@@ -138,6 +138,7 @@ TEST(MappedTraceTest, PreservesEveryLineOfOneStructSizedAccess)
                {"indices", Json::array({"5"})},
                {"shape", Json::array({6})},
                {"elem_size", 12},
+               {"op", "store"},
              }})},
   }});
   yarda::ObjectAddressModel objects;
@@ -153,6 +154,11 @@ TEST(MappedTraceTest, PreservesEveryLineOfOneStructSizedAccess)
   EXPECT_EQ(accesses[0].decoded.address, 0x103cU);
   EXPECT_EQ(accesses[1].object_byte_offset, 64U);
   EXPECT_EQ(accesses[1].decoded.address, 0x1040U);
+  EXPECT_EQ(accesses[0].operation, yarda::AccessOperation::Store);
+  EXPECT_EQ(accesses[0].source_access_ordinal, 0U);
+  EXPECT_EQ(accesses[0].line_span_ordinal, 0U);
+  EXPECT_EQ(accesses[1].source_access_ordinal, 0U);
+  EXPECT_EQ(accesses[1].line_span_ordinal, 1U);
   EXPECT_EQ(result.mappings.size(), 2);
   EXPECT_EQ(result.mappings.at({"global::records", 64}).decoded.line_offset,
             0U);

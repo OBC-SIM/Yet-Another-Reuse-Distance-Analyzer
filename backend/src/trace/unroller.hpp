@@ -3,14 +3,24 @@
 #include <nlohmann/json.hpp>
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "cache_line.hpp"
+#include "yarda/trace/resolved_access.hpp"
 #include "yarda/trace/trace.hpp"
 
 namespace yarda::detail
 {
+
+// TODO(feat/cpp-elf-cli-mapping A2): Remove this compatibility policy when
+// unmapped task accesses are rejected instead of omitted.
+enum class ScalarAccessPolicy
+{
+  Include,
+  Omit,
+};
 
 class TraceUnroller
 {
@@ -26,17 +36,20 @@ private:
   const AccessLayoutResolver & layouts_;
 };
 
-class MappedTraceUnroller
+class ResolvedTraceUnroller
 {
 public:
-  MappedTraceUnroller(const CacheGeometry & geometry,
-                      const ObjectAddressModel & objects,
-                      const AccessLayoutResolver & layouts);
+  ResolvedTraceUnroller(
+    const ObjectAddressModel & objects, const AccessLayoutResolver & layouts,
+    ScalarAccessPolicy scalar_policy = ScalarAccessPolicy::Include);
 
-  std::vector<CacheLineMapping> unroll(const nlohmann::json & node) const;
+  std::vector<ResolvedAccess> unroll(const nlohmann::json & node);
 
 private:
-  CacheLineMapper mapper_;
+  const ObjectAddressModel & objects_;
+  const AccessLayoutResolver & layouts_;
+  ScalarAccessPolicy scalar_policy_;
+  std::uint64_t next_source_access_ordinal_ = 0;
 };
 
 }  // namespace yarda::detail
