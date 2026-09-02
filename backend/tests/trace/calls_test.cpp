@@ -205,4 +205,81 @@ TEST(CallsTest, RejectsRecursion)
   EXPECT_THROW(yarda::expand_calls(module), std::invalid_argument);
 }
 
+TEST(CallsTest, RetainsKnownNonInlineTaskCallAsOpaqueMarker)
+{
+  const Json call = {
+    {"type", "Call"}, {"callee", "opaque"}, {"args", Json::array()}};
+  const Json loop = {
+    {"type", "Loop"},
+    {"var", "i"},
+    {"bound", 2},
+    {"body", Json::array({call})},
+  };
+  const Json module = Json::array({
+    {{"function", "opaque"}, {"body", Json::array()}},
+    {{"function", "kernel"},
+     {"annotations", Json::array({"ape.analyze"})},
+     {"body", Json::array({loop})}},
+  });
+
+  const auto expanded = yarda::expand_task_calls(module);
+
+  ASSERT_EQ(expanded.size(), 1U);
+  ASSERT_EQ(expanded[0]["body"].size(), 1U);
+  const auto & expanded_body = expanded[0]["body"][0]["body"];
+  ASSERT_EQ(expanded_body.size(), 1U);
+  EXPECT_EQ(expanded_body[0], call);
+}
+
+TEST(CallsTest, ExpandsRepeatedInlineCallsInsideLoop)
+{
+  const Json access = {{"type", "Scalar"}, {"name", "value"}};
+  const Json call = {
+    {"type", "Call"}, {"callee", "touch"}, {"args", Json::array()}};
+  const Json loop = {
+    {"type", "Loop"},
+    {"var", "i"},
+    {"bound", 2},
+    {"body", Json::array({call, call})},
+  };
+  const Json module = Json::array({
+    {{"function", "touch"},
+     {"annotations", Json::array({"ape.inline"})},
+     {"body", Json::array({access})}},
+    {{"function", "kernel"},
+     {"annotations", Json::array({"ape.analyze"})},
+     {"body", Json::array({loop})}},
+  });
+
+  const auto task_expanded = yarda::expand_task_calls(module);
+  const auto block_expanded = yarda::expand_calls(module);
+
+  ASSERT_EQ(task_expanded.size(), 1U);
+  ASSERT_EQ(block_expanded.size(), 1U);
+  EXPECT_EQ(task_expanded[0]["body"][0]["body"], Json::array({access, access}));
+  EXPECT_EQ(block_expanded[0]["body"][0]["body"],
+            Json::array({access, access}));
+}
+
+TEST(CallsTest, RejectsIndirectRecursiveInlineTaskCall)
+{
+  const Json call_first = {
+    {"type", "Call"}, {"callee", "first"}, {"args", Json::array()}};
+  const Json call_second = {
+    {"type", "Call"}, {"callee", "second"}, {"args", Json::array()}};
+  const Json module = Json::array({
+    {{"function", "first"},
+     {"annotations", Json::array({"ape.inline"})},
+     {"body", Json::array({call_second})}},
+    {{"function", "second"},
+     {"annotations", Json::array({"ape.inline"})},
+     {"body", Json::array({call_first})}},
+    {{"function", "kernel"},
+     {"annotations", Json::array({"ape.analyze"})},
+     {"body", Json::array({call_first})}},
+  });
+
+  EXPECT_THROW(yarda::expand_task_calls(module), std::invalid_argument);
+}
+
 }  // namespace

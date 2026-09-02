@@ -196,9 +196,10 @@ Json expand_body(const Json & body, const Functions & functions,
         substituted.push_back(
           substitute_node(child, names, object_ids, objects));
       }
-      stack.insert(callee);
-      for (auto & child :
-           expand_body(substituted, functions, objects, stack, analyzed_tasks))
+      auto child_stack = stack;
+      child_stack.insert(callee);
+      for (auto & child : expand_body(substituted, functions, objects,
+                                      child_stack, analyzed_tasks))
       {
         expanded.push_back(std::move(child));
       }
