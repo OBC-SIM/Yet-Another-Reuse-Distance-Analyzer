@@ -26,7 +26,9 @@ std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
   const detail::TraceUnroller unroller(granularity, cache_line_size, layouts);
   return detail::build_block_traces<NamedTrace, std::string>(
     raw,
-    [&unroller](const nlohmann::json & node) { return unroller.unroll(node); },
+    [&unroller](const std::string &, const nlohmann::json & node) {
+      return unroller.unroll(node);
+    },
     detail::EmptyLoopPolicy::Include);
 }
 

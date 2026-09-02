@@ -10,6 +10,7 @@ add_library(yarda_backend
     src/trace/access_layout.cpp
     src/trace/access_layout_legacy.cpp
     src/trace/access_layout_structured.cpp
+    src/trace/access_resolver.cpp
     src/trace/cache_line.cpp
     src/trace/mapped_trace.cpp
     src/trace/resolved_access.cpp
@@ -164,9 +165,12 @@ if(BUILD_TESTING)
         tests/trace/access_layout_test.cpp
         tests/trace/schema_test.cpp
         tests/trace/mapped_trace_test.cpp
-        tests/trace/mapped_trace_compatibility_test.cpp
+        tests/trace/mapped_trace_strict_test.cpp
         tests/trace/resolved_access_test.cpp
         tests/trace/resolved_mapping_test.cpp
+        tests/trace/strict_input_test.cpp
+        tests/trace/strict_resolution_test.cpp
+        tests/trace/strict_unroller_test.cpp
         tests/trace/trace_test.cpp
     )
     target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)

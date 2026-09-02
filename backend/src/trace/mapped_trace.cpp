@@ -1,6 +1,8 @@
 #include "yarda/trace/mapped_trace.hpp"
 
 #include <iterator>
+#include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -59,35 +61,38 @@ flatten_mapped_traces(const std::vector<NamedMappedTrace> & traces)
   return result;
 }
 
-std::vector<CacheLineMapping>
-unroll_node_actual(const nlohmann::json & node, const CacheGeometry & geometry,
-                   const ObjectAddressModel & objects)
-{
-  validate_mapping_geometry(geometry);
-  const detail::AccessLayoutResolver layouts;
-  detail::ResolvedTraceUnroller unroller(objects, layouts,
-                                         detail::ScalarAccessPolicy::Omit);
-  return map_resolved_accesses(unroller.unroll(node), geometry);
-}
-
 MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
                                       const CacheGeometry & geometry,
                                       const ObjectAddressModel & objects)
 {
   validate_mapping_geometry(geometry);
-  const detail::AccessLayoutResolver layouts(raw);
-  detail::ResolvedTraceUnroller unroller(objects, layouts,
-                                         detail::ScalarAccessPolicy::Omit);
-  MappedTraceResult result;
-  result.traces =
-    detail::build_block_traces<NamedMappedTrace, CacheLineMapping>(
-      raw,
-      [&unroller, &geometry](const nlohmann::json & node) {
-        return map_resolved_accesses(unroller.unroll(node), geometry);
-      },
-      detail::EmptyLoopPolicy::Omit);
-  collect_mappings(result.traces, result.mappings);
-  return result;
+  try
+  {
+    const detail::AccessLayoutResolver layouts(raw);
+    detail::ResolvedTraceUnroller unroller(objects, layouts);
+    MappedTraceResult result;
+    result.traces =
+      detail::build_block_traces<NamedMappedTrace, CacheLineMapping>(
+        raw,
+        [&unroller, &geometry](const std::string & task_id,
+                               const nlohmann::json & node) {
+          return map_resolved_accesses(unroller.unroll(node, task_id),
+                                       geometry);
+        },
+        detail::EmptyLoopPolicy::Omit);
+    result.coverage = unroller.coverage();
+    for (const auto & trace : result.traces)
+    {
+      result.coverage.emitted_line_references += trace.accesses.size();
+    }
+    collect_mappings(result.traces, result.mappings);
+    return result;
+  }
+  catch (const nlohmann::json::exception & error)
+  {
+    throw std::invalid_argument("malformed LAT input: " +
+                                std::string(error.what()));
+  }
 }
 
 }  // namespace yarda

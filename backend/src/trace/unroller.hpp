@@ -3,24 +3,16 @@
 #include <nlohmann/json.hpp>
 
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "cache_line.hpp"
 #include "yarda/trace/resolved_access.hpp"
 #include "yarda/trace/trace.hpp"
+#include "yarda/trace/trace_coverage.hpp"
 
 namespace yarda::detail
 {
-
-// TODO(feat/cpp-elf-cli-mapping A2): Remove this compatibility policy when
-// unmapped task accesses are rejected instead of omitted.
-enum class ScalarAccessPolicy
-{
-  Include,
-  Omit,
-};
 
 class TraceUnroller
 {
@@ -39,17 +31,18 @@ private:
 class ResolvedTraceUnroller
 {
 public:
-  ResolvedTraceUnroller(
-    const ObjectAddressModel & objects, const AccessLayoutResolver & layouts,
-    ScalarAccessPolicy scalar_policy = ScalarAccessPolicy::Include);
+  ResolvedTraceUnroller(const ObjectAddressModel & objects,
+                        const AccessLayoutResolver & layouts);
 
-  std::vector<ResolvedAccess> unroll(const nlohmann::json & node);
+  std::vector<ResolvedAccess> unroll(const nlohmann::json & node,
+                                     const std::string & task_id);
+
+  const TraceCoverage & coverage() const noexcept;
 
 private:
   const ObjectAddressModel & objects_;
   const AccessLayoutResolver & layouts_;
-  ScalarAccessPolicy scalar_policy_;
-  std::uint64_t next_source_access_ordinal_ = 0;
+  TraceCoverage coverage_;
 };
 
 }  // namespace yarda::detail
