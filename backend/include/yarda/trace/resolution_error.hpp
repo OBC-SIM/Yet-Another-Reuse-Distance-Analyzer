@@ -29,7 +29,7 @@ public:
    *
    * @param category Stable machine-readable failure category.
    * @param task_id Analyzed root containing the rejected access.
-   * @param source_access_ordinal Zero-based source emission position.
+   * @param source_access_ordinal Zero-based source position in its trace scope.
    * @param object_id Canonical object identity, or an empty string if absent.
    * @param coverage Coverage snapshot including the rejected access.
    * @param message Human-readable failure description.
@@ -69,7 +69,8 @@ public:
   /**
    * @brief Return the rejected access's source emission position.
    *
-   * @return Zero-based module-wide source access ordinal.
+   * @return Module-wide ordinal for block APIs or task-local ordinal for task
+   * APIs.
    */
   [[nodiscard]] std::uint64_t source_access_ordinal() const noexcept
   {
@@ -88,6 +89,9 @@ public:
 
   /**
    * @brief Return coverage accumulated through the rejected access.
+   *
+   * For task APIs the snapshot aggregates all selected tasks visited through
+   * the failure, even though `source_access_ordinal()` is task-local.
    *
    * @return Borrowed coverage snapshot valid for this error's lifetime.
    */

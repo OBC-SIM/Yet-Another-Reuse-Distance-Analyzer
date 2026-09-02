@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "call_roles.hpp"
 #include "yarda/trace/schema.hpp"
 
 namespace yarda
@@ -19,10 +20,6 @@ using Functions = std::unordered_map<std::string, Json>;
 
 const std::regex kAffineName(R"(^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$)");
 const std::regex kIdentifier(R"(\b[A-Za-z_][A-Za-z0-9_]*\b)");
-const std::unordered_set<std::string> kAnalyze = {"yard.analyze",
-                                                  "ape."
-                                                  "analyze"};
-const std::unordered_set<std::string> kInline = {"yard.inline", "ape.inline"};
 
 std::string substitute_name(const std::string & name, const Mapping & mapping)
 {
@@ -139,7 +136,8 @@ Json substitute_node(Json node, const Mapping & names,
 }
 
 Json expand_body(const Json & body, const Functions & functions,
-                 const Json & objects, std::unordered_set<std::string> stack)
+                 const Json & objects, std::unordered_set<std::string> stack,
+                 bool analyzed_tasks)
 {
   Json expanded = Json::array();
   for (auto node : body)
@@ -148,16 +146,21 @@ Json expand_body(const Json & body, const Functions & functions,
     if (type == "Call")
     {
       const auto callee = node.value("callee", "");
-      if (!functions.count(callee))
+      const auto target = functions.find(callee);
+      if (target == functions.end())
       {
         throw std::invalid_argument("Unknown call target: " + callee);
+      }
+      if (analyzed_tasks && !detail::call_roles::is_inline(target->second))
+      {
+        continue;
       }
       if (stack.count(callee))
       {
         throw std::invalid_argument(
           "Recursive call expansion is not supported: " + callee);
       }
-      const auto & function = functions.at(callee);
+      const auto & function = target->second;
       Mapping names;
       Mapping object_ids;
       const auto params = function.value("params", Json::array());
@@ -194,14 +197,16 @@ Json expand_body(const Json & body, const Functions & functions,
           substitute_node(child, names, object_ids, objects));
       }
       stack.insert(callee);
-      for (auto & child : expand_body(substituted, functions, objects, stack))
+      for (auto & child :
+           expand_body(substituted, functions, objects, stack, analyzed_tasks))
       {
         expanded.push_back(std::move(child));
       }
     }
     else if (type == "Loop")
     {
-      node["body"] = expand_body(node["body"], functions, objects, stack);
+      node["body"] =
+        expand_body(node["body"], functions, objects, stack, analyzed_tasks);
       expanded.push_back(std::move(node));
     }
     else
@@ -212,22 +217,7 @@ Json expand_body(const Json & body, const Functions & functions,
   return expanded;
 }
 
-bool has_annotation(const Json & function,
-                    const std::unordered_set<std::string> & wanted)
-{
-  for (const auto & annotation : function.value("annotations", Json::array()))
-  {
-    if (wanted.count(annotation.get<std::string>()))
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
-}  // namespace
-
-nlohmann::json expand_calls(const nlohmann::json & raw)
+Json expand_module(const nlohmann::json & raw, bool analyzed_tasks)
 {
   Json objects = Json::object();
   if (raw.is_object() && raw.contains("metadata") &&
@@ -240,23 +230,59 @@ nlohmann::json expand_calls(const nlohmann::json & raw)
   bool has_roles = false;
   for (const auto & function : module)
   {
-    functions[function.at("function").get<std::string>()] = function;
-    has_roles = has_roles || has_annotation(function, kAnalyze) ||
-                has_annotation(function, kInline);
+    const auto name = function.at("function").get<std::string>();
+    if (name.empty())
+    {
+      throw std::invalid_argument("Function identity must not be empty");
+    }
+    if (!functions.emplace(name, function).second)
+    {
+      throw std::invalid_argument("Duplicate function identity: " + name);
+    }
+    const bool analyzed = detail::call_roles::is_analyzed(function);
+    const bool inlined = detail::call_roles::is_inline(function);
+    if (analyzed_tasks && analyzed && inlined)
+    {
+      throw std::invalid_argument(
+        "Function is both an analyzed root and inline: " + name);
+    }
+    has_roles = has_roles || analyzed || inlined;
   }
 
   Json result = Json::array();
   for (auto function : module)
   {
     const auto name = function.at("function").get<std::string>();
+    const bool selected = detail::call_roles::is_analyzed(function) ||
+                          (!analyzed_tasks && !has_roles);
+    if (analyzed_tasks && !selected)
+    {
+      continue;
+    }
     function["body"] =
-      expand_body(function["body"], functions, objects, {name});
-    if (!has_roles || has_annotation(function, kAnalyze))
+      expand_body(function["body"], functions, objects, {name}, analyzed_tasks);
+    if (selected)
     {
       result.push_back(std::move(function));
     }
   }
+  if (analyzed_tasks && result.empty())
+  {
+    throw std::invalid_argument("LAT module contains no analyzed task root");
+  }
   return result;
+}
+
+}  // namespace
+
+nlohmann::json expand_calls(const nlohmann::json & raw)
+{
+  return expand_module(raw, false);
+}
+
+nlohmann::json expand_task_calls(const nlohmann::json & raw)
+{
+  return expand_module(raw, true);
 }
 
 }  // namespace yarda

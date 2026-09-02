@@ -206,12 +206,18 @@ std::vector<ResolvedAccess> ResolvedTraceUnroller::unroll(
   std::vector<ResolvedAccess> accesses;
   const auto emit = [&](const Json & access,
                         const std::vector<std::string> & indices) {
-    const auto ordinal = coverage_.source_accesses++;
+    const auto ordinal = next_source_access_ordinal_++;
+    ++coverage_.source_accesses;
     accesses.push_back(resolve_access(access, indices, task_id, ordinal,
                                       objects_, layouts_, coverage_));
   };
   visit_node(node, {}, emit);
   return accesses;
+}
+
+void ResolvedTraceUnroller::begin_task() noexcept
+{
+  next_source_access_ordinal_ = 0;
 }
 
 const TraceCoverage & ResolvedTraceUnroller::coverage() const noexcept

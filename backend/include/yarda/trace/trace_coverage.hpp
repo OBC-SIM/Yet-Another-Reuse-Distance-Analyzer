@@ -22,7 +22,8 @@ struct TraceCoverage
    *
    * Successful strict APIs guarantee this condition. Error snapshots can be
    * incomplete and retain the counters accumulated through the rejection.
-   * Functions excluded by root-role selection are outside these counters.
+   * Functions excluded by root-role selection and known non-inline call sites
+   * omitted by the task API are outside these counters.
    *
    * @return `true` when every visited access resolved without rejection.
    */

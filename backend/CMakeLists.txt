@@ -171,6 +171,8 @@ if(BUILD_TESTING)
         tests/trace/strict_input_test.cpp
         tests/trace/strict_resolution_test.cpp
         tests/trace/strict_unroller_test.cpp
+        tests/trace/task_trace_test.cpp
+        tests/trace/task_trace_validation_test.cpp
         tests/trace/trace_test.cpp
     )
     target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
