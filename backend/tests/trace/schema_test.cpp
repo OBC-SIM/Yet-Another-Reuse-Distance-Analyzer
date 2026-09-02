@@ -54,6 +54,24 @@ TEST(SchemaTest, EnrichesV2ArrayMetadata)
   EXPECT_EQ(node["elem_size"], 8);
 }
 
+TEST(SchemaTest, EnrichesV2ScalarMetadata)
+{
+  const Json raw = {
+    {"schema_version", 2},
+    {"metadata",
+     {{"objects", {{"global::flag", {{"kind", "scalar"}, {"elem_size", 4}}}}}}},
+    {"functions",
+     Json::array({{{"function", "kernel"},
+                   {"body", Json::array({{{"type", "Scalar"},
+                                          {"name", "flag"},
+                                          {"object", "global::flag"}}})}}})},
+  };
+
+  const auto node = yarda::normalize_module(raw)[0]["body"][0];
+
+  EXPECT_EQ(node["elem_size"], 4);
+}
+
 TEST(SchemaTest, RejectsUnsupportedRoot)
 {
   EXPECT_THROW(yarda::normalize_module(Json::object()), std::invalid_argument);

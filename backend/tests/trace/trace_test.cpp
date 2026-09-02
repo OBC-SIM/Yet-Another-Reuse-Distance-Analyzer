@@ -160,6 +160,7 @@ TEST(TraceTest, ReturnsTypedMappingForLinkedGlobalAccess)
   EXPECT_EQ(trace[0].decoded.tag, 1U);
   EXPECT_EQ(trace[0].decoded.set_index, 0U);
   EXPECT_EQ(trace[0].decoded.line_offset, 0x30U);
+  EXPECT_EQ(trace[0].source_access_ordinal, 0U);
 }
 
 TEST(TraceTest, MapsDifferentGlobalObjectsToSharedCacheLine)

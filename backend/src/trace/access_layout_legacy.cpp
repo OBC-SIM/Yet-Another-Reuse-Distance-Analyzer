@@ -32,11 +32,16 @@ parse_indices(const std::vector<std::string> & indices)
 std::optional<std::int64_t>
 linear_index(const Json & node, const std::vector<std::int64_t> & indices)
 {
+  if (indices.empty())
+  {
+    return node.value("type", "") == "Scalar" ? std::optional<std::int64_t>(0)
+                                              : std::nullopt;
+  }
   if (indices.size() == 1)
   {
     return indices.front();
   }
-  if (indices.empty() || !node.contains("shape") || !node["shape"].is_array() ||
+  if (!node.contains("shape") || !node["shape"].is_array() ||
       (node["shape"].size() != indices.size() &&
        node["shape"].size() + 1 != indices.size()))
   {

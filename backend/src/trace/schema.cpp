@@ -12,13 +12,14 @@ using Json = nlohmann::json;
 Json enrich_node(Json node, const Json & objects)
 {
   const auto type = node.value("type", "");
-  if (type == "Array")
+  if (type == "Array" || type == "Scalar")
   {
     const auto object_id = node.value("object", "");
     if (!object_id.empty() && objects.contains(object_id))
     {
       const auto & metadata = objects.at(object_id);
-      if (!node.contains("shape") && metadata.contains("shape"))
+      if (type == "Array" && !node.contains("shape") &&
+          metadata.contains("shape"))
       {
         node["shape"] = metadata["shape"];
       }
