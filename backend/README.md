@@ -33,3 +33,25 @@ uses a Fenwick tree for O(N log N) reuse-distance profiling. `--mode unroll`
 remains accepted for command-line compatibility; `--mode predict` is not
 supported. Cache-line granularity requires a versioned YAML hierarchy passed
 through `--cache`; core 0's configured L1 line size defines trace grouping.
+
+For task-isolated linked-address mapping, pass a non-PIE executable and cache
+configuration:
+
+```bash
+./build/backend/yarda_cpp task_ape.json \
+  --elf task.elf \
+  --cache backend/config/cache.32b.yaml \
+  --export task_mapping.json
+```
+
+This path accepts only `ET_EXEC`, resolves canonical global objects once, and
+maps them with core 0's L1 geometry. The versioned JSON preserves task-local
+source ordinals, load/store operations, cross-line provenance, complete
+resolution coverage, and known non-inline static call-site exclusions. The
+`known_non_inline_static_call_sites` count is taken after inline expansion and
+does not multiply sites by loop iterations. Calls to another analyzed root are
+caller-local opaque sites while the callee remains a separate task. This mode
+intrinsically maps cache lines: omit `--granularity` or pass `cache-line`;
+explicit `element` is rejected. Its `linked_absolute` addresses are linked
+virtual addresses, not automatically physical addresses. Without `--export`,
+the JSON is written to stdout.

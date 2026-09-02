@@ -15,6 +15,8 @@ namespace yarda
 namespace
 {
 
+using Json = nlohmann::json;
+
 TraceCoverage coverage_delta(const TraceCoverage & after,
                              const TraceCoverage & before)
 {
@@ -24,6 +26,27 @@ TraceCoverage coverage_delta(const TraceCoverage & after,
     after.rejected_accesses - before.rejected_accesses,
     after.emitted_line_references - before.emitted_line_references,
   };
+}
+
+Json remove_opaque_calls(const Json & body, std::uint64_t & excluded)
+{
+  Json result = Json::array();
+  for (auto node : body)
+  {
+    const auto type = node.value("type", "");
+    if (type == "Call")
+    {
+      ++excluded;
+      continue;
+    }
+    if (type == "Loop")
+    {
+      node["body"] =
+        remove_opaque_calls(node.value("body", Json::array()), excluded);
+    }
+    result.push_back(std::move(node));
+  }
+  return result;
 }
 
 }  // namespace
@@ -65,10 +88,14 @@ ResolvedTaskTraceResult resolved_task_traces(const nlohmann::json & raw,
     for (const auto & root : roots)
     {
       const auto task_id = root.at("function").get<std::string>();
+      std::uint64_t excluded_opaque_call_sites = 0;
+      const auto body =
+        remove_opaque_calls(root.value("body", nlohmann::json::array()),
+                            excluded_opaque_call_sites);
       unroller.begin_task();
       const auto coverage_before = unroller.coverage();
       std::vector<ResolvedAccess> accesses;
-      for (const auto & node : root.value("body", nlohmann::json::array()))
+      for (const auto & node : body)
       {
         auto emitted = unroller.unroll(node, task_id);
         accesses.insert(accesses.end(),
@@ -77,7 +104,9 @@ ResolvedTaskTraceResult resolved_task_traces(const nlohmann::json & raw,
       }
       result.tasks.push_back(
         {task_id, std::move(accesses),
-         coverage_delta(unroller.coverage(), coverage_before)});
+         coverage_delta(unroller.coverage(), coverage_before),
+         excluded_opaque_call_sites});
+      result.excluded_opaque_call_sites += excluded_opaque_call_sites;
     }
     result.coverage = unroller.coverage();
     return result;
