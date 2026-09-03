@@ -1,13 +1,13 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 #define MAX_N 100
 int A[MAX_N];
 int B[9];
 
-YARD_INLINE
+APE_INLINE
 void test_ptr_param_kernel(int * ptr, int idx) { ptr[idx] = 1; }
 
-YARD_ANALYZE
+APE_ANALYZE
 void test_ptr_param()
 {
   B[0] = 1;

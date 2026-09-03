@@ -1,4 +1,4 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 /**
  * PolyBench: 2mm (2 Matrix Multiplications)
@@ -25,7 +25,7 @@ double C[NJ][NL];
 double D[NI][NL];
 double tmp[NI][NJ];  // 중간 결과
 
-YARD_ANALYZE
+APE_ANALYZE
 void kernel_2mm(double alpha, double beta)
 {
   int i, j, k;

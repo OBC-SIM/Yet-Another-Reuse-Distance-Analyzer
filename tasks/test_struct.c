@@ -1,4 +1,4 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 struct S {
   int x;
@@ -12,7 +12,7 @@ struct Outer {
 
 struct Outer o;
 
-YARD_INLINE
+APE_INLINE
 void struct_field_access(struct Outer *o)
 {
   for (int i = 0; i < 4; i++) {
@@ -21,7 +21,7 @@ void struct_field_access(struct Outer *o)
   }
 }
 
-YARD_ANALYZE
+APE_ANALYZE
 void struct_field_access_kernel(void)
 {
   struct_field_access(&o);

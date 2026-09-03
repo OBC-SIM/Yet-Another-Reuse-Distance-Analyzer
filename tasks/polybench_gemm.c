@@ -1,4 +1,4 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 /**
  * PolyBench: gemm (General Matrix Multiply)
@@ -20,7 +20,7 @@ double A[N][N];
 double B[N][N];
 double C[N][N];
 
-YARD_ANALYZE
+APE_ANALYZE
 void gemm_kernel(double alpha, double beta)
 {
   int i, j, k;
