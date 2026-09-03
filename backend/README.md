@@ -33,6 +33,10 @@ uses a Fenwick tree for O(N log N) reuse-distance profiling. `--mode unroll`
 remains accepted for command-line compatibility; `--mode predict` is not
 supported. Cache-line granularity requires a versioned YAML hierarchy passed
 through `--cache`; core 0's configured L1 line size defines trace grouping.
+APE v2 cache-line references use the canonical object ID, so different index
+expressions for the same storage share one line identity. Legacy accesses
+without an object ID fall back to their reference name. Cache-line profiles
+produced by the earlier name-based behavior must be regenerated.
 
 For task-isolated linked-address mapping, pass a non-PIE executable and cache
 configuration:

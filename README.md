@@ -133,11 +133,14 @@ cd ..
   --export /tmp/test_1d.cache-line.json
 ```
 
-현재 main CLI는 일반 배열에는 LAT reference name, structured access에는
-canonical object ID를 사용하고, resolved relative byte offset을 cache-line
-index로 변환합니다. `--elf`를 지정하면 canonical global object를 `ET_EXEC`
-symbol에 연결하고 core 0 L1 geometry의 linked address, set, tag, offset을
-task별 JSON으로 출력합니다. 다단계 cache hit/miss는 아직 계산하지 않습니다.
+현재 main CLI의 non-ELF cache-line 경로는 APE/LAT v2 access에 canonical
+object ID를 사용하고, object가 없는 legacy access만 LAT reference name으로
+fallback한 뒤 resolved relative byte offset을 cache-line index로 변환합니다.
+과거 name 기반 동작으로 생성한 cache-line RDH는 동일 입력이라도 값이 달라질
+수 있으므로 새 구현으로 다시 생성해야 합니다.
+`--elf`를 지정하면 canonical global object를 `ET_EXEC` symbol에 연결하고
+core 0 L1 geometry의 linked address, set, tag, offset을 task별 JSON으로
+출력합니다. 다단계 cache hit/miss는 아직 계산하지 않습니다.
 
 ### 5. ELF-linked task mapping
 
