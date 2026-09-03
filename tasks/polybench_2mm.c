@@ -61,33 +61,6 @@ void kernel_2mm(double alpha, double beta)
 
 int main()
 {
-  int i, j;
-
-  // 초기화
-  for (i = 0; i < NI; i++)
-  {
-    for (j = 0; j < NK; j++)
-    {
-      A[i][j] = (double)(i * j) / NI;
-    }
-  }
-
-  for (i = 0; i < NK; i++)
-  {
-    for (j = 0; j < NJ; j++)
-    {
-      B[i][j] = (double)(i * (j + 1)) / NJ;
-    }
-  }
-
-  for (i = 0; i < NJ; i++)
-  {
-    for (j = 0; j < NL; j++)
-    {
-      C[i][j] = (double)(i * (j + 2)) / NL;
-    }
-  }
-
   kernel_2mm(1.5, 1.2);
 
   return 0;

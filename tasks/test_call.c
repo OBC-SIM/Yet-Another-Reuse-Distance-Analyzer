@@ -1,5 +1,7 @@
 #include "yard_analyze.h"
 
+float a[16];
+
 YARD_INLINE
 void touch(float x[16], int idx)
 {
@@ -7,7 +9,14 @@ void touch(float x[16], int idx)
 }
 
 YARD_ANALYZE
-void call_kernel(float a[16])
+void call_kernel(void)
 {
-  for (int i = 0; i < 16; i++) touch(a, i);
+  for (int i = 0; i < 16; i++)
+    touch(a, i);
+}
+
+int main()
+{
+  call_kernel();
+  return 0;
 }

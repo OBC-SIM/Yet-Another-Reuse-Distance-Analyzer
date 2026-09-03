@@ -57,18 +57,6 @@ void jacobi_2d_kernel()
 
 int main()
 {
-  int i, j;
-
-  // 초기화
-  for (i = 0; i < N; i++)
-  {
-    for (j = 0; j < N; j++)
-    {
-      A[i][j] = (double)((i * (j + 2) + 2) % N) / N;
-      B[i][j] = (double)((i * (j + 3) + 3) % N) / N;
-    }
-  }
-
   jacobi_2d_kernel();
 
   return 0;

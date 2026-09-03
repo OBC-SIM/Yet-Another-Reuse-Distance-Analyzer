@@ -8,5 +8,12 @@ void test_constatnt_variable(void)
 {
   const int N = 50;
 
-  for (int i = 0; i < N; i++) A[i] = 1;
+  for (int i = 0; i < N; i++)
+    A[i] = 1;
+}
+
+int main()
+{
+  test_constatnt_variable();
+  return 0;
 }

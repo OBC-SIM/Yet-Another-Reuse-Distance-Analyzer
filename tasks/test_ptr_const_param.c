@@ -7,7 +7,8 @@ int B[9];
 YARD_INLINE
 void test_ptr_const_param_kernel(int * ptr, const int idx)
 {
-  for (int i = 0; i < idx; i++) ptr[i] = 1;
+  for (int i = 0; i < idx; i++)
+    ptr[i] = 1;
 }
 
 YARD_ANALYZE
@@ -17,4 +18,10 @@ void test_ptr_const_param()
   test_ptr_const_param_kernel(A, 50);
   B[7] = 2;
   B[8] = 3;
+}
+
+int main()
+{
+  test_ptr_const_param();
+  return 0;
 }
