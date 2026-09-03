@@ -216,8 +216,9 @@ ELF mapping export는 `mode: "elf-task-mapping"`과
 `address_basis: "linked_absolute"`를 사용합니다. 각 task에는 resolution
 coverage, known non-inline static call-site 제외 수, ordered resolved accesses,
 그리고 source/line ordinal과 load/store를 보존한 mapped line references가
-포함됩니다. `known_non_inline_static_call_sites`는 inline expansion 후의 정적
-호출 지점 수이며 루프 반복 횟수를 곱하지 않습니다. 다른 analyze root 호출도
+포함됩니다. `known_non_inline_static_call_sites`는 원본 C 전체가 아니라 입력
+LAT에 명시된 known non-inline `Call` 중 inline expansion 후 남은 정적 호출
+지점 수이며 루프 반복 횟수를 곱하지 않습니다. 다른 analyze root 호출도
 caller의 opaque site로 세고 callee는 별도 task로 출력합니다. `--export`를
 생략하면 같은 JSON을 stdout으로 출력합니다.
 
@@ -330,8 +331,9 @@ absolute linked address만 허용합니다.
 현재 논문 임계 경로의 linked-address 분석 대상은 canonical object ID와 정적
 layout을 가진 scalar·array·structure global access입니다. Non-global,
 pointer-backed, runtime-dependent access는 조용히 생략하지 않고 전체 CLI
-호출을 categorized resolution error로 실패시킵니다. 알려진 non-inline static
-call site는 access coverage와 분리된 exclusion count로 보고합니다.
+호출을 categorized resolution error로 실패시킵니다. 입력 LAT에 명시된 known
+non-inline static call site는 access coverage와 분리된 exclusion count로
+보고합니다.
 
 ## 테스트
 
