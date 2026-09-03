@@ -14,7 +14,9 @@ std::vector<std::string> unroll_node_actual(const nlohmann::json & node,
                                             std::size_t cache_line_size)
 {
   const detail::AccessLayoutResolver layouts;
-  return detail::TraceUnroller(granularity, cache_line_size, layouts)
+  detail::ExpansionBudget expansion_budget;
+  return detail::TraceUnroller(granularity, cache_line_size, layouts,
+                               expansion_budget)
     .unroll(node);
 }
 
@@ -23,13 +25,15 @@ std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
                                      std::size_t cache_line_size)
 {
   const detail::AccessLayoutResolver layouts(raw);
-  const detail::TraceUnroller unroller(granularity, cache_line_size, layouts);
+  detail::ExpansionBudget expansion_budget;
+  const detail::TraceUnroller unroller(granularity, cache_line_size, layouts,
+                                       expansion_budget);
   return detail::build_block_traces<NamedTrace, std::string>(
     raw,
     [&unroller](const std::string &, const nlohmann::json & node) {
       return unroller.unroll(node);
     },
-    detail::EmptyLoopPolicy::Include);
+    detail::EmptyLoopPolicy::Include, expansion_budget);
 }
 
 }  // namespace yarda

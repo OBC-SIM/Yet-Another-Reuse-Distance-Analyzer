@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "block_trace.hpp"
+#include "call_expansion.hpp"
 #include "unroller.hpp"
-#include "yarda/trace/calls.hpp"
 
 namespace yarda
 {
@@ -28,10 +28,10 @@ TraceCoverage coverage_delta(const TraceCoverage & after,
   };
 }
 
-Json remove_opaque_calls(const Json & body, std::uint64_t & excluded)
+Json remove_opaque_calls(Json body, std::uint64_t & excluded)
 {
   Json result = Json::array();
-  for (auto node : body)
+  for (auto & node : body)
   {
     const auto type = node.value("type", "");
     if (type == "Call")
@@ -41,8 +41,7 @@ Json remove_opaque_calls(const Json & body, std::uint64_t & excluded)
     }
     if (type == "Loop")
     {
-      node["body"] =
-        remove_opaque_calls(node.value("body", Json::array()), excluded);
+      node["body"] = remove_opaque_calls(std::move(node["body"]), excluded);
     }
     result.push_back(std::move(node));
   }
@@ -57,7 +56,8 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
   try
   {
     const detail::AccessLayoutResolver layouts(raw);
-    detail::ResolvedTraceUnroller unroller(objects, layouts);
+    detail::ExpansionBudget expansion_budget;
+    detail::ResolvedTraceUnroller unroller(objects, layouts, expansion_budget);
     ResolvedTraceResult result;
     result.traces =
       detail::build_block_traces<NamedResolvedTrace, ResolvedAccess>(
@@ -65,7 +65,7 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
         [&unroller](const std::string & task_id, const nlohmann::json & node) {
           return unroller.unroll(node, task_id);
         },
-        detail::EmptyLoopPolicy::Omit);
+        detail::EmptyLoopPolicy::Omit, expansion_budget);
     result.coverage = unroller.coverage();
     return result;
   }
@@ -82,16 +82,16 @@ ResolvedTaskTraceResult resolved_task_traces(const nlohmann::json & raw,
   try
   {
     const detail::AccessLayoutResolver layouts(raw);
-    detail::ResolvedTraceUnroller unroller(objects, layouts);
+    detail::ExpansionBudget expansion_budget;
+    detail::ResolvedTraceUnroller unroller(objects, layouts, expansion_budget);
     ResolvedTaskTraceResult result;
-    const auto roots = expand_task_calls(raw);
-    for (const auto & root : roots)
+    auto roots = detail::expand_task_calls(raw, expansion_budget);
+    for (auto & root : roots)
     {
       const auto task_id = root.at("function").get<std::string>();
       std::uint64_t excluded_opaque_call_sites = 0;
-      const auto body =
-        remove_opaque_calls(root.value("body", nlohmann::json::array()),
-                            excluded_opaque_call_sites);
+      const auto body = remove_opaque_calls(std::move(root["body"]),
+                                            excluded_opaque_call_sites);
       unroller.begin_task();
       const auto coverage_before = unroller.coverage();
       std::vector<ResolvedAccess> accesses;

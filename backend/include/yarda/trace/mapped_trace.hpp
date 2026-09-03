@@ -71,7 +71,7 @@ flatten_mapped_traces(const std::vector<NamedMappedTrace> & traces);
  * module-wide across functions. Every visited access must resolve; unsupported
  * or unresolved accesses fail the operation instead of being omitted.
  * @throws std::invalid_argument for invalid geometry, malformed LAT input,
- * or call expansion.
+ * call expansion, or an expansion resource limit violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
@@ -103,7 +103,8 @@ MappedTaskTraceResult map_resolved_task_traces(
  * @return Task-isolated cache-line traces with complete coverage.
  * @throws std::invalid_argument for invalid geometry or any condition rejected
  * by resolved_task_traces, including a missing analyzed root, overlapping
- * roles, ambiguous identities, unknown targets, or malformed LAT input.
+ * roles, ambiguous identities, unknown targets, malformed LAT input, or an
+ * expansion resource limit violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 MappedTaskTraceResult mapped_task_traces(const nlohmann::json & raw,

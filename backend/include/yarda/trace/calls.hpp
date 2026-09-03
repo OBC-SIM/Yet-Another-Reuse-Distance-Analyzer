@@ -11,7 +11,8 @@ namespace yarda
  * @param raw Legacy or APE v2 LAT module.
  * @return Normalized function entries without Call nodes.
  * @throws std::invalid_argument for empty or duplicate function identities,
- * unknown callees, recursion, or argument count mismatches.
+ * unknown callees, recursion, argument count mismatches, more than 100,000
+ * call-expansion node visits, or an inline call depth above 256.
  */
 nlohmann::json expand_calls(const nlohmann::json & raw);
 
@@ -30,8 +31,8 @@ nlohmann::json expand_calls(const nlohmann::json & raw);
  * before trace unrolling.
  * @throws std::invalid_argument if no analyzed root exists, if one function
  * has both analyze and inline roles, or for empty or duplicate function
- * identities, unknown targets, recursion, or argument count mismatches in an
- * expanded inline call.
+ * identities, unknown targets, recursion, argument count mismatches, more
+ * than 100,000 call-expansion node visits, or an inline call depth above 256.
  */
 nlohmann::json expand_task_calls(const nlohmann::json & raw);
 
