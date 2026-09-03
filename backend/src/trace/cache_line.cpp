@@ -44,8 +44,9 @@ std::vector<std::string> trace_cache_line_keys(
   const auto divisor = static_cast<std::int64_t>(line_size);
   const auto first_line = floor_divide(access->offset, divisor);
   const auto last_line = floor_divide(last_byte, divisor);
+  const auto object = node.value("object", std::string{});
   const auto key_base =
-    has_field_path(node) ? node.value("object", "") : node.value("name", "");
+    object.empty() ? node.value("name", std::string{}) : object;
   std::vector<std::string> keys;
   for (auto line = first_line;; ++line)
   {
