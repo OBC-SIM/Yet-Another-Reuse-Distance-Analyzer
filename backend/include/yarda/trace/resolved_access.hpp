@@ -82,7 +82,8 @@ struct ResolvedTaskTraceResult
  * @param raw APE v2 LAT module with canonical object metadata.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Named geometry-independent access traces in deterministic order.
- * @throws std::invalid_argument for malformed LAT input or call expansion.
+ * @throws std::invalid_argument for malformed LAT input, invalid call
+ * expansion, or an expansion resource limit violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
@@ -106,7 +107,8 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
  * @return Task-isolated resolved traces in deterministic module order.
  * @throws std::invalid_argument if no explicitly analyzed root exists, or for
  * malformed LAT input, ambiguous or overlapping function roles, unknown call
- * targets, or invalid inline-call expansion.
+ * targets, invalid inline-call expansion, or an expansion resource limit
+ * violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
 ResolvedTaskTraceResult resolved_task_traces(

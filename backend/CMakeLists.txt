@@ -4,6 +4,7 @@ add_library(yarda_backend
     src/cache/line_mapping_json.cpp
     src/cache/lru_rd_analysis.cpp
     src/trace/calls.cpp
+    src/trace/call_substitution.cpp
     src/reuse/profile.cpp
     src/trace/schema.cpp
     src/trace/trace.cpp
@@ -142,6 +143,7 @@ if(BUILD_TESTING)
         tests/reuse/profile_test.cpp
         tests/trace/access_layout_test.cpp
         tests/trace/schema_test.cpp
+        tests/trace/expansion_budget_test.cpp
         tests/trace/mapped_trace_test.cpp
         tests/trace/mapped_trace_strict_test.cpp
         tests/trace/resolved_access_test.cpp

@@ -6,7 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "yarda/trace/calls.hpp"
+#include "call_expansion.hpp"
+#include "expansion_budget.hpp"
 
 namespace yarda::detail
 {
@@ -20,9 +21,10 @@ enum class EmptyLoopPolicy
 template <typename Named, typename Access, typename Unroll>
 std::vector<Named> build_block_traces(const nlohmann::json & raw,
                                       const Unroll & unroll,
-                                      EmptyLoopPolicy empty_loop_policy)
+                                      EmptyLoopPolicy empty_loop_policy,
+                                      ExpansionBudget & expansion_budget)
 {
-  const auto module = expand_calls(raw);
+  const auto module = expand_calls(raw, expansion_budget);
   std::vector<Named> result;
   for (const auto & function : module)
   {

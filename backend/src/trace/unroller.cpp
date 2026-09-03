@@ -106,7 +106,7 @@ std::uint64_t iteration_count(std::int64_t start, std::int64_t bound,
 
 template <typename Emit>
 void visit_node(const Json & node, const Environment & environment,
-                const Emit & emit)
+                ExpansionBudget & expansion_budget, const Emit & emit)
 {
   const auto type = node.value("type", "");
   if (type == "Scalar")
@@ -131,6 +131,7 @@ void visit_node(const Json & node, const Environment & environment,
     const auto bound = node.at("bound").get<std::int64_t>();
     const auto step = node.value("step", 1LL);
     const auto count = iteration_count(start, bound, step);
+    expansion_budget.consume_loop_iterations(count);
     auto value = start;
     for (std::uint64_t iteration = 0; iteration < count; ++iteration)
     {
@@ -138,7 +139,7 @@ void visit_node(const Json & node, const Environment & environment,
       child_environment[variable] = value;
       for (const auto & child : node.value("body", Json::array()))
       {
-        visit_node(child, child_environment, emit);
+        visit_node(child, child_environment, expansion_budget, emit);
       }
       if (iteration + 1 < count && __builtin_add_overflow(value, step, &value))
       {
@@ -154,10 +155,12 @@ void visit_node(const Json & node, const Environment & environment,
 
 TraceUnroller::TraceUnroller(Granularity granularity,
                              std::size_t cache_line_size,
-                             const AccessLayoutResolver & layouts)
+                             const AccessLayoutResolver & layouts,
+                             ExpansionBudget & expansion_budget)
   : granularity_(granularity)
   , cache_line_size_(cache_line_size)
   , layouts_(layouts)
+  , expansion_budget_(expansion_budget)
 {
 }
 
@@ -190,13 +193,14 @@ TraceUnroller::unroll(const nlohmann::json & node) const
     }
     trace.push_back(key.str());
   };
-  visit_node(node, {}, emit);
+  visit_node(node, {}, expansion_budget_, emit);
   return trace;
 }
 
 ResolvedTraceUnroller::ResolvedTraceUnroller(
-  const ObjectAddressModel & objects, const AccessLayoutResolver & layouts)
-  : objects_(objects), layouts_(layouts)
+  const ObjectAddressModel & objects, const AccessLayoutResolver & layouts,
+  ExpansionBudget & expansion_budget)
+  : objects_(objects), layouts_(layouts), expansion_budget_(expansion_budget)
 {
 }
 
@@ -211,7 +215,7 @@ std::vector<ResolvedAccess> ResolvedTraceUnroller::unroll(
     accesses.push_back(resolve_access(access, indices, task_id, ordinal,
                                       objects_, layouts_, coverage_));
   };
-  visit_node(node, {}, emit);
+  visit_node(node, {}, expansion_budget_, emit);
   return accesses;
 }
 

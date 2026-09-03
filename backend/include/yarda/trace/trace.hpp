@@ -34,9 +34,10 @@ struct NamedTrace
  * @return Ordered reference keys.
  * @throws std::invalid_argument if CacheLine granularity is requested for a
  * structured field path, or if the node holds a zero loop step, a loop
- * expanding beyond 1,000,000 iterations, a loop induction value that
- * overflows, or an unknown node type. This node-level entry point has no
- * module metadata; use block_traces for structured cache-line accesses.
+ * expanding beyond 1,000,000 iterations, cumulative loop work above
+ * 1,000,000 iterations, a loop induction value that overflows, or an unknown
+ * node type. This node-level entry point has no module metadata; use
+ * block_traces for structured cache-line accesses.
  */
 std::vector<std::string> unroll_node_actual(
   const nlohmann::json & node, Granularity granularity = Granularity::Element,
@@ -52,8 +53,10 @@ std::vector<std::string> unroll_node_actual(
  * @throws std::invalid_argument for malformed or unsupported structured
  * layout metadata, including pointer-backed structured objects; for a
  * malformed module schema or call expansion; and for a zero loop step, a loop
- * expanding beyond 1,000,000 iterations, a loop induction value that
- * overflows, or an unknown node type.
+ * expanding beyond 1,000,000 iterations, cumulative loop work above
+ * 1,000,000 iterations, more than 100,000 call-expansion node visits, an inline
+ * call depth above 256, a loop induction value that overflows, or an unknown
+ * node type.
  */
 std::vector<NamedTrace> block_traces(
   const nlohmann::json & raw, Granularity granularity = Granularity::Element,

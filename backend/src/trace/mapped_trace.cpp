@@ -118,7 +118,8 @@ MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
   try
   {
     const detail::AccessLayoutResolver layouts(raw);
-    detail::ResolvedTraceUnroller unroller(objects, layouts);
+    detail::ExpansionBudget expansion_budget;
+    detail::ResolvedTraceUnroller unroller(objects, layouts, expansion_budget);
     MappedTraceResult result;
     result.traces =
       detail::build_block_traces<NamedMappedTrace, CacheLineMapping>(
@@ -128,7 +129,7 @@ MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
           return map_resolved_accesses(unroller.unroll(node, task_id),
                                        geometry);
         },
-        detail::EmptyLoopPolicy::Omit);
+        detail::EmptyLoopPolicy::Omit, expansion_budget);
     result.coverage = unroller.coverage();
     for (const auto & trace : result.traces)
     {
