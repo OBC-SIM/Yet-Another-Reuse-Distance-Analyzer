@@ -15,3 +15,9 @@ void random_access_with_constant_index()
   array[0] = 42;
   array[0] = 42;
 }
+
+int main()
+{
+  random_access_with_constant_index();
+  return 0;
+}

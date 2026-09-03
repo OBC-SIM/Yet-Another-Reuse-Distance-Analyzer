@@ -8,5 +8,12 @@ YARD_ANALYZE
 void loop_global(void)
 {
   for (int i = 0; i < 100; i++)
-    for (int j = 0; j < 200; j++) A[i][j] = B[i][j] + 1;
+    for (int j = 0; j < 200; j++)
+      A[i][j] = B[i][j] + 1;
+}
+
+int main()
+{
+  loop_global();
+  return 0;
 }

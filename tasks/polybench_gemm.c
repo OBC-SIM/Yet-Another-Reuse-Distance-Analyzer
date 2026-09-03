@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 
-#define N 20  // 작은 크기로 설정 (분석 용이)
+#define N 25  // 논문 실험 구성
 
 double A[N][N];
 double B[N][N];
@@ -51,19 +51,6 @@ void gemm_kernel(double alpha, double beta)
 
 int main()
 {
-  int i, j;
-
-  // 초기화
-  for (i = 0; i < N; i++)
-  {
-    for (j = 0; j < N; j++)
-    {
-      A[i][j] = (double)(i * j) / N;
-      B[i][j] = (double)(i * j) / N;
-      C[i][j] = (double)(i * j) / N;
-    }
-  }
-
   gemm_kernel(1.5, 2.5);
 
   return 0;

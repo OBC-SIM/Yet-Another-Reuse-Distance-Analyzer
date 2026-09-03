@@ -11,8 +11,15 @@ YARD_ANALYZE
 void test_ptr_param()
 {
   B[0] = 1;
-  for (int i = 0; i < 50; i++) test_ptr_param_kernel(A, i);
+  for (int i = 0; i < 50; i++)
+    test_ptr_param_kernel(A, i);
   B[8] = 4;
   B[7] = 2;
   B[8] = 3;
+}
+
+int main()
+{
+  test_ptr_param();
+  return 0;
 }
