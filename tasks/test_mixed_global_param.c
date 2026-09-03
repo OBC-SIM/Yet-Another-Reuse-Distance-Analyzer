@@ -1,10 +1,10 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 float G[16][32];
 float P[16][32];
 
 // 전역 2D 배열과 함수 파라미터 2D 배열을 같은 루프에서 함께 접근한다.
-YARD_INLINE
+APE_INLINE
 void mixed_global_param(float P[16][32])
 {
   for (int i = 0; i < 16; i++)
@@ -12,7 +12,7 @@ void mixed_global_param(float P[16][32])
       G[i][j] += P[i][j];
 }
 
-YARD_ANALYZE
+APE_ANALYZE
 void mixed_global_param_kernel(void)
 {
   mixed_global_param(P);

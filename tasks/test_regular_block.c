@@ -1,9 +1,9 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 float A[33];
 float B[65];
 
-YARD_ANALYZE
+APE_ANALYZE
 void test(float alpha)
 {
   A[0] = 0.0f;

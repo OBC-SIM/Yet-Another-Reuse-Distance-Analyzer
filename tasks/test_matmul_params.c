@@ -1,9 +1,9 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 float A[32][64], B[64][32], C[32][32];
 
 // 함수 파라미터 2D 배열이 pointer-to-row GEP로 분해되는 회귀 케이스.
-YARD_INLINE
+APE_INLINE
 void matmul_params(float A[32][64], float B[64][32], float C[32][32])
 {
   for (int i = 0; i < 32; i++)
@@ -12,7 +12,7 @@ void matmul_params(float A[32][64], float B[64][32], float C[32][32])
         C[i][j] += A[i][k] * B[k][j];
 }
 
-YARD_ANALYZE
+APE_ANALYZE
 void matmul_params_kernel(void)
 {
   matmul_params(A, B, C);

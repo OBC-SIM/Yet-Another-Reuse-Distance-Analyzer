@@ -1,4 +1,4 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 /**
  * PolyBench: correlation (상관관계 행렬)
@@ -22,7 +22,7 @@ double corr[N][N];
 double mean[N];
 double stddev[N];
 
-YARD_ANALYZE
+APE_ANALYZE
 void correlation_kernel()
 {
   int i, j, k;

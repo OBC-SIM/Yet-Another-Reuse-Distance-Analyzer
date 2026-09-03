@@ -1,4 +1,4 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 #ifndef GAP_LINES
 #define GAP_LINES 1024
@@ -21,7 +21,7 @@ float gap[GAP_LINES][LINE_FLOATS];
  * reuse distance, while a cache hierarchy maps those distances to L1, LLC, or
  * memory-level behavior.
  */
-YARD_ANALYZE
+APE_ANALYZE
 void rd_cache_threshold_kernel(void)
 {
   for (int r = 0; r < REPS; r++)
