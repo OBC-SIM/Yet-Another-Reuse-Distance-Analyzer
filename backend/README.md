@@ -52,10 +52,18 @@ This path accepts only `ET_EXEC`, resolves canonical global objects once, and
 maps them with core 0's L1 geometry. The versioned JSON preserves task-local
 source ordinals, load/store operations, cross-line provenance, complete
 resolution coverage, and known non-inline static call-site exclusions. The
-`known_non_inline_static_call_sites` count is taken after inline expansion and
-does not multiply sites by loop iterations. Calls to another analyzed root are
-caller-local opaque sites while the callee remains a separate task. This mode
-intrinsically maps cache lines: omit `--granularity` or pass `cache-line`;
-explicit `element` is rejected. Its `linked_absolute` addresses are linked
-virtual addresses, not automatically physical addresses. Without `--export`,
-the JSON is written to stdout.
+`known_non_inline_static_call_sites` count includes only known non-inline
+`Call` nodes present in the input LAT after inline expansion; it is not a census
+of every call in the original C source and does not multiply sites by loop
+iterations. Calls to another analyzed root are caller-local opaque sites while
+the callee remains a separate task. This mode intrinsically maps cache lines:
+omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
+`linked_absolute` addresses are linked virtual addresses, not automatically
+physical addresses. Without `--export`, the JSON is written to stdout.
+
+Each invocation is limited to 100,000 call-expansion node visits, 1,000,000
+cumulative loop iterations, and an inline call depth of 256. An individual loop
+also cannot exceed 1,000,000 iterations. Source access count is not capped.
+The `--elf` report materializes every resolved access and mapped line reference,
+so large traces can exhaust host memory. Exceeding a structural expansion limit
+fails the complete invocation instead of returning a partial trace.
