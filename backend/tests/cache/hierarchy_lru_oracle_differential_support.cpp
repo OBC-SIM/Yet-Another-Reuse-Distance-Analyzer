@@ -73,6 +73,16 @@ void append_geometry(std::ostringstream & output, const char * name,
 
 }  // namespace
 
+const std::array<SeededOracleTraceSpec, 3> & seeded_oracle_trace_specs()
+{
+  static const std::array<SeededOracleTraceSpec, 3> specs{{
+    {0x00c0ffeeU, 256U, 64U, {32, 8, 2}, {32, 32, 4}},
+    {0x5eed1234U, 320U, 256U, {32, 16, 2}, {32, 128, 8}},
+    {0x000a11ceU, 384U, 256U, {64, 16, 2}, {64, 128, 8}},
+  }};
+  return specs;
+}
+
 MappedTaskTrace make_seeded_oracle_trace(const SeededOracleTraceSpec & spec)
 {
   if (spec.block_domain == 0)
@@ -80,13 +90,14 @@ MappedTaskTrace make_seeded_oracle_trace(const SeededOracleTraceSpec & spec)
     throw std::invalid_argument(
       "seeded oracle trace requires a positive block domain");
   }
-  assert(spec.reference_count >= 13);
+  assert(spec.reference_count >= kWitnessReferenceCount);
   assert(spec.l1_geometry.line_size == spec.llc_geometry.line_size);
 
   MappedTaskTrace trace;
   trace.task_id = "seed-" + std::to_string(spec.seed);
   trace.accesses.reserve(spec.reference_count);
   append_witness_prefix(trace, spec.l1_geometry);
+  assert(trace.accesses.size() == kWitnessReferenceCount);
 
   std::mt19937 random(spec.seed);
   while (trace.accesses.size() < spec.reference_count)

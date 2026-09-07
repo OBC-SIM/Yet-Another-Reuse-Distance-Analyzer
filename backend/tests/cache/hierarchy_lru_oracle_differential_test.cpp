@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
@@ -19,7 +18,9 @@ namespace
 using yarda::test::OracleCsrdObservation;
 using yarda::test::support::describe_seeded_oracle_trace;
 using yarda::test::support::expect_contract_invariants;
+using yarda::test::support::kWitnessReferenceCount;
 using yarda::test::support::make_seeded_oracle_trace;
+using yarda::test::support::seeded_oracle_trace_specs;
 using yarda::test::support::SeededOracleTraceSpec;
 
 std::vector<std::optional<std::uint64_t>> independent_stack_distances(
@@ -145,7 +146,7 @@ void expect_seeded_differential_agreement(
   const auto trace = make_seeded_oracle_trace(spec);
   SCOPED_TRACE(describe_seeded_oracle_trace(spec, trace));
   ASSERT_EQ(trace.accesses.size(), spec.reference_count);
-  ASSERT_GE(trace.accesses.size(), 13U);
+  ASSERT_GE(trace.accesses.size(), kWitnessReferenceCount);
   EXPECT_EQ(trace.accesses[1].decoded.block_number,
             trace.accesses[2].decoded.block_number);
   EXPECT_NE(trace.accesses[1].decoded.line_offset,
@@ -208,18 +209,12 @@ void expect_seeded_differential_agreement(
 TEST(ExplicitHierarchyLruOracleDifferentialTest,
      MatchesExactOraclesOnSeededMixedTraces)
 {
-  const std::array<SeededOracleTraceSpec, 3> specs{{
-    {0x00c0ffeeU, 256U, 64U, {32, 8, 2}, {32, 32, 4}},
-    {0x5eed1234U, 320U, 256U, {32, 16, 2}, {32, 128, 8}},
-    {0x000a11ceU, 384U, 256U, {64, 16, 2}, {64, 128, 8}},
-  }};
-
   std::uint64_t maximum_observed_distance = 0;
-  for (const auto & spec : specs)
+  for (const auto & spec : seeded_oracle_trace_specs())
   {
     expect_seeded_differential_agreement(spec, maximum_observed_distance);
   }
-  EXPECT_GT(maximum_observed_distance, 17U);
+  EXPECT_EQ(maximum_observed_distance, 26U);
 }
 
 }  // namespace

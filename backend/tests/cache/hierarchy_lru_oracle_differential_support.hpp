@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -13,6 +14,9 @@ namespace test
 {
 namespace support
 {
+
+/** @brief Number of deterministic references preceding the seeded suffix. */
+inline constexpr std::size_t kWitnessReferenceCount = 13;
 
 /** @brief Inputs for one deterministic oracle differential trace. */
 struct SeededOracleTraceSpec
@@ -30,13 +34,20 @@ struct SeededOracleTraceSpec
 };
 
 /**
+ * @brief Share differential inputs with their generator contract tests.
+ *
+ * @return Immutable specs borrowed for the lifetime of the test program.
+ */
+const std::array<SeededOracleTraceSpec, 3> & seeded_oracle_trace_specs();
+
+/**
  * @brief Build a reproducible mixed-offset and mixed-operation trace.
  *
  * A deterministic witness prefix covers multi-offset identity, eviction
  * history, and store recency before the seeded suffix broadens combinations.
  *
- * @param spec Valid geometries, a positive block domain, and at least thirteen
- * references.
+ * @param spec Valid geometries, a positive block domain, and at least
+ * `kWitnessReferenceCount` references.
  * @return L1-mapped task trace whose task ID identifies the seed.
  * @throws std::invalid_argument if the block domain is zero.
  */
