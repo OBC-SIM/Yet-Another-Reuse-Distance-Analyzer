@@ -36,6 +36,10 @@ target_link_libraries(yarda_cache_config
     PRIVATE yaml-cpp
 )
 
+add_library(yarda_hierarchy_analysis src/cache/hierarchy_model.cpp)
+target_link_libraries(yarda_hierarchy_analysis PUBLIC yarda_cache_config)
+target_compile_options(yarda_hierarchy_analysis PRIVATE -Wall -Wextra -Wpedantic)
+
 find_package(LLVM 14 REQUIRED CONFIG)
 llvm_map_components_to_libnames(YARDA_ELF_LLVM_LIBS object support)
 
@@ -170,9 +174,15 @@ if(BUILD_TESTING)
         tests/cache/hierarchy_lru_oracle_differential_test.cpp
         tests/cache/hierarchy_lru_oracle_operation_test.cpp
         tests/cache/hierarchy_lru_oracle_test.cpp
+        tests/cache/hierarchy_model_test.cpp
+        tests/cache/hierarchy_model_validation_test.cpp
     )
     target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
-        yarda_backend GTest::gtest_main
+        yarda_hierarchy_analysis GTest::gtest_main
+    )
+    target_compile_definitions(yarda_hierarchy_analysis_tests PRIVATE
+        YARDA_CACHE_CONFIG_32B_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/cache.32b.yaml"
+        YARDA_CACHE_CONFIG_EXAMPLE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/cache.example.yaml"
     )
     gtest_discover_tests(yarda_hierarchy_analysis_tests)
 
