@@ -37,6 +37,8 @@ target_link_libraries(yarda_cache_config
 )
 
 add_library(yarda_hierarchy_analysis
+    src/cache/exact_csrd.cpp
+    src/cache/recency_index.cpp
     src/cache/hierarchy_model.cpp
     src/cache/hierarchy_analysis.cpp
     src/cache/hierarchy_aggregation.cpp
@@ -172,6 +174,9 @@ if(BUILD_TESTING)
     gtest_discover_tests(yarda_backend_tests)
 
     add_executable(yarda_hierarchy_analysis_tests
+        tests/cache/exact_csrd_test.cpp
+        tests/cache/exact_csrd_differential_test.cpp
+        tests/cache/recency_index_test.cpp
         tests/cache/exact_csrd_oracle.cpp
         tests/cache/exact_csrd_oracle_test.cpp
         tests/cache/hierarchy_lru_oracle.cpp
