@@ -10,6 +10,8 @@ using yarda::analyze_batch_hierarchy;
 using yarda::LruAccessOutcome;
 using yarda::test::support::append_batch_access;
 using yarda::test::support::batch_input;
+using yarda::test::support::batch_l1_result;
+using yarda::test::support::batch_llc_result;
 using yarda::test::support::expect_batch_provenance;
 using yarda::test::support::make_batch_hierarchy;
 using yarda::test::support::make_batch_task;
@@ -21,16 +23,18 @@ TEST(BatchHierarchyLlcTest, FiltersL1HitsAndPreservesMissOrder)
                             make_batch_hierarchy({32, 1, 1}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.llc.mappings.size(), 3U);
-  ASSERT_EQ(task.llc.accesses.size(), 3U);
-  ASSERT_EQ(task.l1.mappings.size(), 5U);
-  EXPECT_EQ(task.llc.summary.lookups, task.l1.summary.misses);
-  EXPECT_EQ(task.llc.mappings[0].source_access_ordinal, 0U);
-  EXPECT_EQ(task.llc.mappings[1].source_access_ordinal, 2U);
-  EXPECT_EQ(task.llc.mappings[2].source_access_ordinal, 4U);
-  EXPECT_EQ(task.llc.accesses[0].outcome, LruAccessOutcome::ColdMiss);
-  EXPECT_EQ(task.llc.accesses[2].outcome, LruAccessOutcome::Hit);
-  EXPECT_EQ(task.llc.accesses[2].reuse_distance, 1U);
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  ASSERT_EQ(llc.mappings.size(), 3U);
+  ASSERT_EQ(llc.accesses.size(), 3U);
+  ASSERT_EQ(l1.mappings.size(), 5U);
+  EXPECT_EQ(llc.summary.lookups, l1.summary.misses);
+  EXPECT_EQ(llc.mappings[0].source_access_ordinal, 0U);
+  EXPECT_EQ(llc.mappings[1].source_access_ordinal, 2U);
+  EXPECT_EQ(llc.mappings[2].source_access_ordinal, 4U);
+  EXPECT_EQ(llc.accesses[0].outcome, LruAccessOutcome::ColdMiss);
+  EXPECT_EQ(llc.accesses[2].outcome, LruAccessOutcome::Hit);
+  EXPECT_EQ(llc.accesses[2].reuse_distance, 1U);
 }
 
 TEST(BatchHierarchyLlcTest, FillsL1AfterLlcService)
@@ -40,11 +44,13 @@ TEST(BatchHierarchyLlcTest, FillsL1AfterLlcService)
                             make_batch_hierarchy({32, 1, 1}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.l1.accesses.size(), 4U);
-  ASSERT_EQ(task.llc.accesses.size(), 3U);
-  EXPECT_EQ(task.l1.accesses[2].outcome, LruAccessOutcome::ReplacementMiss);
-  EXPECT_EQ(task.llc.accesses[2].outcome, LruAccessOutcome::Hit);
-  EXPECT_EQ(task.l1.accesses[3].outcome, LruAccessOutcome::Hit);
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  ASSERT_EQ(l1.accesses.size(), 4U);
+  ASSERT_EQ(llc.accesses.size(), 3U);
+  EXPECT_EQ(l1.accesses[2].outcome, LruAccessOutcome::ReplacementMiss);
+  EXPECT_EQ(llc.accesses[2].outcome, LruAccessOutcome::Hit);
+  EXPECT_EQ(l1.accesses[3].outcome, LruAccessOutcome::Hit);
 }
 
 TEST(BatchHierarchyLlcTest, RemapsOriginalAddressAtDifferentSetCount)
@@ -54,14 +60,16 @@ TEST(BatchHierarchyLlcTest, RemapsOriginalAddressAtDifferentSetCount)
                             make_batch_hierarchy({32, 2, 1}, {32, 8, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.l1.mappings.size(), 3U);
-  ASSERT_EQ(task.llc.mappings.size(), 3U);
-  EXPECT_EQ(task.l1.mappings[1].decoded.set_index, 0U);
-  EXPECT_EQ(task.l1.mappings[1].decoded.tag, 1U);
-  EXPECT_EQ(task.llc.mappings[1].decoded.set_index, 2U);
-  EXPECT_EQ(task.llc.mappings[1].decoded.tag, 0U);
-  EXPECT_EQ(task.llc.summary.hits, 1U);
-  EXPECT_EQ(task.llc.summary.replacement_misses, 0U);
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  ASSERT_EQ(l1.mappings.size(), 3U);
+  ASSERT_EQ(llc.mappings.size(), 3U);
+  EXPECT_EQ(l1.mappings[1].decoded.set_index, 0U);
+  EXPECT_EQ(l1.mappings[1].decoded.tag, 1U);
+  EXPECT_EQ(llc.mappings[1].decoded.set_index, 2U);
+  EXPECT_EQ(llc.mappings[1].decoded.tag, 0U);
+  EXPECT_EQ(llc.summary.hits, 1U);
+  EXPECT_EQ(llc.summary.replacement_misses, 0U);
 }
 
 TEST(BatchHierarchyLlcTest,
@@ -74,12 +82,14 @@ TEST(BatchHierarchyLlcTest,
     batch_input({input}), make_batch_hierarchy({32, 4, 2}, {32, 8, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.l1.mappings.size(), 3U);
-  ASSERT_EQ(task.l1.accesses.size(), 3U);
-  ASSERT_EQ(task.llc.mappings.size(), 2U);
-  EXPECT_EQ(task.l1.accesses[1].outcome, LruAccessOutcome::Hit);
-  const auto & remapped = task.llc.mappings[1];
-  expect_batch_provenance(remapped, task.l1.mappings[2]);
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  ASSERT_EQ(l1.mappings.size(), 3U);
+  ASSERT_EQ(l1.accesses.size(), 3U);
+  ASSERT_EQ(llc.mappings.size(), 2U);
+  EXPECT_EQ(l1.accesses[1].outcome, LruAccessOutcome::Hit);
+  const auto & remapped = llc.mappings[1];
+  expect_batch_provenance(remapped, l1.mappings[2]);
   EXPECT_EQ(remapped.decoded.address, 0x1020U);
   EXPECT_EQ(remapped.decoded.set_index, 1U);
   EXPECT_EQ(remapped.decoded.tag, 32U);
@@ -98,7 +108,7 @@ TEST(BatchHierarchyLlcTest, PreservesExactLlcReplacementDistance)
     batch_input({make_batch_task({0, 32, 64, 96, 128, 0})}),
     make_batch_hierarchy({32, 1, 1}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
-  const auto & llc = result.tasks[0].llc;
+  const auto llc = batch_llc_result(result.tasks[0]);
   ASSERT_EQ(llc.accesses.size(), 6U);
   EXPECT_EQ(llc.accesses.back().outcome, LruAccessOutcome::ReplacementMiss);
   EXPECT_EQ(llc.accesses.back().reuse_distance, 4U);
@@ -116,10 +126,10 @@ TEST(BatchHierarchyLlcTest, DoesNotTouchLlcRecencyOnL1Hit)
     make_batch_hierarchy({32, 2, 2}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.llc.accesses.size(), 5U);
-  EXPECT_EQ(task.llc.accesses.back().reuse_distance, 3U);
-  EXPECT_EQ(task.llc.accesses.back().outcome,
-            LruAccessOutcome::ReplacementMiss);
+  const auto llc = batch_llc_result(task);
+  ASSERT_EQ(llc.accesses.size(), 5U);
+  EXPECT_EQ(llc.accesses.back().reuse_distance, 3U);
+  EXPECT_EQ(llc.accesses.back().outcome, LruAccessOutcome::ReplacementMiss);
 }
 
 TEST(BatchHierarchyLlcTest, KeepsL1LineAfterLlcEviction)
@@ -129,9 +139,11 @@ TEST(BatchHierarchyLlcTest, KeepsL1LineAfterLlcEviction)
                             make_batch_hierarchy({32, 4, 2}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.l1.accesses.size(), 4U);
-  EXPECT_EQ(task.l1.accesses.back().outcome, LruAccessOutcome::Hit);
-  EXPECT_EQ(task.llc.summary.lookups, 3U);
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  ASSERT_EQ(l1.accesses.size(), 4U);
+  EXPECT_EQ(l1.accesses.back().outcome, LruAccessOutcome::Hit);
+  EXPECT_EQ(llc.summary.lookups, 3U);
 }
 
 TEST(BatchHierarchyLlcTest, DoesNotInsertL1VictimsIntoLlc)
@@ -140,7 +152,7 @@ TEST(BatchHierarchyLlcTest, DoesNotInsertL1VictimsIntoLlc)
     batch_input({make_batch_task({0, 32, 64, 96, 128, 0})}),
     make_batch_hierarchy({32, 4, 4}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
-  const auto & llc = result.tasks[0].llc;
+  const auto llc = batch_llc_result(result.tasks[0]);
   ASSERT_EQ(llc.accesses.size(), 6U);
   EXPECT_EQ(llc.accesses.back().outcome, LruAccessOutcome::ReplacementMiss);
   EXPECT_EQ(llc.accesses.back().reuse_distance, 4U);
@@ -155,12 +167,14 @@ TEST(BatchHierarchyLlcTest, AllocatesBothLevelsForStoreMisses)
     batch_input({input}), make_batch_hierarchy({32, 1, 1}, {32, 2, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  ASSERT_EQ(task.l1.accesses.size(), 4U);
-  ASSERT_EQ(task.llc.accesses.size(), 3U);
-  EXPECT_EQ(task.llc.accesses[2].outcome, LruAccessOutcome::Hit);
-  EXPECT_EQ(task.l1.accesses[3].outcome, LruAccessOutcome::Hit);
-  ASSERT_EQ(task.llc.mappings.size(), 3U);
-  EXPECT_EQ(task.llc.mappings[0].operation, yarda::AccessOperation::Store);
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  ASSERT_EQ(l1.accesses.size(), 4U);
+  ASSERT_EQ(llc.accesses.size(), 3U);
+  EXPECT_EQ(llc.accesses[2].outcome, LruAccessOutcome::Hit);
+  EXPECT_EQ(l1.accesses[3].outcome, LruAccessOutcome::Hit);
+  ASSERT_EQ(llc.mappings.size(), 3U);
+  EXPECT_EQ(llc.mappings[0].operation, yarda::AccessOperation::Store);
 }
 
 }  // namespace

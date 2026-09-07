@@ -80,37 +80,89 @@ inline void expect_batch_matches_oracles(const ResolvedTaskTraceResult & input,
   {
     const auto & reference = mapped.tasks[i];
     const auto & task = actual.tasks[i];
+    const auto l1 = batch_l1_result(task);
+    const auto llc = batch_llc_result(task);
     SCOPED_TRACE("task_id=" + reference.task_id);
     const auto oracle = analyze_with_explicit_lru(
       reference, hierarchy.l1.geometry, hierarchy.llc.geometry);
     ASSERT_EQ(oracle.events.size(), reference.accesses.size());
-    ASSERT_EQ(task.l1.accesses.size(), oracle.events.size());
+    ASSERT_EQ(l1.accesses.size(), oracle.events.size());
     std::vector<CacheLineMapping> llc_input;
     for (std::size_t j = 0; j < oracle.events.size(); ++j)
     {
-      EXPECT_EQ(task.l1.accesses[j].outcome, oracle.events[j].l1_outcome);
+      EXPECT_EQ(l1.accesses[j].outcome, oracle.events[j].l1_outcome);
+      const auto & event = task.events[j];
+      EXPECT_EQ(event.llc.has_value(),
+                oracle.events[j].llc_outcome.has_value());
+      EXPECT_EQ(event.llc_mapping.has_value(),
+                oracle.events[j].llc_outcome.has_value());
+      switch (oracle.events[j].first_service)
+      {
+        case OracleFirstServiceLevel::L1:
+          EXPECT_EQ(event.first_service, FirstServiceLevel::L1);
+          break;
+        case OracleFirstServiceLevel::LLC:
+          EXPECT_EQ(event.first_service, FirstServiceLevel::LLC);
+          break;
+        case OracleFirstServiceLevel::Memory:
+          EXPECT_EQ(event.first_service, FirstServiceLevel::Memory);
+          break;
+      }
+
       if (!oracle.events[j].llc_outcome) continue;
-      ASSERT_LT(llc_input.size(), task.llc.accesses.size());
-      EXPECT_EQ(task.llc.accesses[llc_input.size()].outcome,
+      ASSERT_LT(llc_input.size(), llc.accesses.size());
+      EXPECT_EQ(llc.accesses[llc_input.size()].outcome,
                 *oracle.events[j].llc_outcome);
       auto row = reference.accesses[j];
       row.decoded =
         decode_cache_address(row.decoded.address, hierarchy.llc.geometry);
       llc_input.push_back(row);
     }
-    EXPECT_EQ(task.task_id, reference.task_id);
-    EXPECT_EQ(task.source_accesses, reference.coverage.source_accesses);
-    EXPECT_EQ(task.modeled_accesses, reference.accesses.size());
-    EXPECT_EQ(task.coverage.source_accesses,
+    EXPECT_EQ(task.summary.ehc_l1, oracle.ehc_l1);
+    EXPECT_EQ(task.summary.ehc_llc, oracle.ehc_llc);
+    EXPECT_EQ(task.summary.all_cache_misses, oracle.all_cache_misses);
+    if (reference.accesses.empty())
+    {
+      EXPECT_FALSE(task.summary.hr_l1);
+      EXPECT_FALSE(task.summary.hr_llc);
+      EXPECT_FALSE(task.summary.miss_ratio);
+    }
+    else
+    {
+      ASSERT_TRUE(task.summary.hr_l1);
+      ASSERT_TRUE(task.summary.hr_llc);
+      ASSERT_TRUE(task.summary.miss_ratio);
+      const auto denominator = static_cast<double>(reference.accesses.size());
+      EXPECT_DOUBLE_EQ(*task.summary.hr_l1,
+                       static_cast<double>(oracle.ehc_l1) / denominator);
+      EXPECT_DOUBLE_EQ(*task.summary.hr_llc,
+                       static_cast<double>(oracle.ehc_llc) / denominator);
+      EXPECT_DOUBLE_EQ(*task.summary.miss_ratio,
+                       static_cast<double>(oracle.all_cache_misses) /
+                         denominator);
+      EXPECT_NEAR(*task.summary.hr_l1 + *task.summary.hr_llc +
+                    *task.summary.miss_ratio,
+                  1.0, 1e-15);
+    }
+    EXPECT_TRUE(task.summary.invariants.level_conservation_l1);
+    EXPECT_TRUE(task.summary.invariants.level_conservation_llc);
+    EXPECT_TRUE(task.summary.invariants.llc_input_matches_l1_misses);
+    EXPECT_TRUE(task.summary.invariants.first_service_conservation);
+    EXPECT_TRUE(task.summary.invariants.all_passed);
+    EXPECT_EQ(task.summary.task_id, reference.task_id);
+    EXPECT_EQ(task.summary.source_accesses, reference.coverage.source_accesses);
+    EXPECT_EQ(task.summary.modeled_accesses, reference.accesses.size());
+    EXPECT_EQ(task.summary.coverage.source_accesses,
               reference.coverage.source_accesses);
-    EXPECT_EQ(task.coverage.resolved_accesses,
+    EXPECT_EQ(task.summary.coverage.resolved_accesses,
               reference.coverage.resolved_accesses);
-    EXPECT_EQ(task.coverage.rejected_accesses, 0U);
-    EXPECT_EQ(task.coverage.emitted_line_references, reference.accesses.size());
-    expect_batch_level_matches_oracles(task.l1, reference.accesses,
+    EXPECT_EQ(task.summary.coverage.rejected_accesses, 0U);
+    EXPECT_EQ(task.summary.coverage.emitted_line_references,
+              reference.accesses.size());
+    expect_batch_level_matches_oracles(l1, reference.accesses,
                                        hierarchy.l1.geometry, oracle.l1);
-    expect_batch_level_matches_oracles(task.llc, llc_input,
-                                       hierarchy.llc.geometry, oracle.llc);
+    expect_batch_level_matches_oracles(llc, llc_input, hierarchy.llc.geometry,
+                                       oracle.llc);
   }
 }
 

@@ -1,33 +1,22 @@
 #pragma once
 
-#include <cstdint>
-#include <map>
-#include <string>
+#include <optional>
 #include <vector>
 
 #include "yarda/cache/hierarchy_model.hpp"
+#include "yarda/cache/hierarchy_summary.hpp"
 #include "yarda/cache/lru_rd_analysis.hpp"
 #include "yarda/trace/resolved_access.hpp"
 
 namespace yarda
 {
 
-/**
- * @brief Count one cold-started cache-level input stream.
- *
- * The accounting unit is a cache-line reference. Finite distances, including
- * those above associativity, remain separate histogram keys. Unique lines
- * count linked blocks independently of source object identity.
- */
-struct CacheLevelSummary
+/** @brief Identify the first level servicing one L1 line reference. */
+enum class FirstServiceLevel
 {
-  std::uint64_t lookups = 0;
-  std::uint64_t hits = 0;
-  std::uint64_t misses = 0;
-  std::uint64_t cold_misses = 0;
-  std::uint64_t replacement_misses = 0;
-  std::uint64_t unique_lines = 0;
-  std::map<std::uint64_t, std::uint64_t> csrd_histogram;
+  L1,
+  LLC,
+  Memory,
 };
 
 /**
@@ -44,20 +33,26 @@ struct BatchCacheLevelResult
 };
 
 /**
- * @brief Own the two independent cold cache streams of one analyzed task.
+ * @brief Own aligned cache observations for one L1 reference.
  *
- * LLC rows contain only L1 misses, in their original order. Both levels retain
- * source and span ordinals scoped by task_id. Coverage counts L1 references;
- * source_accesses counts source ranges and modeled_accesses counts L1 rows.
+ * Both LLC fields are present exactly for L1 misses. Mappings preserve the
+ * same source/span provenance, with geometry-specific set/tag decoding.
+ * The enclosing task summary supplies task_id; no borrowed data is retained.
  */
+struct HierarchyAccessEvent
+{
+  CacheLineMapping l1_mapping;
+  LruAccessResult l1;
+  std::optional<CacheLineMapping> llc_mapping;
+  std::optional<LruAccessResult> llc;
+  FirstServiceLevel first_service = FirstServiceLevel::Memory;
+};
+
+/** @brief Own a checked task summary and one event per ordered L1 reference. */
 struct BatchTaskHierarchyResult
 {
-  std::string task_id;
-  std::uint64_t source_accesses = 0;
-  std::uint64_t modeled_accesses = 0;
-  BatchCacheLevelResult l1;
-  BatchCacheLevelResult llc;
-  TraceCoverage coverage;
+  TaskHierarchySummary summary;
+  std::vector<HierarchyAccessEvent> events;
 };
 
 /** @brief Own a complete batch analysis in input task order. */
@@ -68,7 +63,7 @@ struct BatchHierarchyResult
 };
 
 /**
- * @brief Analyze full exact L1 and miss-filtered LLC CSRD for each task.
+ * @brief Analyze exact L1/LLC CSRD and first service for each cold task.
  *
  * Empty tasks are retained. Each task starts with cold state at both levels.
  * Load and store have identical residency semantics. LLC mappings decode the
@@ -84,7 +79,8 @@ struct BatchHierarchyResult
  * @throws std::invalid_argument for unsupported or inconsistent input, empty
  * or duplicate task IDs, no tasks, or invalid or unequal-line-size geometries.
  * @throws std::overflow_error for address, distance or counter overflow.
- * @throws std::logic_error if level result sizes or conservation disagree.
+ * @throws std::logic_error if sizes, cross-level provenance, coverage or
+ * level/service conservation disagree.
  */
 BatchHierarchyResult
 analyze_batch_hierarchy(const ResolvedTaskTraceResult & resolved,

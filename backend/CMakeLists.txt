@@ -39,6 +39,8 @@ target_link_libraries(yarda_cache_config
 add_library(yarda_hierarchy_analysis
     src/cache/hierarchy_model.cpp
     src/cache/hierarchy_analysis.cpp
+    src/cache/hierarchy_aggregation.cpp
+    src/cache/hierarchy_service_summary.cpp
     src/cache/hierarchy_level_analysis.cpp
     src/cache/hierarchy_input_validation.cpp
 )
@@ -186,6 +188,9 @@ if(BUILD_TESTING)
         tests/cache/hierarchy_analysis_llc_test.cpp
         tests/cache/hierarchy_analysis_differential_test.cpp
         tests/cache/hierarchy_level_analysis_test.cpp
+        tests/cache/hierarchy_aggregation_test.cpp
+        tests/cache/hierarchy_aggregation_validation_test.cpp
+        tests/cache/hierarchy_service_summary_test.cpp
     )
     target_include_directories(yarda_hierarchy_analysis_tests PRIVATE src/cache)
     target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE

@@ -12,6 +12,8 @@ using yarda::analyze_batch_hierarchy;
 using yarda::LruAccessOutcome;
 using yarda::test::support::append_batch_access;
 using yarda::test::support::batch_input;
+using yarda::test::support::batch_l1_result;
+using yarda::test::support::batch_llc_result;
 using yarda::test::support::make_batch_hierarchy;
 using yarda::test::support::make_batch_task;
 
@@ -21,13 +23,15 @@ TEST(BatchHierarchyL1Test, PreservesEmptyTaskAndZeroSummaries)
     batch_input({make_batch_task({}, "empty")}), make_batch_hierarchy());
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  EXPECT_EQ(task.task_id, "empty");
-  EXPECT_EQ(task.source_accesses, 0U);
-  EXPECT_EQ(task.modeled_accesses, 0U);
-  EXPECT_TRUE(task.coverage.complete());
+  const auto llc = batch_llc_result(task);
+  const auto l1 = batch_l1_result(task);
+  EXPECT_EQ(task.summary.task_id, "empty");
+  EXPECT_EQ(task.summary.source_accesses, 0U);
+  EXPECT_EQ(task.summary.modeled_accesses, 0U);
+  EXPECT_TRUE(task.summary.coverage.complete());
   EXPECT_TRUE(result.coverage.complete());
   EXPECT_EQ(result.coverage.emitted_line_references, 0U);
-  for (const auto * level : {&task.l1, &task.llc})
+  for (const auto * level : {&l1, &llc})
   {
     EXPECT_TRUE(level->mappings.empty());
     EXPECT_TRUE(level->accesses.empty());
@@ -50,19 +54,20 @@ TEST(BatchHierarchyL1Test, CountsOneSourceRangeAsOrderedCrossLineReferences)
     analyze_batch_hierarchy(batch_input({input}), make_batch_hierarchy());
   ASSERT_EQ(result.tasks.size(), 1U);
   const auto & task = result.tasks[0];
-  EXPECT_EQ(task.source_accesses, 1U);
-  EXPECT_EQ(task.modeled_accesses, 3U);
-  EXPECT_EQ(task.l1.summary.lookups, 3U);
-  EXPECT_EQ(task.coverage.source_accesses, 1U);
-  EXPECT_EQ(task.coverage.resolved_accesses, 1U);
-  EXPECT_EQ(task.coverage.emitted_line_references, 3U);
+  const auto l1 = batch_l1_result(task);
+  EXPECT_EQ(task.summary.source_accesses, 1U);
+  EXPECT_EQ(task.summary.modeled_accesses, 3U);
+  EXPECT_EQ(l1.summary.lookups, 3U);
+  EXPECT_EQ(task.summary.coverage.source_accesses, 1U);
+  EXPECT_EQ(task.summary.coverage.resolved_accesses, 1U);
+  EXPECT_EQ(task.summary.coverage.emitted_line_references, 3U);
   EXPECT_EQ(result.coverage.emitted_line_references, 3U);
-  ASSERT_EQ(task.l1.mappings.size(), 3U);
+  ASSERT_EQ(l1.mappings.size(), 3U);
   const std::vector<std::uint64_t> addresses{0x101c, 0x1020, 0x1040};
   const std::vector<std::uint64_t> offsets{12, 16, 48};
   for (std::size_t i = 0; i < 3; ++i)
   {
-    const auto & row = task.l1.mappings[i];
+    const auto & row = l1.mappings[i];
     EXPECT_EQ(row.decoded.address, addresses[i]);
     EXPECT_EQ(row.object_byte_offset, offsets[i]);
     EXPECT_EQ(row.object_id, "global::wide");
@@ -82,7 +87,7 @@ TEST(BatchHierarchyL1Test, PreservesExactDistancesAcrossAssociativityBoundary)
     analyze_batch_hierarchy(batch_input({make_batch_task({0, 32, 0, 64, 32})}),
                             make_batch_hierarchy({32, 2, 2}, {32, 8, 4}));
   ASSERT_EQ(result.tasks.size(), 1U);
-  const auto & l1 = result.tasks[0].l1;
+  const auto l1 = batch_l1_result(result.tasks[0]);
   ASSERT_EQ(l1.accesses.size(), 5U);
   EXPECT_FALSE(l1.accesses[0].reuse_distance);
   EXPECT_EQ(l1.accesses[2].reuse_distance, 1U);
@@ -107,7 +112,7 @@ TEST(BatchHierarchyL1Test, RetainsDistanceFarBeyondResidentCapacity)
   const auto result = analyze_batch_hierarchy(
     batch_input({task}), make_batch_hierarchy({32, 2, 2}, {32, 4, 4}));
   ASSERT_EQ(result.tasks.size(), 1U);
-  const auto & l1 = result.tasks[0].l1;
+  const auto l1 = batch_l1_result(result.tasks[0]);
   ASSERT_EQ(l1.accesses.size(), 19U);
   EXPECT_EQ(l1.accesses.back().reuse_distance, 17U);
   EXPECT_EQ(l1.accesses.back().outcome, LruAccessOutcome::ReplacementMiss);
@@ -121,7 +126,8 @@ TEST(BatchHierarchyL1Test, IgnoresOtherSetsAndDeduplicatesRepeatedCompetitors)
     analyze_batch_hierarchy(batch_input({make_batch_task({0, 32, 64, 64, 0})}),
                             make_batch_hierarchy({32, 4, 2}, {32, 8, 2}));
   ASSERT_EQ(result.tasks.size(), 1U);
-  const auto & accesses = result.tasks[0].l1.accesses;
+  const auto l1 = batch_l1_result(result.tasks[0]);
+  const auto & accesses = l1.accesses;
   ASSERT_EQ(accesses.size(), 5U);
   EXPECT_EQ(accesses[3].reuse_distance, 0U);
   EXPECT_EQ(accesses[4].reuse_distance, 1U);
@@ -135,18 +141,19 @@ TEST(BatchHierarchyL1Test, PreservesTaskOrderAndResetsBothLevelsAndHistory)
                  make_batch_task({}, "empty"), make_batch_task({0}, "a-last")});
   const auto result = analyze_batch_hierarchy(input, make_batch_hierarchy());
   ASSERT_EQ(result.tasks.size(), 3U);
-  EXPECT_EQ(result.tasks[0].task_id, "z-first");
-  EXPECT_EQ(result.tasks[1].task_id, "empty");
-  EXPECT_EQ(result.tasks[2].task_id, "a-last");
-  EXPECT_EQ(result.tasks[0].l1.summary.hits, 1U);
-  const auto & last = result.tasks[2];
-  ASSERT_EQ(last.l1.accesses.size(), 1U);
-  ASSERT_EQ(last.llc.accesses.size(), 1U);
-  EXPECT_EQ(last.l1.accesses[0].outcome, LruAccessOutcome::ColdMiss);
-  EXPECT_EQ(last.llc.accesses[0].outcome, LruAccessOutcome::ColdMiss);
-  EXPECT_FALSE(last.l1.accesses[0].reuse_distance);
-  EXPECT_FALSE(last.llc.accesses[0].reuse_distance);
-  EXPECT_EQ(last.l1.mappings[0].source_access_ordinal, 0U);
+  EXPECT_EQ(result.tasks[0].summary.task_id, "z-first");
+  EXPECT_EQ(result.tasks[1].summary.task_id, "empty");
+  EXPECT_EQ(result.tasks[2].summary.task_id, "a-last");
+  EXPECT_EQ(result.tasks[0].summary.l1.hits, 1U);
+  const auto last_l1 = batch_l1_result(result.tasks[2]);
+  const auto last_llc = batch_llc_result(result.tasks[2]);
+  ASSERT_EQ(last_l1.accesses.size(), 1U);
+  ASSERT_EQ(last_llc.accesses.size(), 1U);
+  EXPECT_EQ(last_l1.accesses[0].outcome, LruAccessOutcome::ColdMiss);
+  EXPECT_EQ(last_llc.accesses[0].outcome, LruAccessOutcome::ColdMiss);
+  EXPECT_FALSE(last_l1.accesses[0].reuse_distance);
+  EXPECT_FALSE(last_llc.accesses[0].reuse_distance);
+  EXPECT_EQ(last_l1.mappings[0].source_access_ordinal, 0U);
   EXPECT_EQ(result.coverage.source_accesses, 3U);
   EXPECT_EQ(result.coverage.resolved_accesses, 3U);
   EXPECT_EQ(result.coverage.emitted_line_references, 3U);
@@ -163,7 +170,7 @@ TEST(BatchHierarchyL1Test, UsesLinkedBlockIdentityAcrossObjectsAndOffsets)
   const auto result =
     analyze_batch_hierarchy(batch_input({task}), make_batch_hierarchy());
   ASSERT_EQ(result.tasks.size(), 1U);
-  const auto & l1 = result.tasks[0].l1;
+  const auto l1 = batch_l1_result(result.tasks[0]);
   ASSERT_EQ(l1.accesses.size(), 2U);
   EXPECT_EQ(l1.accesses[1].reuse_distance, 0U);
   EXPECT_EQ(l1.accesses[1].outcome, LruAccessOutcome::Hit);
@@ -176,8 +183,9 @@ TEST(BatchHierarchyL1Test, AcceptsLastRepresentableByteWithoutRangeOverflow)
     batch_input({make_batch_task({std::numeric_limits<std::uint64_t>::max()})}),
     make_batch_hierarchy());
   ASSERT_EQ(result.tasks.size(), 1U);
-  ASSERT_EQ(result.tasks[0].l1.mappings.size(), 1U);
-  EXPECT_EQ(result.tasks[0].l1.mappings[0].decoded.line_offset, 31U);
+  const auto l1 = batch_l1_result(result.tasks[0]);
+  ASSERT_EQ(l1.mappings.size(), 1U);
+  EXPECT_EQ(l1.mappings[0].decoded.line_offset, 31U);
 }
 
 }  // namespace

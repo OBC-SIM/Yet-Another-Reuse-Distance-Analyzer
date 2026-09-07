@@ -117,4 +117,47 @@ inline void expect_batch_provenance(const CacheLineMapping & actual,
   EXPECT_EQ(actual.line_span_ordinal, expected.line_span_ordinal);
 }
 
+/**
+ * @brief Project L1 observations for existing cache-level oracle assertions.
+ *
+ * @param task Owned batch events in L1 reference order.
+ * @return Copies of L1 payload and the reported L1 summary.
+ */
+inline BatchCacheLevelResult
+batch_l1_result(const BatchTaskHierarchyResult & task)
+{
+  BatchCacheLevelResult result;
+  result.summary = task.summary.l1;
+  for (const auto & event : task.events)
+  {
+    result.mappings.push_back(event.l1_mapping);
+    result.accesses.push_back(event.l1);
+  }
+  return result;
+}
+
+/**
+ * @brief Project present LLC observations without consulting FSL decisions.
+ *
+ * @param task Owned batch events in L1 reference order.
+ * @return Copies of present LLC payload and its summary; a mismatched pair
+ * of optionals also reports a Google Test failure.
+ */
+inline BatchCacheLevelResult
+batch_llc_result(const BatchTaskHierarchyResult & task)
+{
+  BatchCacheLevelResult result;
+  result.summary = task.summary.llc;
+  for (const auto & event : task.events)
+  {
+    EXPECT_EQ(event.llc_mapping.has_value(), event.llc.has_value());
+    if (event.llc && event.llc_mapping)
+    {
+      result.mappings.push_back(*event.llc_mapping);
+      result.accesses.push_back(*event.llc);
+    }
+  }
+  return result;
+}
+
 }  // namespace yarda::test::support
