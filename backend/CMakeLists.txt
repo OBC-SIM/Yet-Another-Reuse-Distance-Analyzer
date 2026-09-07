@@ -160,6 +160,19 @@ if(BUILD_TESTING)
     target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
     gtest_discover_tests(yarda_backend_tests)
 
+    add_executable(yarda_hierarchy_analysis_tests
+        tests/cache/exact_csrd_oracle.cpp
+        tests/cache/exact_csrd_oracle_test.cpp
+        tests/cache/hierarchy_lru_oracle.cpp
+        tests/cache/hierarchy_lru_oracle_contract_test.cpp
+        tests/cache/hierarchy_lru_oracle_operation_test.cpp
+        tests/cache/hierarchy_lru_oracle_test.cpp
+    )
+    target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
+        yarda_backend GTest::gtest_main
+    )
+    gtest_discover_tests(yarda_hierarchy_analysis_tests)
+
     add_executable(yarda_cache_config_tests
         tests/cache/cache_config_test.cpp
         tests/cache/yaml_config_parser_test.cpp
