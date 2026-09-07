@@ -165,6 +165,9 @@ if(BUILD_TESTING)
         tests/cache/exact_csrd_oracle_test.cpp
         tests/cache/hierarchy_lru_oracle.cpp
         tests/cache/hierarchy_lru_oracle_contract_test.cpp
+        tests/cache/hierarchy_lru_oracle_differential_support.cpp
+        tests/cache/hierarchy_lru_oracle_differential_support_test.cpp
+        tests/cache/hierarchy_lru_oracle_differential_test.cpp
         tests/cache/hierarchy_lru_oracle_operation_test.cpp
         tests/cache/hierarchy_lru_oracle_test.cpp
     )
