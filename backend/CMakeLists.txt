@@ -36,7 +36,12 @@ target_link_libraries(yarda_cache_config
     PRIVATE yaml-cpp
 )
 
-add_library(yarda_hierarchy_analysis src/cache/hierarchy_model.cpp)
+add_library(yarda_hierarchy_analysis
+    src/cache/hierarchy_model.cpp
+    src/cache/hierarchy_analysis.cpp
+    src/cache/hierarchy_level_analysis.cpp
+    src/cache/hierarchy_input_validation.cpp
+)
 target_link_libraries(yarda_hierarchy_analysis PUBLIC yarda_cache_config)
 target_compile_options(yarda_hierarchy_analysis PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -176,7 +181,13 @@ if(BUILD_TESTING)
         tests/cache/hierarchy_lru_oracle_test.cpp
         tests/cache/hierarchy_model_test.cpp
         tests/cache/hierarchy_model_validation_test.cpp
+        tests/cache/hierarchy_analysis_validation_test.cpp
+        tests/cache/hierarchy_analysis_l1_test.cpp
+        tests/cache/hierarchy_analysis_llc_test.cpp
+        tests/cache/hierarchy_analysis_differential_test.cpp
+        tests/cache/hierarchy_level_analysis_test.cpp
     )
+    target_include_directories(yarda_hierarchy_analysis_tests PRIVATE src/cache)
     target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
         yarda_hierarchy_analysis GTest::gtest_main
     )
