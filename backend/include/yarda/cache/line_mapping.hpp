@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <string>
 #include <utility>
@@ -69,6 +70,26 @@ struct CacheLineAddressRange
 /** @brief Deterministic address rows keyed by object ID and byte offset. */
 using CacheLineMappingTable =
   std::map<std::pair<std::string, std::uint64_t>, CacheLineAddressMapping>;
+
+/** @brief Synchronous line consumer; a row is borrowed only during its call. */
+using CacheLineSink = std::function<void(const CacheLineMapping &)>;
+
+/**
+ * @brief Deliver each touched line in increasing linked-address order.
+ *
+ * Validates the complete range before the first callback and retains no line
+ * vector. Exceptions from the sink stop emission and propagate unchanged.
+ *
+ * @param range Borrowed linked byte range, unchanged throughout this call.
+ * @param geometry Borrowed geometry, unchanged throughout this call.
+ * @param sink Required borrowed callback; copy any rows retained after it.
+ * @return Nothing.
+ * @throws std::invalid_argument for invalid geometry, range or empty sink.
+ * @throws std::overflow_error if the source range overflows.
+ */
+void for_each_cache_line(const CacheLineAddressRange & range,
+                         const CacheGeometry & geometry,
+                         const CacheLineSink & sink);
 
 /**
  * @brief Decode every cache line touched by one linked byte range.

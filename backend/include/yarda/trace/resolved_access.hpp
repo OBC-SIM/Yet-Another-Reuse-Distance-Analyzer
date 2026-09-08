@@ -101,6 +101,8 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
  * independently as its own task.
  * Empty analyzed roots remain present as empty tasks. Every visited access
  * must resolve.
+ * This collecting compatibility API retains its structural expansion limits;
+ * stream_resolved_task_accesses adds separately configurable emission limits.
  *
  * @param raw APE v2 LAT module with canonical object metadata.
  * @param objects Linked global object addresses (borrowed, ownership retained).

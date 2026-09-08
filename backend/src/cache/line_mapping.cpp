@@ -3,14 +3,18 @@
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 namespace yarda
 {
-std::vector<CacheLineMapping> map_cache_lines(
-  const CacheLineAddressRange & range, const CacheGeometry & geometry)
+void for_each_cache_line(const CacheLineAddressRange & range,
+                         const CacheGeometry & geometry,
+                         const CacheLineSink & sink)
 {
+  if (!sink)
+  {
+    throw std::invalid_argument("cache-line sink must not be empty");
+  }
   if (range.object_id.empty() || range.access_size == 0)
   {
     throw std::invalid_argument("cache-line address range is invalid");
@@ -26,7 +30,7 @@ std::vector<CacheLineMapping> map_cache_lines(
     throw std::overflow_error("object offset range overflows");
   }
 
-  std::vector<CacheLineMapping> mappings;
+  static_cast<void>(cache_set_count(geometry));
   auto current_address = range.linked_byte_address;
   auto current_object_offset = range.object_byte_offset;
   auto remaining = range.access_size;
@@ -42,10 +46,9 @@ std::vector<CacheLineMapping> map_cache_lines(
     mapping.source_access_size = range.access_size;
     mapping.source_linked_byte_address = range.linked_byte_address;
     mapping.line_span_ordinal = line_span_ordinal++;
-    mappings.push_back(std::move(mapping));
+    sink(mapping);
 
-    const auto available =
-      geometry.line_size - mappings.back().decoded.line_offset;
+    const auto available = geometry.line_size - mapping.decoded.line_offset;
     const auto consumed = std::min(remaining, available);
     remaining -= consumed;
     if (remaining != 0)
@@ -54,6 +57,15 @@ std::vector<CacheLineMapping> map_cache_lines(
       current_object_offset += consumed;
     }
   }
+}
+
+std::vector<CacheLineMapping> map_cache_lines(
+  const CacheLineAddressRange & range, const CacheGeometry & geometry)
+{
+  std::vector<CacheLineMapping> mappings;
+  for_each_cache_line(range, geometry, [&](const CacheLineMapping & mapping) {
+    mappings.push_back(mapping);
+  });
   return mappings;
 }
 

@@ -199,8 +199,11 @@ TraceUnroller::unroll(const nlohmann::json & node) const
 
 ResolvedTraceUnroller::ResolvedTraceUnroller(
   const ObjectAddressModel & objects, const AccessLayoutResolver & layouts,
-  ExpansionBudget & expansion_budget)
-  : objects_(objects), layouts_(layouts), expansion_budget_(expansion_budget)
+  ExpansionBudget & expansion_budget, TraceEmissionBudget * emission_budget)
+  : objects_(objects)
+  , layouts_(layouts)
+  , expansion_budget_(expansion_budget)
+  , emission_budget_(emission_budget)
 {
 }
 
@@ -208,15 +211,25 @@ std::vector<ResolvedAccess> ResolvedTraceUnroller::unroll(
   const nlohmann::json & node, const std::string & task_id)
 {
   std::vector<ResolvedAccess> accesses;
+  unroll(node, task_id,
+         [&](const ResolvedAccess & access) { accesses.push_back(access); });
+  return accesses;
+}
+
+void ResolvedTraceUnroller::unroll(const nlohmann::json & node,
+                                   const std::string & task_id,
+                                   const ResolvedAccessSink & sink)
+{
   const auto emit = [&](const Json & access,
                         const std::vector<std::string> & indices) {
+    if (emission_budget_) emission_budget_->consume_source_access();
     const auto ordinal = next_source_access_ordinal_++;
     ++coverage_.source_accesses;
-    accesses.push_back(resolve_access(access, indices, task_id, ordinal,
-                                      objects_, layouts_, coverage_));
+    const auto resolved = resolve_access(access, indices, task_id, ordinal,
+                                         objects_, layouts_, coverage_);
+    sink(resolved);
   };
   visit_node(node, {}, expansion_budget_, emit);
-  return accesses;
 }
 
 void ResolvedTraceUnroller::begin_task() noexcept

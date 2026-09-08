@@ -16,6 +16,9 @@ add_library(yarda_backend
     src/trace/mapped_trace.cpp
     src/trace/resolved_access.cpp
     src/trace/resolved_mapping.cpp
+    src/trace/emission_budget.cpp
+    src/trace/task_access_stream.cpp
+    src/trace/task_access_support.cpp
     src/trace/unroller.cpp
     src/trace/task_mapping_json.cpp
 )
@@ -161,6 +164,10 @@ if(BUILD_TESTING)
         tests/trace/mapped_trace_strict_test.cpp
         tests/trace/resolved_access_test.cpp
         tests/trace/resolved_mapping_test.cpp
+        tests/trace/task_access_stream_test.cpp
+        tests/trace/task_access_stream_failure_test.cpp
+        tests/trace/task_access_stream_budget_test.cpp
+        tests/trace/resolved_mapping_stream_test.cpp
         tests/trace/strict_input_test.cpp
         tests/trace/strict_resolution_test.cpp
         tests/trace/strict_unroller_test.cpp
