@@ -40,6 +40,9 @@ target_link_libraries(yarda_cache_config
 )
 
 add_library(yarda_hierarchy_analysis
+    src/cache/streaming_hierarchy.cpp
+    src/cache/streaming_hierarchy_summary.cpp
+    src/cache/streaming_hierarchy_task.cpp
     src/cache/exact_csrd.cpp
     src/cache/recency_index.cpp
     src/cache/hierarchy_model.cpp
@@ -181,6 +184,13 @@ if(BUILD_TESTING)
     gtest_discover_tests(yarda_backend_tests)
 
     add_executable(yarda_hierarchy_analysis_tests
+        tests/cache/streaming_hierarchy_test.cpp
+        tests/cache/streaming_hierarchy_differential_test.cpp
+        tests/cache/streaming_hierarchy_events_test.cpp
+        tests/cache/streaming_hierarchy_budget_test.cpp
+        tests/cache/streaming_hierarchy_failure_test.cpp
+        tests/cache/streaming_hierarchy_summary_test.cpp
+        tests/cache/streaming_hierarchy_task_test.cpp
         tests/cache/exact_csrd_test.cpp
         tests/cache/exact_csrd_differential_test.cpp
         tests/cache/recency_index_test.cpp
