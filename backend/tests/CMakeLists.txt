@@ -34,6 +34,11 @@ add_executable(yarda_backend_tests
     trace/task_scope_test.cpp
     trace/task_access_stream_failure_test.cpp
     trace/task_access_stream_budget_test.cpp
+    trace/work_limits_test.cpp
+    trace/work_limits_default_test.cpp
+    trace/work_limits_failure_test.cpp
+    trace/work_limits_guard_test.cpp
+    trace/work_limits_budget_test.cpp
     trace/resolved_mapping_stream_test.cpp
     trace/strict_input_test.cpp
     trace/strict_resolution_test.cpp

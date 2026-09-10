@@ -45,7 +45,8 @@ StreamingHierarchyResult analyze_streaming_hierarchy(
       active.reset();
     },
   };
-  const auto source = stream_resolved_task_accesses(raw, objects, sink, budget);
+  const auto source = stream_resolved_task_accesses(raw, objects, sink, budget,
+                                                    options.loop_limits);
   if (!source.coverage.complete() ||
       source.coverage.emitted_line_references != 0 ||
       source.coverage.source_accesses != result.coverage.source_accesses ||

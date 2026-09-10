@@ -6,6 +6,7 @@
 
 #include "yarda/trace/emission_budget.hpp"
 #include "yarda/trace/resolved_access.hpp"
+#include "yarda/trace/work_limits.hpp"
 
 namespace yarda
 {
@@ -50,12 +51,31 @@ struct TaskAccessStreamResult
  * @param objects Borrowed linked object model, unchanged throughout the call.
  * @param sink Borrowed required callbacks, configured before streaming.
  * @param budget Borrowed module budget, also usable by a budgeted line sink.
+ * @param loop_limits Borrowed inclusive limits, copied for this invocation.
  * @return Aggregate source coverage and exclusions only on complete success.
  * @throws std::invalid_argument for invalid callbacks, malformed LAT, rejected
- * call expansion or exhausted structural/emission limits.
+ * call expansion or exhausted structural, loop or emission limits.
  * @throws ResolutionError for unsupported or unresolved source accesses.
  * @note Any sink exception propagates unchanged. No callbacks follow failure;
  * an interrupted task receives no successful end notification.
+ */
+TaskAccessStreamResult stream_resolved_task_accesses(
+  const nlohmann::json & raw, const ObjectAddressModel & objects,
+  const TaskAccessSink & sink, TraceEmissionBudget & budget,
+  const LoopWorkLimits & loop_limits);
+
+/**
+ * @brief Stream sources with default single and cumulative loop allowances.
+ * @param raw Borrowed APE v2 LAT module, unchanged throughout the call.
+ * @param objects Borrowed linked object model, unchanged throughout the call.
+ * @param sink Borrowed required callbacks with the same lifetime contract.
+ * @param budget Borrowed module emission budget, also shared with line mapping.
+ * @return Aggregate source coverage and exclusions only on complete success.
+ * @throws std::invalid_argument for invalid input, callbacks or exhausted
+ * limits.
+ * @throws ResolutionError for unsupported or unresolved source accesses.
+ * @note Each loop allowance defaults to 1,000,000. Sink exceptions propagate
+ * unchanged; callers must discard partial state from every task on failure.
  */
 TaskAccessStreamResult stream_resolved_task_accesses(
   const nlohmann::json & raw, const ObjectAddressModel & objects,

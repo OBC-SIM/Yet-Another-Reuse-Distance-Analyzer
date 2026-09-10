@@ -7,6 +7,7 @@
 
 #include "yarda/cache/hierarchy_analysis.hpp"
 #include "yarda/trace/emission_budget.hpp"
+#include "yarda/trace/work_limits.hpp"
 
 namespace yarda
 {
@@ -41,6 +42,14 @@ struct StreamingHierarchyOptions
    * A nonzero limit requires a sink. Truncation never consumes emission budget.
    */
   std::uint64_t event_limit = 0;
+  /**
+   * @brief Single-loop and module-cumulative allowances; zero forbids
+   * iterations.
+   *
+   * Both default to 1,000,000. Exhaustion fails the entire invocation without
+   * a partial result. Legacy batch adapters retain the default loop limits.
+   */
+  LoopWorkLimits loop_limits{};
 };
 
 /** @brief Diagnostic delivery metadata, separate from semantic task counts. */

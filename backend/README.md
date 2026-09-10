@@ -69,9 +69,47 @@ omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
 `linked_absolute` addresses are linked virtual addresses, not automatically
 physical addresses. Without `--export`, the JSON is written to stdout.
 
-Each invocation is limited to 100,000 call-expansion node visits, 1,000,000
-cumulative loop iterations, and an inline call depth of 256. An individual loop
-also cannot exceed 1,000,000 iterations. Source access count is not capped.
+Every LAT expansion path, including streaming hierarchy analysis, is limited to
+100,000 call-expansion node visits and an inline call depth of 256. The CLI and
+legacy batch APIs retain the default 1,000,000 iterations per loop and
+1,000,000 cumulative loop iterations. These CLI and batch paths do not cap
+source access count.
 The `--elf` report materializes every resolved access and mapped line reference,
 so large traces can exhaust host memory. Exceeding a structural expansion limit
 fails the complete invocation instead of returning a partial trace.
+
+## Streaming hierarchy work limits
+
+The C++ streaming APIs expose independent single-loop and cumulative-loop
+allowances through `LoopWorkLimits` in `yarda/trace/work_limits.hpp`. Both
+default to 1,000,000 iterations. Hierarchy callers set them alongside the
+existing source/line emission allowances:
+
+```cpp
+yarda::StreamingHierarchyOptions options;
+options.loop_limits = {2'000'000, 20'000'000};
+options.emission_limits = {10'000'000, 20'000'000};
+auto result = yarda::analyze_streaming_hierarchy(lat, objects, hierarchy, options);
+```
+
+Producer callers use
+`stream_resolved_task_accesses(lat, objects, sink, emission_budget, loop_limits)`.
+The existing three- and four-argument overloads retain default loop limits.
+Hierarchy emission defaults remain 1,000,000 sources and 10,000,000 source-to-L1
+line references. These configurable settings are C++ APIs; CLI flags follow in B10.
+
+All limits are inclusive. Zero permits no iterations or emissions for that
+specific budget; it is never an unlimited sentinel. Zero-trip loops and flat
+accesses do not consume loop work, while loops with empty bodies still do.
+At each dynamic loop entry, the single-loop allowance is checked and the entire
+trip count is reserved from one module budget before the body executes. For
+example, a two-iteration outer loop with a three-iteration inner loop consumes
+`2 + 2 * 3 = 8` cumulative iterations. Task boundaries reset cache state and
+source ordinals, but do not reset cumulative loop/source/line allowances.
+
+Raising source/line limits alone does not raise loop limits. Cross-line accesses
+consume one line allowance per source-to-L1 reference; LLC forwarding is not
+charged again. Node/depth guards, checked arithmetic and address validation
+remain active. Any exhaustion fails the whole invocation, stops callbacks and
+returns no partial result. Discard any previously collected sink events on
+failure. Event truncation alone still permits complete analysis.

@@ -4,24 +4,26 @@
 #include <stdexcept>
 #include <string>
 
+#include "yarda/trace/work_limits.hpp"
+
 namespace yarda::detail
 {
 
 struct ExpansionLimits
 {
   std::uint64_t expanded_nodes;
-  std::uint64_t loop_iterations;
   std::uint64_t inline_call_depth;
 };
 
-inline constexpr ExpansionLimits kExpansionLimits{100'000, 1'000'000, 256};
+inline constexpr ExpansionLimits kExpansionLimits{100'000, 256};
 
-/** Bound structural expansion work for one LAT module. */
+/** Bound structural expansion and dynamic loop work for one LAT module. */
 class ExpansionBudget
 {
 public:
-  explicit ExpansionBudget(ExpansionLimits limits = kExpansionLimits)
-    : limits_(limits)
+  explicit ExpansionBudget(ExpansionLimits limits = kExpansionLimits,
+                           LoopWorkLimits loop_limits = {})
+    : limits_(limits), loop_limits_(loop_limits)
   {
   }
 
@@ -33,7 +35,13 @@ public:
 
   void consume_loop_iterations(std::uint64_t count)
   {
-    consume(loop_iterations_, count, limits_.loop_iterations,
+    if (count > loop_limits_.single_loop_iterations)
+    {
+      throw std::invalid_argument(
+        "loop iteration count exceeds " +
+        std::to_string(loop_limits_.single_loop_iterations));
+    }
+    consume(loop_iterations_, count, loop_limits_.cumulative_loop_iterations,
             "cumulative loop iteration count", "");
   }
 
@@ -60,6 +68,7 @@ private:
   }
 
   ExpansionLimits limits_;
+  LoopWorkLimits loop_limits_;
   std::uint64_t expanded_nodes_ = 0;
   std::uint64_t loop_iterations_ = 0;
 };

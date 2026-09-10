@@ -14,6 +14,14 @@ TaskAccessStreamResult stream_resolved_task_accesses(
   const nlohmann::json & raw, const ObjectAddressModel & objects,
   const TaskAccessSink & sink, TraceEmissionBudget & budget)
 {
+  return stream_resolved_task_accesses(raw, objects, sink, budget, {});
+}
+
+TaskAccessStreamResult stream_resolved_task_accesses(
+  const nlohmann::json & raw, const ObjectAddressModel & objects,
+  const TaskAccessSink & sink, TraceEmissionBudget & budget,
+  const LoopWorkLimits & loop_limits)
+{
   if (!sink.begin_task || !sink.access || !sink.end_task)
   {
     throw std::invalid_argument("task access sink requires all callbacks");
@@ -21,7 +29,8 @@ TaskAccessStreamResult stream_resolved_task_accesses(
   try
   {
     const detail::AccessLayoutResolver layouts(raw);
-    detail::ExpansionBudget expansion_budget;
+    detail::ExpansionBudget expansion_budget(detail::kExpansionLimits,
+                                             loop_limits);
     detail::ResolvedTraceUnroller unroller(objects, layouts, expansion_budget,
                                            &budget);
     TaskAccessStreamResult result;

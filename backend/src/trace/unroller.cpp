@@ -17,8 +17,6 @@ namespace
 using Json = nlohmann::json;
 using Environment = std::unordered_map<std::string, std::int64_t>;
 
-constexpr std::uint64_t kMaxLoopIterations = 1'000'000;
-
 std::string resolve_index(const std::string & index,
                           const Environment & environment)
 {
@@ -96,10 +94,6 @@ std::uint64_t iteration_count(std::int64_t start, std::int64_t bound,
   else if (start > bound)
   {
     count = ceil_divide(positive_distance(bound, start), step_magnitude(step));
-  }
-  if (count > kMaxLoopIterations)
-  {
-    throw std::invalid_argument("loop iteration count exceeds 1000000");
   }
   return count;
 }

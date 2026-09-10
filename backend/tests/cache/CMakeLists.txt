@@ -3,6 +3,8 @@ add_executable(yarda_hierarchy_analysis_tests
     streaming_hierarchy_differential_test.cpp
     streaming_hierarchy_events_test.cpp
     streaming_hierarchy_budget_test.cpp
+    streaming_hierarchy_work_limits_test.cpp
+    streaming_hierarchy_default_limits_test.cpp
     streaming_hierarchy_failure_test.cpp
     streaming_hierarchy_summary_test.cpp
     streaming_hierarchy_task_test.cpp
