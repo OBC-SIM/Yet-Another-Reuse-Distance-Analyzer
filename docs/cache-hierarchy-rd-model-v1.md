@@ -10,6 +10,11 @@ The model is an abstract, deterministic demand-cache model. It is not a
 cycle-accurate hardware simulation and does not claim to reproduce a specific
 processor's cache policy.
 
+R1's [analysis-region contract](analysis-regions-v1.md) was fixed on 2026-09-09
+with a standalone compiler-boundary experiment. Production region extraction
+and task integration remain R2 work; the current implementation supports the
+existing function roots. The input extension below does not change cache semantics.
+
 ## 2. Model identity
 
 | Field | Required value |
@@ -45,8 +50,8 @@ following statically:
 - an unambiguous ELF object symbol and absolute linked base address;
 - an object-relative byte offset and positive access size;
 - a load or store operation;
-- a finite expansion of an `APE_ANALYZE` root and any supported
-  `APE_INLINE` helpers; and
+- a finite expansion of an `APE_ANALYZE` root (or the selected region root
+  specified in section 8.1) and any supported `APE_INLINE` helpers; and
 - cache-line references within the configured expansion limits.
 
 Global arrays, scalars, and structured or static global objects are supported
@@ -172,7 +177,8 @@ or exclusion:
 
 ## 8. Task state and coverage
 
-One `APE_ANALYZE` root is one independent task. At each task start, the analyzer
+One selected root is one independent task. Without the region extension in
+section 8.1, the root is the existing whole `APE_ANALYZE` function. At each task start, the analyzer
 creates cold L1, LLC, and CSRD-history state. No state is shared across tasks,
 even though the selected LLC is structurally shared in the configuration.
 
@@ -188,6 +194,34 @@ every resolved address uses AddressBasis::Absolute
 
 Any violation fails the complete hierarchy analysis. A partial task or module
 result is not a valid result under this model.
+
+### 8.1 Analysis-region input extension (R1 contract; R2 implementation pending)
+
+The [region contract](analysis-regions-v1.md) defines one complete, non-nested
+`APE_ANALYZE_BEGIN`/`APE_ANALYZE_END` region per function, selected automatically
+as one independent cold task. A region takes precedence over `APE_ANALYZE` on the same function;
+combining it with `APE_INLINE` is unsupported. Empty regions are retained.
+Outside accesses do not count or warm caches, while resolvable outside value
+dependencies are preserved through compilation.
+
+Retained canonical-IR loads inside a region count even when their global objects
+are defined outside it. Reusing an outside-loaded value does not count that load
+again; constant-folded values add no references. Runtime-loaded loop bounds and
+unresolved indices are rejected before region LAT output. Normalization-created
+scalar/control instructions need not carry region tags: R2 validates selected
+access sites and complete-loop descriptors separately using the whole function.
+
+APE/LAT v2 retains the original `function`, parameters and object identities,
+adds `analysis_scope: {"kind":"region","name":"APE_ANALYZE"}`, and contains only the
+selected body. Function task IDs stay unchanged. A region task ID is
+`region:<UTF-8-byte-length>:<function>:APE_ANALYZE`; collisions fail the complete module.
+The existing source/line provenance and callback interfaces remain applicable.
+
+Region source uses the fixed `clang14-o0-region-v1` C++ frontend pipeline:
+capture and remove compiler-inserted annotations before `mem2reg` and
+`loop-simplify`. Optimized input pipelines and arbitrary imported region IR are
+unsupported. Missing or inconsistent source/IR boundary information must fail,
+not select the whole function. The ordinary function input path stays unchanged.
 
 ## 9. First-service metrics and invariants
 
