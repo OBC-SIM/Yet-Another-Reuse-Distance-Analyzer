@@ -17,6 +17,14 @@ ctest --test-dir build --output-on-failure
 
 CTest runs the frontend and backend test suites together.
 
+Region LAT is accepted by the task mapping and streaming hierarchy APIs. Its
+`analysis_scope` is validated before task delivery, and result/event IDs use
+`region:<UTF-8 byte length>:<original function>:APE_ANALYZE`. Original function
+and object bindings remain unchanged; legacy whole-module unroll rejects region
+LAT. Enable the optional source frontend with `YARDA_BUILD_REGION_FRONTEND=ON`
+to also build the C-to-LAT/ET_EXEC integration fixtures. See the
+[region contract](../docs/analysis-regions-v1.md) for selection semantics.
+
 ## Run
 
 ```bash

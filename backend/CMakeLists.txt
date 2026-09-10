@@ -18,6 +18,7 @@ add_library(yarda_backend
     src/trace/resolved_mapping.cpp
     src/trace/emission_budget.cpp
     src/trace/task_access_stream.cpp
+    src/trace/task_scope.cpp
     src/trace/task_access_support.cpp
     src/trace/unroller.cpp
     src/trace/task_mapping_json.cpp
@@ -85,6 +86,10 @@ target_link_libraries(yarda_cpp PRIVATE yarda_cache_config yarda_elf_regions)
 
 if(BUILD_TESTING)
     find_package(GTest REQUIRED)
+
+    if(TARGET yarda_region_lat)
+        add_subdirectory(tests/regions)
+    endif()
 
     find_program(YARDA_CLANGXX_EXECUTABLE NAMES clang++-14 REQUIRED)
     find_program(YARDA_LLVM_OBJCOPY_EXECUTABLE NAMES llvm-objcopy-14 REQUIRED)
@@ -168,6 +173,7 @@ if(BUILD_TESTING)
         tests/trace/resolved_access_test.cpp
         tests/trace/resolved_mapping_test.cpp
         tests/trace/task_access_stream_test.cpp
+        tests/trace/task_scope_test.cpp
         tests/trace/task_access_stream_failure_test.cpp
         tests/trace/task_access_stream_budget_test.cpp
         tests/trace/resolved_mapping_stream_test.cpp

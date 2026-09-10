@@ -195,7 +195,7 @@ every resolved address uses AddressBasis::Absolute
 Any violation fails the complete hierarchy analysis. A partial task or module
 result is not a valid result under this model.
 
-### 8.1 Analysis-region input extension (R1 contract; R2 implementation pending)
+### 8.1 Analysis-region input extension (R2)
 
 The [region contract](analysis-regions-v1.md) defines one complete, non-nested
 `APE_ANALYZE_BEGIN`/`APE_ANALYZE_END` region per function, selected automatically

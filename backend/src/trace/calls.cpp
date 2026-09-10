@@ -10,6 +10,7 @@
 #include "call_roles.hpp"
 #include "call_substitution.hpp"
 #include "expansion_budget.hpp"
+#include "task_scope.hpp"
 #include "yarda/trace/schema.hpp"
 
 namespace yarda
@@ -154,6 +155,7 @@ Json expand_module(const nlohmann::json & raw, bool analyzed_tasks,
     has_roles = has_roles || analyzed || inlined;
   }
 
+  detail::validate_task_scopes(module, analyzed_tasks);
   Json result = Json::array();
   for (auto function : module)
   {

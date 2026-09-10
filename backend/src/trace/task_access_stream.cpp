@@ -4,6 +4,7 @@
 
 #include "call_expansion.hpp"
 #include "task_access_support.hpp"
+#include "task_scope.hpp"
 #include "unroller.hpp"
 
 namespace yarda
@@ -27,7 +28,7 @@ TaskAccessStreamResult stream_resolved_task_accesses(
     auto roots = detail::expand_task_calls(raw, expansion_budget);
     for (auto & root : roots)
     {
-      const auto task_id = root.at("function").get<std::string>();
+      const auto task_id = detail::analysis_task_id(root);
       std::uint64_t excluded = 0;
       const auto body =
         detail::remove_opaque_calls(std::move(root["body"]), excluded);
