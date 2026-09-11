@@ -1,3 +1,4 @@
+#include "../trace/prepared_access_test_support.hpp"
 #include "hierarchy_lru_oracle_differential_support.hpp"
 #include "streaming_hierarchy_test_support.hpp"
 
@@ -149,6 +150,64 @@ TEST(StreamingHierarchyDifferentialTest,
   }
   EXPECT_EQ(event_index, 22U);
   EXPECT_EQ(actual.event_delivery.emitted_events, 22U);
+  EXPECT_FALSE(actual.event_delivery.events_truncated);
+}
+
+TEST(StreamingHierarchyDifferentialTest,
+     PreparedPaddedPathsMatchExplicitSourcesAndBothOracles)
+{
+  namespace prepared = yarda::test::prepared_access;
+  auto read = prepared::structured_access();
+  auto write = read;
+  write["op"] = "store";
+  const auto body =
+    Json::array({loop(2, {loop(2, {loop(3, {read, write}, "j")})}, "r")});
+  auto raw = prepared::structured_module();
+  raw["functions"] = {function("first", body), function("second", body)};
+  auto objects = stream::addresses();
+  objects.objects["global::A"] = {0x1014, 96};
+  const auto hierarchy = make_batch_hierarchy({32, 2, 1}, {32, 4, 2});
+
+  ResolvedTaskTrace first;
+  first.task_id = "first";
+  // Two rows of three 16-byte cells; y occupies bytes [8,16) in each cell.
+  const std::vector<std::uint64_t> offsets{8, 24, 40, 56, 72, 88};
+  for (int repetition = 0; repetition < 2; ++repetition)
+    for (const auto offset : offsets)
+      for (const auto operation :
+           {AccessOperation::Load, AccessOperation::Store})
+        test::support::append_batch_access(first, 0x1014 + offset, 8, operation,
+                                           "global::A", offset);
+  auto second = first;
+  second.task_id = "second";
+  const auto expected_sources = test::support::batch_input({first, second});
+  test::support::expect_batch_matches_oracles(expected_sources, hierarchy);
+  const auto expected = analyze_batch_hierarchy(expected_sources, hierarchy);
+
+  EventCollector collector;
+  auto options = collector.options(72, {48, 72});
+  options.loop_limits = {3, 36};
+  const auto actual =
+    analyze_streaming_hierarchy(raw, objects, hierarchy, options);
+  const auto plain = analyze_streaming_hierarchy(raw, objects, hierarchy);
+  stream::expect_coverage(actual.coverage, {48, 48, 0, 72});
+  ASSERT_EQ(actual.tasks.size(), 2U);
+  ASSERT_EQ(plain.tasks.size(), 2U);
+  ASSERT_EQ(collector.events.size(), 72U);
+  std::size_t event_index = 0;
+  for (std::size_t task = 0; task < 2; ++task)
+  {
+    expect_summary(actual.tasks[task], expected.tasks[task].summary);
+    expect_summary(plain.tasks[task], expected.tasks[task].summary);
+    for (const auto & event : expected.tasks[task].events)
+    {
+      EXPECT_EQ(collector.events[event_index].first,
+                expected.tasks[task].summary.task_id);
+      expect_event(collector.events[event_index++].second, event);
+    }
+  }
+  EXPECT_EQ(event_index, 72U);
+  EXPECT_EQ(actual.event_delivery.emitted_events, 72U);
   EXPECT_FALSE(actual.event_delivery.events_truncated);
 }
 

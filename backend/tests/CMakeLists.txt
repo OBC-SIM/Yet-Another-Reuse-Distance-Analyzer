@@ -40,6 +40,10 @@ add_executable(yarda_backend_tests
     trace/work_limits_guard_test.cpp
     trace/work_limits_budget_test.cpp
     trace/prepared_index_test.cpp
+    trace/prepared_access_test.cpp
+    trace/prepared_access_binding_test.cpp
+    trace/prepared_access_failure_test.cpp
+    trace/prepared_layout_failure_test.cpp
     trace/prepared_trace_test.cpp
     trace/prepared_trace_stream_test.cpp
     trace/prepared_trace_failure_test.cpp
