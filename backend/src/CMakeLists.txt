@@ -27,6 +27,9 @@ add_library(yarda_backend
     trace/task_access_stream.cpp
     trace/task_scope.cpp
     trace/task_access_support.cpp
+    trace/prepared_index.cpp
+    trace/loop_iteration.cpp
+    trace/prepared_trace.cpp
     trace/unroller.cpp
     trace/task_mapping_json.cpp
 )

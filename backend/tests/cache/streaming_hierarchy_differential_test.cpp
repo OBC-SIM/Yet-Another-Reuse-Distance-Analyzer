@@ -92,4 +92,64 @@ TEST(StreamingHierarchyDifferentialTest, PreservesIndependentNonInclusiveLevels)
                        make_batch_hierarchy({32, 2, 2}, {32, 4, 2}));
 }
 
+TEST(StreamingHierarchyDifferentialTest,
+     MatchesExplicitShadowedLoopSourcesAndBothIndependentOracles)
+{
+  const auto read = access("global::A", "i");
+  const auto write = access("global::A", "i", "store");
+  const auto body =
+    Json::array({loop(3, Json::array({
+                           read,
+                           loop(2, Json::array({write}), "i", 1),
+                           read,
+                         }))});
+  const auto raw = stream::module(Json::array({
+                                    function("first", body),
+                                    function("second", body),
+                                  }),
+                                  8);
+  const auto objects = stream::addresses(8);
+  const auto hierarchy = make_batch_hierarchy({32, 4, 2}, {32, 8, 2});
+
+  // These offsets follow lexical loop scope, without consulting a producer.
+  ResolvedTaskTrace first;
+  first.task_id = "first";
+  const std::vector<std::uint64_t> offsets{0, 8, 0, 8, 8, 8, 16, 8, 16};
+  for (std::size_t i = 0; i < offsets.size(); ++i)
+    test::support::append_batch_access(first, 0x101c + offsets[i], 8,
+                                       i % 3 == 1 ? AccessOperation::Store
+                                                  : AccessOperation::Load,
+                                       "global::A", offsets[i]);
+  auto second = first;
+  second.task_id = "second";
+  const auto expected_sources = test::support::batch_input({first, second});
+  test::support::expect_batch_matches_oracles(expected_sources, hierarchy);
+  const auto expected = analyze_batch_hierarchy(expected_sources, hierarchy);
+
+  EventCollector collector;
+  auto options = collector.options(22, {18, 22});
+  options.loop_limits = {3, 12};
+  const auto actual =
+    analyze_streaming_hierarchy(raw, objects, hierarchy, options);
+  stream::expect_coverage(actual.coverage, {18, 18, 0, 22});
+  ASSERT_EQ(actual.tasks.size(), 2U);
+  ASSERT_EQ(expected.tasks.size(), 2U);
+  ASSERT_EQ(collector.events.size(), 22U);
+  std::size_t event_index = 0;
+  for (std::size_t task = 0; task < 2; ++task)
+  {
+    expect_summary(actual.tasks[task], expected.tasks[task].summary);
+    for (const auto & event : expected.tasks[task].events)
+    {
+      ASSERT_LT(event_index, collector.events.size());
+      EXPECT_EQ(collector.events[event_index].first,
+                expected.tasks[task].summary.task_id);
+      expect_event(collector.events[event_index++].second, event);
+    }
+  }
+  EXPECT_EQ(event_index, 22U);
+  EXPECT_EQ(actual.event_delivery.emitted_events, 22U);
+  EXPECT_FALSE(actual.event_delivery.events_truncated);
+}
+
 }  // namespace

@@ -113,3 +113,19 @@ charged again. Node/depth guards, checked arithmetic and address validation
 remain active. Any exhaustion fails the whole invocation, stops callbacks and
 returns no partial result. Discard any previously collected sink events on
 failure. Event truncation alone still permits complete analysis.
+
+## Prepared loop execution
+
+Task and legacy unrolling prepare each reached static LAT node once per subtree
+traversal. Repeated execution reuses the loop body and integer variable slots,
+including lexical shadowing, instead of copying JSON bodies and variable maps.
+Supported index expressions keep their existing spelling and rejection rules;
+address layout and ELF extent checks still run through the existing resolver.
+
+Preparation follows execution order. Zero-trip bodies are not prepared, loop
+work is reserved at every dynamic entry, and later malformed nodes cannot
+preempt an earlier consumer exception. All preparation occurs inside the
+analysis call. Prepared nodes borrow the immutable expanded input and are
+released when traversal returns or fails. Their storage follows static nodes,
+indices and loop slots, with no per-access history or cache shared between
+analyses. Full-exact cache history remains a separate distinct-line cost.

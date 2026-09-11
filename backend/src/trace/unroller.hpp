@@ -58,7 +58,8 @@ public:
 
   /**
    * @brief Resolve and deliver accesses without retaining a trace vector.
-   * @param node Borrowed LAT subtree.
+   * @param node Borrowed LAT subtree, unchanged throughout traversal. Prepared
+   * nodes and loop slots are owned only until this traversal returns or fails.
    * @param task_id Borrowed identity for source-resolution diagnostics.
    * @param sink Required synchronous consumer, configured before traversal.
    * @return Nothing.
