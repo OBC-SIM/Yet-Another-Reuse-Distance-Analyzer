@@ -8,19 +8,12 @@
 #include <variant>
 #include <vector>
 
-#include "prepared_index.hpp"
+#include "prepared_access.hpp"
 
 namespace yarda::detail
 {
 
 struct PreparedNode;
-
-/** @brief Own index plans and one reusable output row, never access history. */
-struct PreparedAccess
-{
-  std::vector<PreparedIndex> indices;
-  std::vector<std::string> values;
-};
 
 /** @brief Keep one lexical loop and its lazily reached body for a traversal. */
 struct PreparedLoop

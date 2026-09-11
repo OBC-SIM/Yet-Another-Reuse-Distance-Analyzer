@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -10,6 +11,12 @@
 
 namespace yarda::detail
 {
+
+struct PreparedAccess;
+
+/** @brief Synchronous consumer; node state and loop slots expire on return. */
+using PreparedNodeSink = std::function<void(
+  const nlohmann::json &, PreparedAccess &, const std::vector<std::int64_t> &)>;
 
 /** @brief Synchronous consumer; node and indices are borrowed until return. */
 using PreparedAccessSink =
@@ -32,5 +39,17 @@ using PreparedAccessSink =
  */
 void visit_prepared_trace(const nlohmann::json & node, ExpansionBudget & budget,
                           const PreparedAccessSink & sink);
+
+/**
+ * @brief Visit reached nodes with traversal-owned state and current loop slots.
+ * @param node Borrowed immutable expanded subtree.
+ * @param budget Borrowed module budget; loop work is charged on each entry.
+ * @param sink Required synchronous consumer; owns source charge and resolution.
+ * @return Nothing; plans are destroyed on normal return and exceptions.
+ * @note Uses the same lazy visits and exception order as visit_prepared_trace.
+ */
+void visit_prepared_accesses(const nlohmann::json & node,
+                             ExpansionBudget & budget,
+                             const PreparedNodeSink & sink);
 
 }  // namespace yarda::detail

@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "prepared_layout.hpp"
+
 namespace yarda::detail
 {
 namespace
@@ -30,7 +32,8 @@ parse_indices(const std::vector<std::string> & indices)
 }
 
 std::optional<std::int64_t>
-linear_index(const Json & node, const std::vector<std::int64_t> & indices)
+linear_index(const Json & node, const std::vector<std::int64_t> & indices,
+             PreparedLayout * plan)
 {
   if (indices.empty())
   {
@@ -39,6 +42,7 @@ linear_index(const Json & node, const std::vector<std::int64_t> & indices)
   }
   if (indices.size() == 1)
   {
+    if (plan) plan->steps.push_back({0, 1});
     return indices.front();
   }
   if (!node.contains("shape") || !node["shape"].is_array() ||
@@ -77,6 +81,7 @@ linear_index(const Json & node, const std::vector<std::int64_t> & indices)
     {
       return std::nullopt;
     }
+    if (plan) plan->steps.push_back({position, stride});
   }
   return linear;
 }
@@ -95,13 +100,23 @@ std::optional<ByteAccess> resolve_legacy_access(
   {
     return std::nullopt;
   }
-  const auto linear = linear_index(node, *numeric);
+  return prepare_legacy_access(node, *numeric, nullptr);
+}
+
+std::optional<ByteAccess> prepare_legacy_access(
+  const nlohmann::json & node, const std::vector<std::int64_t> & indices,
+  PreparedLayout * plan)
+{
+  if (!node.contains("elem_size") || !node["elem_size"].is_number_integer())
+    return std::nullopt;
+  const auto linear = linear_index(node, indices, plan);
   const auto size = node["elem_size"].get<std::int64_t>();
   std::int64_t offset = 0;
   if (!linear || size <= 0 || __builtin_mul_overflow(*linear, size, &offset))
   {
     return std::nullopt;
   }
+  if (plan) plan->width = size;
   return ByteAccess{offset, size};
 }
 

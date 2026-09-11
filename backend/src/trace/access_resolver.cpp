@@ -4,6 +4,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "yarda/trace/resolution_error.hpp"
 
@@ -40,98 +41,98 @@ std::optional<std::string> operation_name(const Json & node)
   return node.at("op").get<std::string>();
 }
 
-bool has_runtime_dependent_index(const std::vector<std::string> & indices)
-{
-  for (const auto & index : indices)
-  {
-    if (!parse_exact_integer(index))
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
 }  // namespace
 
 ResolvedAccess resolve_access(const nlohmann::json & node,
-                              const std::vector<std::string> & indices,
+                              PreparedAccess & prepared, bool exact_indices,
                               const std::string & task_id,
                               std::uint64_t source_access_ordinal,
                               const ObjectAddressModel & objects,
                               const AccessLayoutResolver & layouts,
                               TraceCoverage & coverage)
 {
-  const auto object_id =
-    node.contains("object") && node.at("object").is_string()
-      ? node.at("object").get<std::string>()
-      : std::string{};
-  if (object_id.rfind("global::", 0) != 0)
+  PreparedAccessPlan candidate;
+  auto & plan = prepared.plan ? *prepared.plan : candidate;
+  if (!prepared.plan)
   {
-    reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
-           object_id, "non-global storage is outside ELF task analysis",
-           coverage);
+    plan.object_id = node.contains("object") && node.at("object").is_string()
+                       ? node.at("object").get<std::string>()
+                       : std::string{};
+    const auto & object_id = plan.object_id;
+    if (object_id.rfind("global::", 0) != 0)
+    {
+      reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
+             object_id, "non-global storage is outside ELF task analysis",
+             coverage);
+    }
+    if (node.value("type", "") == "Scalar" && node.contains("indices") &&
+        (!node.at("indices").is_array() || !node.at("indices").empty()))
+    {
+      reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
+             object_id, "scalar access contains invalid indices", coverage);
+    }
+    const auto operation = operation_name(node);
+    if (!operation)
+    {
+      reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
+             object_id, "load/store operation metadata is unavailable",
+             coverage);
+    }
+    if (*operation == "load")
+    {
+      plan.operation = AccessOperation::Load;
+    }
+    else if (*operation == "store")
+    {
+      plan.operation = AccessOperation::Store;
+    }
+    else
+    {
+      reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
+             object_id, "unsupported memory operation: " + *operation,
+             coverage);
+    }
   }
-  if (node.value("type", "") == "Scalar" && node.contains("indices") &&
-      (!node.at("indices").is_array() || !node.at("indices").empty()))
-  {
-    reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
-           object_id, "scalar access contains invalid indices", coverage);
-  }
-  const auto operation = operation_name(node);
-  if (!operation)
-  {
-    reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
-           object_id, "load/store operation metadata is unavailable", coverage);
-  }
-  AccessOperation resolved_operation = AccessOperation::Unknown;
-  if (*operation == "load")
-  {
-    resolved_operation = AccessOperation::Load;
-  }
-  else if (*operation == "store")
-  {
-    resolved_operation = AccessOperation::Store;
-  }
-  else
-  {
-    reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
-           object_id, "unsupported memory operation: " + *operation, coverage);
-  }
-  if (has_runtime_dependent_index(indices))
+  const auto & object_id = plan.object_id;
+  if (!exact_indices)
   {
     reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
            object_id, "runtime-dependent index cannot be resolved", coverage);
   }
-  const auto object_kind = layouts.object_kind(object_id);
-  if (!object_kind)
+  if (!prepared.plan)
   {
-    reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
-           object_id, "object metadata is unavailable", coverage);
-  }
-  if (object_kind->empty())
-  {
-    reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
-           object_id, "object kind metadata is invalid", coverage);
-  }
-  if (*object_kind == "pointer")
-  {
-    reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
-           object_id, "pointer-backed storage is outside ELF task analysis",
-           coverage);
-  }
-  if (*object_kind != "array" && *object_kind != "scalar" &&
-      *object_kind != "struct")
-  {
-    reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
-           object_id, "object kind is not recognized: " + *object_kind,
-           coverage);
+    const auto object_kind = layouts.object_kind(object_id);
+    if (!object_kind)
+    {
+      reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
+             object_id, "object metadata is unavailable", coverage);
+    }
+    if (object_kind->empty())
+    {
+      reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
+             object_id, "object kind metadata is invalid", coverage);
+    }
+    if (*object_kind == "pointer")
+    {
+      reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
+             object_id, "pointer-backed storage is outside ELF task analysis",
+             coverage);
+    }
+    if (*object_kind != "array" && *object_kind != "scalar" &&
+        *object_kind != "struct")
+    {
+      reject(ResolutionCategory::Unsupported, task_id, source_access_ordinal,
+             object_id, "object kind is not recognized: " + *object_kind,
+             coverage);
+    }
   }
 
   std::optional<ByteAccess> access;
   try
   {
-    access = layouts.resolve(node, indices);
+    access = prepared.plan
+               ? plan.layout.resolve(prepared.numeric_values, object_id)
+               : layouts.prepare(node, prepared.numeric_values, plan.layout);
   }
   catch (const ResolutionError &)
   {
@@ -160,23 +161,28 @@ ResolvedAccess resolve_access(const nlohmann::json & node,
 
   const auto offset = static_cast<std::uint64_t>(access->offset);
   const auto size = static_cast<std::uint64_t>(access->size);
-  const auto object = objects.objects.find(object_id);
-  if (object == objects.objects.end())
+  if (!prepared.plan)
   {
-    reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
-           object_id, "ELF object symbol is unavailable", coverage);
+    const auto object = objects.objects.find(object_id);
+    if (object == objects.objects.end())
+    {
+      reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
+             object_id, "ELF object symbol is unavailable", coverage);
+    }
+    plan.object = object->second;
+    plan.basis = objects.basis;
   }
-  if (offset >= object->second.size || size > object->second.size - offset)
+  if (offset >= plan.object.size || size > plan.object.size - offset)
   {
     reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
            object_id, "access exceeds ELF object extent", coverage);
   }
-  if (object->second.base > std::numeric_limits<std::uint64_t>::max() - offset)
+  if (plan.object.base > std::numeric_limits<std::uint64_t>::max() - offset)
   {
     reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
            object_id, "ELF object address overflows", coverage);
   }
-  const auto address = object->second.base + offset;
+  const auto address = plan.object.base + offset;
   if (size - 1 > std::numeric_limits<std::uint64_t>::max() - address)
   {
     reject(ResolutionCategory::Unresolved, task_id, source_access_ordinal,
@@ -184,13 +190,15 @@ ResolvedAccess resolve_access(const nlohmann::json & node,
   }
 
   ++coverage.resolved_accesses;
-  return ResolvedAccess{object_id,
+  ResolvedAccess result{object_id,
                         offset,
                         size,
                         address,
-                        objects.basis,
-                        resolved_operation,
+                        plan.basis,
+                        plan.operation,
                         source_access_ordinal};
+  if (!prepared.plan) prepared.plan = std::move(candidate);
+  return result;
 }
 
 }  // namespace yarda::detail

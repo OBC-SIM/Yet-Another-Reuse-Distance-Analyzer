@@ -32,7 +32,6 @@ void prepare_node(PreparedNode & node, const LoopScope * scope,
           access.indices.emplace_back(index.get<std::string>(), scope);
       }
     }
-    access.values.resize(access.indices.size());
     node.payload = std::move(access);
     return;
   }
@@ -66,14 +65,12 @@ void prepare_body(PreparedLoop & loop, const Json & raw)
 
 void execute_node(PreparedNode & node, const LoopScope * scope,
                   std::vector<std::int64_t> & values, ExpansionBudget & budget,
-                  const PreparedAccessSink & sink)
+                  const PreparedNodeSink & sink)
 {
   prepare_node(node, scope, values);
   if (auto * access = std::get_if<PreparedAccess>(&node.payload))
   {
-    for (std::size_t i = 0; i < access->indices.size(); ++i)
-      access->values[i] = access->indices[i].evaluate(values);
-    sink(*node.source, access->values);
+    sink(*node.source, *access, values);
     return;
   }
 
@@ -99,6 +96,21 @@ void execute_node(PreparedNode & node, const LoopScope * scope,
 
 void visit_prepared_trace(const nlohmann::json & node, ExpansionBudget & budget,
                           const PreparedAccessSink & sink)
+{
+  visit_prepared_accesses(
+    node, budget,
+    [&](const Json & source, PreparedAccess & access,
+        const std::vector<std::int64_t> & slots) {
+      access.values.resize(access.indices.size());
+      for (std::size_t i = 0; i < access.indices.size(); ++i)
+        access.values[i] = access.indices[i].evaluate(slots);
+      sink(source, access.values);
+    });
+}
+
+void visit_prepared_accesses(const nlohmann::json & node,
+                             ExpansionBudget & budget,
+                             const PreparedNodeSink & sink)
 {
   PreparedNode root(node);
   std::vector<std::int64_t> values;

@@ -38,9 +38,19 @@ public:
    */
   std::string evaluate(const std::vector<std::int64_t> & values) const;
 
+  /**
+   * @brief Read a numeric value without a string round trip.
+   * @param values Borrowed current loop slots from the owning traversal.
+   * @return Exact substituted or fallback integer, or no exact numeric value.
+   * @pre Every bound slot exists in values; rejection belongs to the consumer.
+   */
+  std::optional<std::int64_t>
+  evaluate_numeric(const std::vector<std::int64_t> & values) const;
+
 private:
   std::string expression_;
   std::optional<std::size_t> slot_;
+  std::optional<std::int64_t> literal_;
   std::int64_t offset_ = 0;
 };
 

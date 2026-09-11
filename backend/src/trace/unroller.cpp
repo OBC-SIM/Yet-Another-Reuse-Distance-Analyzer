@@ -83,16 +83,17 @@ void ResolvedTraceUnroller::unroll(const nlohmann::json & node,
                                    const std::string & task_id,
                                    const ResolvedAccessSink & sink)
 {
-  const auto emit = [&](const Json & access,
-                        const std::vector<std::string> & indices) {
+  const auto emit = [&](const Json & access, PreparedAccess & prepared,
+                        const std::vector<std::int64_t> & slots) {
+    const auto exact = prepared.evaluate_numeric(slots);
     if (emission_budget_) emission_budget_->consume_source_access();
     const auto ordinal = next_source_access_ordinal_++;
     ++coverage_.source_accesses;
-    const auto resolved = resolve_access(access, indices, task_id, ordinal,
-                                         objects_, layouts_, coverage_);
+    const auto resolved = resolve_access(
+      access, prepared, exact, task_id, ordinal, objects_, layouts_, coverage_);
     sink(resolved);
   };
-  visit_prepared_trace(node, expansion_budget_, emit);
+  visit_prepared_accesses(node, expansion_budget_, emit);
 }
 
 void ResolvedTraceUnroller::begin_task() noexcept

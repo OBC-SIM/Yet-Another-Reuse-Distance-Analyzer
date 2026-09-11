@@ -18,6 +18,7 @@ add_library(yarda_backend
     trace/access_layout.cpp
     trace/access_layout_legacy.cpp
     trace/access_layout_structured.cpp
+    trace/access_layout_structured_type.cpp
     trace/access_resolver.cpp
     trace/cache_line.cpp
     trace/mapped_trace.cpp
@@ -28,6 +29,8 @@ add_library(yarda_backend
     trace/task_scope.cpp
     trace/task_access_support.cpp
     trace/prepared_index.cpp
+    trace/prepared_layout.cpp
+    trace/prepared_access.cpp
     trace/loop_iteration.cpp
     trace/prepared_trace.cpp
     trace/unroller.cpp

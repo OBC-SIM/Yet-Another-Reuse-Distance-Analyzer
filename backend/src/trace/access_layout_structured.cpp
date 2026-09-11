@@ -7,6 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "access_layout_structured_type.hpp"
+#include "prepared_layout.hpp"
+
 namespace yarda::detail
 {
 namespace
@@ -14,113 +17,7 @@ namespace
 
 using Json = nlohmann::json;
 
-struct TypeState
-{
-  std::string kind;
-  std::vector<std::int64_t> shape;
-  std::string element_type;
-  std::int64_t element_size;
-};
-
-[[noreturn]] void reject(const std::string & object_id,
-                         const std::string & reason)
-{
-  throw std::invalid_argument("structured access " + reason + ": " + object_id);
-}
-
-std::int64_t required_integer(const Json & value, const char * key,
-                              const std::string & object_id)
-{
-  if (!value.contains(key) || !value[key].is_number_integer())
-  {
-    reject(object_id, std::string("lacks integer ") + key);
-  }
-  return value[key].get<std::int64_t>();
-}
-
-TypeState type_state(const Json & metadata, const std::string & object_id)
-{
-  if (!metadata.is_object())
-  {
-    reject(object_id, "has invalid type metadata");
-  }
-  TypeState state;
-  state.kind = metadata.value("kind", "");
-  state.element_type = metadata.value("elem_type", "");
-  state.element_size = required_integer(metadata, "elem_size", object_id);
-  if (state.element_size <= 0)
-  {
-    reject(object_id, "has non-positive element size");
-  }
-  if (!metadata.contains("shape"))
-  {
-    return state;
-  }
-  if (!metadata["shape"].is_array())
-  {
-    reject(object_id, "has invalid shape");
-  }
-  for (const auto & dimension : metadata["shape"])
-  {
-    if (!dimension.is_number_integer() || dimension.get<std::int64_t>() <= 0)
-    {
-      reject(object_id, "has invalid dimension");
-    }
-    state.shape.push_back(dimension.get<std::int64_t>());
-  }
-  return state;
-}
-
-std::int64_t type_extent(const TypeState & state, const std::string & object_id)
-{
-  std::int64_t extent = state.element_size;
-  for (const auto dimension : state.shape)
-  {
-    if (__builtin_mul_overflow(extent, dimension, &extent))
-    {
-      reject(object_id, "type extent overflows");
-    }
-  }
-  return extent;
-}
-
-const Json & find_field(const Json & structures, const TypeState & state,
-                        const Json & segment, const std::string & object_id)
-{
-  if (!state.shape.empty() || state.element_type.empty() ||
-      !structures.is_object() || !structures.contains(state.element_type))
-  {
-    reject(object_id, "field transition lacks structure layout");
-  }
-  const auto & structure = structures.at(state.element_type);
-  if (!structure.is_object() || !structure.contains("fields") ||
-      !structure["fields"].is_array())
-  {
-    reject(object_id, "has malformed structure layout");
-  }
-  if (required_integer(structure, "size", object_id) != state.element_size)
-  {
-    reject(object_id, "structure size disagrees with its type");
-  }
-  const auto wanted = required_integer(segment, "index", object_id);
-  for (const auto & field : structure["fields"])
-  {
-    if (!field.is_object() || !field.contains("index") ||
-        !field["index"].is_number_integer() ||
-        field["index"].get<std::int64_t>() != wanted)
-    {
-      continue;
-    }
-    if (!segment.contains("name") || !segment["name"].is_string() ||
-        !field.contains("name") || !field["name"].is_string() ||
-        segment["name"].get<std::string>() != field["name"].get<std::string>())
-    {
-      reject(object_id, "field name and index disagree");
-    }
-    return field;
-  }
-  reject(object_id, "references an unknown field index");
-}
+using namespace structured;
 
 void add_offset(std::int64_t amount, std::int64_t & offset,
                 const std::string & object_id)
@@ -133,7 +30,7 @@ void add_offset(std::int64_t amount, std::int64_t & offset,
 
 void select_field(const Json & structures, const Json & segment,
                   const std::string & object_id, TypeState & state,
-                  std::int64_t & offset)
+                  std::int64_t & offset, PreparedLayout * plan)
 {
   const auto & field = find_field(structures, state, segment, object_id);
   const auto field_offset = required_integer(field, "offset", object_id);
@@ -149,11 +46,14 @@ void select_field(const Json & structures, const Json & segment,
   {
     reject(object_id, "field size disagrees with its type");
   }
+  if (plan) plan->steps.push_back({std::nullopt, field_offset});
 }
 
 void select_index(std::int64_t index, const std::string & object_id,
-                  TypeState & state, std::int64_t & offset)
+                  TypeState & state, std::int64_t & offset,
+                  std::size_t position, PreparedLayout * plan)
 {
+  const auto dimension = state.shape.empty() ? 0 : state.shape.front();
   std::int64_t stride = state.element_size;
   if (!state.shape.empty())
   {
@@ -180,14 +80,22 @@ void select_index(std::int64_t index, const std::string & object_id,
     reject(object_id, "indexed byte offset overflows");
   }
   add_offset(indexed_offset, offset, object_id);
+  if (plan) plan->steps.push_back({position, stride, dimension});
 }
 
-}  // namespace
+std::optional<std::int64_t> numeric_index(const std::string & value)
+{
+  return parse_exact_integer(value);
+}
 
-ByteAccess resolve_structured_access(const nlohmann::json & node,
-                                     const std::vector<std::string> & indices,
-                                     const nlohmann::json & objects,
-                                     const nlohmann::json & structures)
+std::optional<std::int64_t> numeric_index(std::int64_t value) { return value; }
+
+template <typename Index>
+ByteAccess resolve_path(const nlohmann::json & node,
+                        const std::vector<Index> & indices,
+                        const nlohmann::json & objects,
+                        const nlohmann::json & structures,
+                        PreparedLayout * plan)
 {
   const auto object_id = node.value("object", "");
   if (object_id.empty() || !objects.is_object() || !objects.contains(object_id))
@@ -207,6 +115,11 @@ ByteAccess resolve_structured_access(const nlohmann::json & node,
     reject(object_id, "uses unsupported pointer object metadata");
   }
   const auto object_extent = type_extent(state, object_id);
+  if (plan)
+  {
+    plan->structured = true;
+    plan->extent = object_extent;
+  }
   std::int64_t offset = 0;
   std::size_t index_position = 0;
 
@@ -222,7 +135,7 @@ ByteAccess resolve_structured_access(const nlohmann::json & node,
     const auto kind = segment.value("kind", "");
     if (kind == "field")
     {
-      select_field(structures, segment, object_id, state, offset);
+      select_field(structures, segment, object_id, state, offset, plan);
       continue;
     }
     if (kind != "index" || index_position >= indices.size() ||
@@ -232,12 +145,13 @@ ByteAccess resolve_structured_access(const nlohmann::json & node,
     {
       reject(object_id, "contains an invalid index transition");
     }
-    const auto index = parse_exact_integer(indices[index_position++]);
+    const auto position = index_position++;
+    const auto index = numeric_index(indices[position]);
     if (!index || *index < 0)
     {
       reject(object_id, "index is not an exact non-negative integer");
     }
-    select_index(*index, object_id, state, offset);
+    select_index(*index, object_id, state, offset, position, plan);
   }
 
   if (index_position != indices.size() || !state.shape.empty())
@@ -250,7 +164,27 @@ ByteAccess resolve_structured_access(const nlohmann::json & node,
   {
     reject(object_id, "exceeds the object extent");
   }
+  if (plan) plan->width = state.element_size;
   return {offset, state.element_size};
+}
+
+}  // namespace
+
+ByteAccess resolve_structured_access(const nlohmann::json & node,
+                                     const std::vector<std::string> & indices,
+                                     const nlohmann::json & objects,
+                                     const nlohmann::json & structures)
+{
+  return resolve_path(node, indices, objects, structures, nullptr);
+}
+
+ByteAccess prepare_structured_access(const nlohmann::json & node,
+                                     const std::vector<std::int64_t> & indices,
+                                     const nlohmann::json & objects,
+                                     const nlohmann::json & structures,
+                                     PreparedLayout & plan)
+{
+  return resolve_path(node, indices, objects, structures, &plan);
 }
 
 }  // namespace yarda::detail

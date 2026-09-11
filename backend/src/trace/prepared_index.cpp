@@ -6,6 +6,17 @@
 
 namespace yarda::detail
 {
+
+std::optional<std::int64_t>
+PreparedIndex::evaluate_numeric(const std::vector<std::int64_t> & values) const
+{
+  if (!slot_) return literal_;
+  std::int64_t resolved = 0;
+  if (__builtin_add_overflow(values[*slot_], offset_, &resolved))
+    return literal_;
+  return resolved;
+}
+
 namespace
 {
 
@@ -24,6 +35,7 @@ PreparedIndex::PreparedIndex(std::string expression, const LoopScope * scope)
 {
   slot_ = find_slot(expression_, scope);
   if (slot_) return;
+  literal_ = parse_exact_integer(expression_);
   const auto position = expression_.find_first_of("+-", 1);
   if (position == std::string::npos) return;
   const auto base =
