@@ -286,6 +286,8 @@ LAT v2 root는 다음 필드를 갖습니다.
 Structured access는 `access_path`의 field/index 순서와 `metadata.structs`를
 함께 사용해 ABI padding이 반영된 byte span으로 해석합니다.
 
+인덱스 문자열 문법·정수 범위·reader 호환성은
+[`LAT affine index 계약`](docs/lat-affine-indices-v1.md)을 참고하세요.
 frontend schema의 전체 설명은 [`frontend/README.md`](frontend/README.md),
 backend API와 CLI 설명은 [`backend/README.md`](backend/README.md)를
 참고하세요.
