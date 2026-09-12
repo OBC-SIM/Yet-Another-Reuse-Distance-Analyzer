@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <map>
 
-#include "cache/streaming_hierarchy_test_support.hpp"
+#include "cache/streaming/streaming_hierarchy_test_support.hpp"
 #include "yarda/elf/object_addresses.hpp"
 
 namespace yarda::test

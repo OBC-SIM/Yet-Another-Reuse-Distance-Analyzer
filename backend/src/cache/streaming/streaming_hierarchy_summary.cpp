@@ -3,7 +3,7 @@
 #include <limits>
 #include <stdexcept>
 
-#include "hierarchy_service_summary.hpp"
+#include "cache/hierarchy/hierarchy_service_summary.hpp"
 
 namespace yarda::detail
 {

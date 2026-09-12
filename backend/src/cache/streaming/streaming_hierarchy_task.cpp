@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include "hierarchy_service_summary.hpp"
+#include "cache/hierarchy/hierarchy_service_summary.hpp"
 #include "streaming_hierarchy_summary.hpp"
 #include "yarda/trace/resolved_mapping.hpp"
 

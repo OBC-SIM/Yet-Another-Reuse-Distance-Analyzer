@@ -3,7 +3,7 @@
 #include <limits>
 
 #include "trace/output/task_access_stream_test_support.hpp"
-#include "hierarchy_analysis_oracle_support.hpp"
+#include "cache/hierarchy/hierarchy_analysis_oracle_support.hpp"
 #include "yarda/cache/streaming_hierarchy.hpp"
 
 namespace yarda::test::streaming

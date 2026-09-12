@@ -1,13 +1,13 @@
 add_executable(yarda_hierarchy_analysis_tests
-    streaming_hierarchy_test.cpp
-    streaming_hierarchy_differential_test.cpp
-    streaming_hierarchy_events_test.cpp
-    streaming_hierarchy_budget_test.cpp
-    streaming_hierarchy_work_limits_test.cpp
-    streaming_hierarchy_default_limits_test.cpp
-    streaming_hierarchy_failure_test.cpp
-    streaming_hierarchy_summary_test.cpp
-    streaming_hierarchy_task_test.cpp
+    streaming/streaming_hierarchy_test.cpp
+    streaming/streaming_hierarchy_differential_test.cpp
+    streaming/streaming_hierarchy_events_test.cpp
+    streaming/streaming_hierarchy_budget_test.cpp
+    streaming/streaming_hierarchy_work_limits_test.cpp
+    streaming/streaming_hierarchy_default_limits_test.cpp
+    streaming/streaming_hierarchy_failure_test.cpp
+    streaming/streaming_hierarchy_summary_test.cpp
+    streaming/streaming_hierarchy_task_test.cpp
     rd/exact_csrd_test.cpp
     rd/exact_csrd_differential_test.cpp
     rd/recency_index_test.cpp
@@ -20,21 +20,20 @@ add_executable(yarda_hierarchy_analysis_tests
     oracle/hierarchy_lru_oracle_differential_test.cpp
     oracle/hierarchy_lru_oracle_operation_test.cpp
     oracle/hierarchy_lru_oracle_test.cpp
-    hierarchy_model_test.cpp
-    hierarchy_model_validation_test.cpp
-    hierarchy_analysis_validation_test.cpp
-    hierarchy_analysis_l1_test.cpp
-    hierarchy_analysis_llc_test.cpp
-    hierarchy_analysis_differential_test.cpp
-    hierarchy_level_analysis_test.cpp
-    hierarchy_aggregation_test.cpp
-    hierarchy_aggregation_validation_test.cpp
-    hierarchy_service_summary_test.cpp
+    hierarchy/hierarchy_model_test.cpp
+    hierarchy/hierarchy_model_validation_test.cpp
+    hierarchy/hierarchy_analysis_validation_test.cpp
+    hierarchy/hierarchy_analysis_l1_test.cpp
+    hierarchy/hierarchy_analysis_llc_test.cpp
+    hierarchy/hierarchy_analysis_differential_test.cpp
+    hierarchy/hierarchy_level_analysis_test.cpp
+    hierarchy/hierarchy_aggregation_test.cpp
+    hierarchy/hierarchy_aggregation_validation_test.cpp
+    hierarchy/hierarchy_service_summary_test.cpp
 )
 target_include_directories(yarda_hierarchy_analysis_tests PRIVATE
     "${YARDA_BACKEND_SOURCE_DIR}/src"
     "${YARDA_BACKEND_SOURCE_DIR}/tests"
-    "${YARDA_BACKEND_SOURCE_DIR}/src/cache"
 )
 target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
     yarda_hierarchy_analysis GTest::gtest_main

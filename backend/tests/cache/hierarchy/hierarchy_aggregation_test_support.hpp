@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "hierarchy_aggregation.hpp"
+#include "cache/hierarchy/hierarchy_aggregation.hpp"
 #include "hierarchy_analysis_test_support.hpp"
 
 namespace yarda::test::support

@@ -31,7 +31,7 @@ add_custom_target(yarda_region_fixtures DEPENDS ${region_outputs})
 add_executable(yarda_region_integration_tests
     main.cpp
     ../trace/integration/analysis_region_test.cpp
-    ../cache/streaming_hierarchy_region_test.cpp
+    ../cache/streaming/streaming_hierarchy_region_test.cpp
     ../cache/oracle/exact_csrd_oracle.cpp
     ../cache/oracle/hierarchy_lru_oracle.cpp)
 add_dependencies(yarda_region_integration_tests yarda_region_fixtures)

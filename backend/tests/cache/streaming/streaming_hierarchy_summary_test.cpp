@@ -1,4 +1,4 @@
-#include "streaming_hierarchy_summary.hpp"
+#include "cache/streaming/streaming_hierarchy_summary.hpp"
 
 #include <limits>
 #include <stdexcept>

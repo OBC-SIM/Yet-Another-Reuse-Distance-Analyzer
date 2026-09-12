@@ -1,9 +1,9 @@
-#include "streaming_hierarchy_task.hpp"
+#include "cache/streaming/streaming_hierarchy_task.hpp"
 
 #include <stdexcept>
 #include <string>
 
-#include "hierarchy_analysis_test_support.hpp"
+#include "cache/hierarchy/hierarchy_analysis_test_support.hpp"
 
 namespace
 {

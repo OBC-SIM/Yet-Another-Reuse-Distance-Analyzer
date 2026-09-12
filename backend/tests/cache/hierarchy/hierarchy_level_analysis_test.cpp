@@ -1,4 +1,4 @@
-#include "hierarchy_level_analysis.hpp"
+#include "cache/hierarchy/hierarchy_level_analysis.hpp"
 
 #include <gtest/gtest.h>
 #include <limits>

@@ -370,12 +370,25 @@ backend/
 │   ├── reuse/                  exact reuse profile
 │   └── trace/                  LAT schema, call expansion, trace APIs
 ├── src/
-│   ├── cache/                  cache configuration/mapping/RD implementation
+│   ├── cache/
+│   │   ├── config/            cache geometry and YAML configuration
+│   │   ├── mapping/           linked-address decoding and line mapping
+│   │   ├── rd/                LRU RD, exact CSRD and recency history
+│   │   ├── hierarchy/         model validation, batch analysis and aggregation
+│   │   └── streaming/         task streaming and hierarchy summaries
 │   ├── cli/                    yarda_cpp, yarda_elf_regions
 │   ├── elf/                    ELF parser and object mapping
 │   ├── reuse/                  Fenwick-based reuse-distance implementation
-│   └── trace/                  schema/layout/unroll implementation
+│   └── trace/
+│       ├── module/            LAT schema, call expansion and task selection
+│       ├── index/             affine expressions and bound indices
+│       ├── layout/            legacy/structured ABI and prepared layouts
+│       ├── access/            object/address resolution and prepared accesses
+│       ├── execution/         loop traversal, unrolling and work budgets
+│       └── output/            task/block results, access streams and JSON
 ├── tests/                      C++ GTest and CLI fixtures
+│   ├── trace/                  source categories plus integration fixtures
+│   └── cache/                  source categories plus shared test oracles
 └── config/                     versioned YAML cache examples
 tasks/                          C benchmark and LAT fixtures
 ```

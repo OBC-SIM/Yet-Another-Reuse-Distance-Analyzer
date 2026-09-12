@@ -1,4 +1,4 @@
-#include "hierarchy_service_summary.hpp"
+#include "cache/hierarchy/hierarchy_service_summary.hpp"
 
 #include <gtest/gtest.h>
 #include <limits>

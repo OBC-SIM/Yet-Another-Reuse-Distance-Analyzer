@@ -58,17 +58,20 @@ target_link_libraries(yarda_cache_config
 )
 
 add_library(yarda_hierarchy_analysis
-    cache/streaming_hierarchy.cpp
-    cache/streaming_hierarchy_summary.cpp
-    cache/streaming_hierarchy_task.cpp
+    cache/streaming/streaming_hierarchy.cpp
+    cache/streaming/streaming_hierarchy_summary.cpp
+    cache/streaming/streaming_hierarchy_task.cpp
     cache/rd/exact_csrd.cpp
     cache/rd/recency_index.cpp
-    cache/hierarchy_model.cpp
-    cache/hierarchy_analysis.cpp
-    cache/hierarchy_aggregation.cpp
-    cache/hierarchy_service_summary.cpp
-    cache/hierarchy_level_analysis.cpp
-    cache/hierarchy_input_validation.cpp
+    cache/hierarchy/hierarchy_model.cpp
+    cache/hierarchy/hierarchy_analysis.cpp
+    cache/hierarchy/hierarchy_aggregation.cpp
+    cache/hierarchy/hierarchy_service_summary.cpp
+    cache/hierarchy/hierarchy_level_analysis.cpp
+    cache/hierarchy/hierarchy_input_validation.cpp
+)
+target_include_directories(yarda_hierarchy_analysis PRIVATE
+    "${YARDA_BACKEND_SOURCE_DIR}/src"
 )
 target_link_libraries(yarda_hierarchy_analysis PUBLIC yarda_cache_config)
 target_compile_options(yarda_hierarchy_analysis PRIVATE -Wall -Wextra -Wpedantic)
