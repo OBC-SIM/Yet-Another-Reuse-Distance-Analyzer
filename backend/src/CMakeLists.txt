@@ -29,6 +29,7 @@ add_library(yarda_backend
     trace/task_scope.cpp
     trace/task_access_support.cpp
     trace/prepared_index.cpp
+    trace/affine_expression.cpp
     trace/prepared_layout.cpp
     trace/prepared_access.cpp
     trace/loop_iteration.cpp
