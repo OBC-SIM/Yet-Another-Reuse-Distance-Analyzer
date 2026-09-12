@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "access_layout.hpp"
+#include "trace/layout/access_layout.hpp"
 
 namespace yarda::detail
 {

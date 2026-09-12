@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "prepared_index.hpp"
-#include "prepared_layout.hpp"
+#include "trace/index/prepared_index.hpp"
+#include "trace/layout/prepared_layout.hpp"
 #include "yarda/access_operation.hpp"
 #include "yarda/elf/address_model.hpp"
 

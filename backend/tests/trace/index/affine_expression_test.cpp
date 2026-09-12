@@ -1,5 +1,5 @@
-#include "../../src/trace/affine_expression.hpp"
-#include "../../src/trace/prepared_index.hpp"
+#include "trace/index/affine_expression.hpp"
+#include "trace/index/prepared_index.hpp"
 
 #include <gtest/gtest.h>
 #include <limits>

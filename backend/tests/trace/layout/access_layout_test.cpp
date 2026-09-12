@@ -1,4 +1,4 @@
-#include "../../src/trace/access_layout.hpp"
+#include "trace/layout/access_layout.hpp"
 
 #include <nlohmann/json.hpp>
 

@@ -29,6 +29,10 @@ add_executable(yarda_affine_index_tests
     regions/main.cpp trace/affine_index_contract_test.cpp
     cache/exact_csrd_oracle.cpp cache/hierarchy_lru_oracle.cpp)
 add_dependencies(yarda_affine_index_tests yarda_affine_fixtures)
+target_include_directories(yarda_affine_index_tests PRIVATE
+    "${YARDA_BACKEND_SOURCE_DIR}/src"
+    "${YARDA_BACKEND_SOURCE_DIR}/tests"
+)
 target_link_libraries(yarda_affine_index_tests PRIVATE
     yarda_hierarchy_analysis yarda_elf_regions GTest::gtest)
 target_include_directories(yarda_affine_index_tests SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})

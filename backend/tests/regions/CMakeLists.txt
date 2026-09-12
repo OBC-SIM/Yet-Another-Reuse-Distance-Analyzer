@@ -35,6 +35,10 @@ add_executable(yarda_region_integration_tests
     ../cache/exact_csrd_oracle.cpp
     ../cache/hierarchy_lru_oracle.cpp)
 add_dependencies(yarda_region_integration_tests yarda_region_fixtures)
+target_include_directories(yarda_region_integration_tests PRIVATE
+    "${YARDA_BACKEND_SOURCE_DIR}/src"
+    "${YARDA_BACKEND_SOURCE_DIR}/tests"
+)
 target_link_libraries(yarda_region_integration_tests PRIVATE
     yarda_hierarchy_analysis yarda_elf_regions GTest::gtest)
 target_include_directories(yarda_region_integration_tests SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})

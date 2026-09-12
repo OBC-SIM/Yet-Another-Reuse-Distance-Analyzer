@@ -1,4 +1,4 @@
-#include "../../src/trace/prepared_index.hpp"
+#include "trace/index/prepared_index.hpp"
 
 #include <gtest/gtest.h>
 #include <limits>

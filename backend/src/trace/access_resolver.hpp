@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "access_layout.hpp"
+#include "trace/layout/access_layout.hpp"
 #include "prepared_access.hpp"
 #include "yarda/trace/resolved_access.hpp"
 #include "yarda/trace/trace_coverage.hpp"

@@ -3,7 +3,7 @@
 #include <regex>
 #include <string>
 
-#include "affine_expression.hpp"
+#include "trace/index/affine_expression.hpp"
 
 namespace yarda::detail
 {

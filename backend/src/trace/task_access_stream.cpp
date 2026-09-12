@@ -2,9 +2,9 @@
 
 #include <stdexcept>
 
-#include "call_expansion.hpp"
+#include "trace/module/call_expansion.hpp"
 #include "task_access_support.hpp"
-#include "task_scope.hpp"
+#include "trace/module/task_scope.hpp"
 #include "unroller.hpp"
 
 namespace yarda

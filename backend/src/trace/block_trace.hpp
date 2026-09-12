@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "call_expansion.hpp"
+#include "trace/module/call_expansion.hpp"
 #include "expansion_budget.hpp"
 
 namespace yarda::detail

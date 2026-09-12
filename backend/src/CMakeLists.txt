@@ -10,15 +10,15 @@ add_library(yarda_backend
     cache/line_mapping.cpp
     cache/line_mapping_json.cpp
     cache/lru_rd_analysis.cpp
-    trace/calls.cpp
-    trace/call_substitution.cpp
+    trace/module/calls.cpp
+    trace/module/call_substitution.cpp
     reuse/profile.cpp
-    trace/schema.cpp
+    trace/module/schema.cpp
     trace/trace.cpp
-    trace/access_layout.cpp
-    trace/access_layout_legacy.cpp
-    trace/access_layout_structured.cpp
-    trace/access_layout_structured_type.cpp
+    trace/layout/access_layout.cpp
+    trace/layout/access_layout_legacy.cpp
+    trace/layout/access_layout_structured.cpp
+    trace/layout/access_layout_structured_type.cpp
     trace/access_resolver.cpp
     trace/cache_line.cpp
     trace/mapped_trace.cpp
@@ -26,11 +26,11 @@ add_library(yarda_backend
     trace/resolved_mapping.cpp
     trace/emission_budget.cpp
     trace/task_access_stream.cpp
-    trace/task_scope.cpp
+    trace/module/task_scope.cpp
     trace/task_access_support.cpp
-    trace/prepared_index.cpp
-    trace/affine_expression.cpp
-    trace/prepared_layout.cpp
+    trace/index/prepared_index.cpp
+    trace/index/affine_expression.cpp
+    trace/layout/prepared_layout.cpp
     trace/prepared_access.cpp
     trace/loop_iteration.cpp
     trace/prepared_trace.cpp
@@ -38,7 +38,10 @@ add_library(yarda_backend
     trace/task_mapping_json.cpp
 )
 
-target_include_directories(yarda_backend PUBLIC "${YARDA_BACKEND_SOURCE_DIR}/include")
+target_include_directories(yarda_backend
+    PUBLIC "${YARDA_BACKEND_SOURCE_DIR}/include"
+    PRIVATE "${YARDA_BACKEND_SOURCE_DIR}/src"
+)
 target_link_libraries(yarda_backend PUBLIC nlohmann_json::nlohmann_json)
 target_compile_options(yarda_backend PRIVATE -Wall -Wextra -Wpedantic)
 

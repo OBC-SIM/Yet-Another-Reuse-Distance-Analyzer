@@ -21,17 +21,17 @@ add_executable(yarda_backend_tests
     cache/line_mapping_json_test.cpp
     cache/lru_rd_analysis_test.cpp
     cache/lru_rd_integration_test.cpp
-    trace/calls_test.cpp
+    trace/module/calls_test.cpp
     reuse/profile_test.cpp
-    trace/access_layout_test.cpp
-    trace/schema_test.cpp
+    trace/layout/access_layout_test.cpp
+    trace/module/schema_test.cpp
     trace/expansion_budget_test.cpp
     trace/mapped_trace_test.cpp
     trace/mapped_trace_strict_test.cpp
     trace/resolved_access_test.cpp
     trace/resolved_mapping_test.cpp
     trace/task_access_stream_test.cpp
-    trace/task_scope_test.cpp
+    trace/module/task_scope_test.cpp
     trace/task_access_stream_failure_test.cpp
     trace/task_access_stream_budget_test.cpp
     trace/work_limits_test.cpp
@@ -39,14 +39,14 @@ add_executable(yarda_backend_tests
     trace/work_limits_failure_test.cpp
     trace/work_limits_guard_test.cpp
     trace/work_limits_budget_test.cpp
-    trace/prepared_index_test.cpp
-    trace/affine_evaluation_test.cpp
-    trace/affine_expression_test.cpp
-    trace/affine_failure_test.cpp
+    trace/index/prepared_index_test.cpp
+    trace/index/affine_evaluation_test.cpp
+    trace/index/affine_expression_test.cpp
+    trace/index/affine_failure_test.cpp
     trace/prepared_access_test.cpp
     trace/prepared_access_binding_test.cpp
     trace/prepared_access_failure_test.cpp
-    trace/prepared_layout_failure_test.cpp
+    trace/layout/prepared_layout_failure_test.cpp
     trace/prepared_trace_test.cpp
     trace/prepared_trace_stream_test.cpp
     trace/prepared_trace_failure_test.cpp
@@ -59,6 +59,10 @@ add_executable(yarda_backend_tests
     trace/task_trace_test.cpp
     trace/task_trace_validation_test.cpp
     trace/trace_test.cpp
+)
+target_include_directories(yarda_backend_tests PRIVATE
+    "${YARDA_BACKEND_SOURCE_DIR}/src"
+    "${YARDA_BACKEND_SOURCE_DIR}/tests"
 )
 target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
 gtest_discover_tests(yarda_backend_tests

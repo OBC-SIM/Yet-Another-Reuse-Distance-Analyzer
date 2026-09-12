@@ -31,7 +31,11 @@ add_executable(yarda_hierarchy_analysis_tests
     hierarchy_aggregation_validation_test.cpp
     hierarchy_service_summary_test.cpp
 )
-target_include_directories(yarda_hierarchy_analysis_tests PRIVATE "${YARDA_BACKEND_SOURCE_DIR}/src/cache")
+target_include_directories(yarda_hierarchy_analysis_tests PRIVATE
+    "${YARDA_BACKEND_SOURCE_DIR}/src"
+    "${YARDA_BACKEND_SOURCE_DIR}/tests"
+    "${YARDA_BACKEND_SOURCE_DIR}/src/cache"
+)
 target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
     yarda_hierarchy_analysis GTest::gtest_main
 )

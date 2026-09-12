@@ -3,7 +3,7 @@
 #include <limits>
 #include <utility>
 
-#include "access_layout.hpp"
+#include "trace/layout/access_layout.hpp"
 #include "affine_expression.hpp"
 
 namespace yarda::detail

@@ -1,6 +1,6 @@
-#include "../../src/trace/call_substitution.hpp"
-#include "../../src/trace/prepared_index.hpp"
-#include "prepared_access_test_support.hpp"
+#include "trace/module/call_substitution.hpp"
+#include "trace/index/prepared_index.hpp"
+#include "trace/prepared_access_test_support.hpp"
 
 #include <limits>
 
