@@ -1,4 +1,4 @@
-#include "../regions/region_fixture.hpp"
+#include "regions/region_fixture.hpp"
 
 namespace yarda::test::region
 {

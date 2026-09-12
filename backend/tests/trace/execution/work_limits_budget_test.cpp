@@ -1,6 +1,6 @@
 #include <limits>
 
-#include "../../src/trace/expansion_budget.hpp"
+#include "trace/execution/expansion_budget.hpp"
 #include "work_limits_test_support.hpp"
 
 namespace

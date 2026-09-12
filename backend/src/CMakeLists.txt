@@ -14,28 +14,28 @@ add_library(yarda_backend
     trace/module/call_substitution.cpp
     reuse/profile.cpp
     trace/module/schema.cpp
-    trace/trace.cpp
+    trace/execution/trace.cpp
     trace/layout/access_layout.cpp
     trace/layout/access_layout_legacy.cpp
     trace/layout/access_layout_structured.cpp
     trace/layout/access_layout_structured_type.cpp
-    trace/access_resolver.cpp
-    trace/cache_line.cpp
-    trace/mapped_trace.cpp
-    trace/resolved_access.cpp
-    trace/resolved_mapping.cpp
-    trace/emission_budget.cpp
-    trace/task_access_stream.cpp
+    trace/access/access_resolver.cpp
+    trace/access/cache_line.cpp
+    trace/output/mapped_trace.cpp
+    trace/output/resolved_access.cpp
+    trace/output/resolved_mapping.cpp
+    trace/execution/emission_budget.cpp
+    trace/output/task_access_stream.cpp
     trace/module/task_scope.cpp
-    trace/task_access_support.cpp
+    trace/output/task_access_support.cpp
     trace/index/prepared_index.cpp
     trace/index/affine_expression.cpp
     trace/layout/prepared_layout.cpp
-    trace/prepared_access.cpp
-    trace/loop_iteration.cpp
-    trace/prepared_trace.cpp
-    trace/unroller.cpp
-    trace/task_mapping_json.cpp
+    trace/access/prepared_access.cpp
+    trace/execution/loop_iteration.cpp
+    trace/execution/prepared_trace.cpp
+    trace/execution/unroller.cpp
+    trace/output/task_mapping_json.cpp
 )
 
 target_include_directories(yarda_backend

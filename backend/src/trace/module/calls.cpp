@@ -9,7 +9,7 @@
 #include "call_expansion.hpp"
 #include "call_roles.hpp"
 #include "call_substitution.hpp"
-#include "trace/expansion_budget.hpp"
+#include "trace/execution/expansion_budget.hpp"
 #include "task_scope.hpp"
 #include "yarda/trace/schema.hpp"
 

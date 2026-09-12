@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "cache_line.hpp"
+#include "trace/access/cache_line.hpp"
 #include "expansion_budget.hpp"
 #include "yarda/trace/emission_budget.hpp"
 #include "yarda/trace/resolved_access.hpp"

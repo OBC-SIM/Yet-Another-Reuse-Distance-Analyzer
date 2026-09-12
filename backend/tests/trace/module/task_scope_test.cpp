@@ -1,4 +1,4 @@
-#include "trace/task_access_stream_test_support.hpp"
+#include "trace/output/task_access_stream_test_support.hpp"
 #include "yarda/trace/calls.hpp"
 #include "yarda/trace/resolution_error.hpp"
 #include "yarda/trace/schema.hpp"

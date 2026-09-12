@@ -1,4 +1,4 @@
-#include "../trace/work_limits_test_support.hpp"
+#include "trace/execution/work_limits_test_support.hpp"
 #include "streaming_hierarchy_test_support.hpp"
 
 namespace

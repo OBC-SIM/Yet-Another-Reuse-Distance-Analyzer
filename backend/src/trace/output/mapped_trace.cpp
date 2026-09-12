@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "block_trace.hpp"
-#include "unroller.hpp"
+#include "trace/execution/block_trace.hpp"
+#include "trace/execution/unroller.hpp"
 #include "yarda/trace/resolved_mapping.hpp"
 
 namespace yarda

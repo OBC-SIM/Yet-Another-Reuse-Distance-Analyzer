@@ -1,7 +1,7 @@
 #pragma once
 
 #include "trace/layout/prepared_layout.hpp"
-#include "prepared_trace_test_support.hpp"
+#include "trace/execution/prepared_trace_test_support.hpp"
 
 namespace yarda::test::prepared_access
 {

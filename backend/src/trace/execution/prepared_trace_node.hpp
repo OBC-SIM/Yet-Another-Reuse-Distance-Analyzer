@@ -8,7 +8,7 @@
 #include <variant>
 #include <vector>
 
-#include "prepared_access.hpp"
+#include "trace/access/prepared_access.hpp"
 
 namespace yarda::detail
 {

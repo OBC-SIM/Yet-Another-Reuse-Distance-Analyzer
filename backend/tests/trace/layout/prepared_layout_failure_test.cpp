@@ -1,6 +1,6 @@
 #include <limits>
 
-#include "trace/prepared_access_test_support.hpp"
+#include "trace/access/prepared_access_test_support.hpp"
 
 namespace
 {

@@ -25,40 +25,40 @@ add_executable(yarda_backend_tests
     reuse/profile_test.cpp
     trace/layout/access_layout_test.cpp
     trace/module/schema_test.cpp
-    trace/expansion_budget_test.cpp
-    trace/mapped_trace_test.cpp
-    trace/mapped_trace_strict_test.cpp
-    trace/resolved_access_test.cpp
-    trace/resolved_mapping_test.cpp
-    trace/task_access_stream_test.cpp
+    trace/execution/expansion_budget_test.cpp
+    trace/output/mapped_trace_test.cpp
+    trace/output/mapped_trace_strict_test.cpp
+    trace/output/resolved_access_test.cpp
+    trace/output/resolved_mapping_test.cpp
+    trace/output/task_access_stream_test.cpp
     trace/module/task_scope_test.cpp
-    trace/task_access_stream_failure_test.cpp
-    trace/task_access_stream_budget_test.cpp
-    trace/work_limits_test.cpp
-    trace/work_limits_default_test.cpp
-    trace/work_limits_failure_test.cpp
-    trace/work_limits_guard_test.cpp
-    trace/work_limits_budget_test.cpp
+    trace/output/task_access_stream_failure_test.cpp
+    trace/output/task_access_stream_budget_test.cpp
+    trace/execution/work_limits_test.cpp
+    trace/execution/work_limits_default_test.cpp
+    trace/execution/work_limits_failure_test.cpp
+    trace/execution/work_limits_guard_test.cpp
+    trace/execution/work_limits_budget_test.cpp
     trace/index/prepared_index_test.cpp
     trace/index/affine_evaluation_test.cpp
     trace/index/affine_expression_test.cpp
     trace/index/affine_failure_test.cpp
-    trace/prepared_access_test.cpp
-    trace/prepared_access_binding_test.cpp
-    trace/prepared_access_failure_test.cpp
+    trace/access/prepared_access_test.cpp
+    trace/access/prepared_access_binding_test.cpp
+    trace/access/prepared_access_failure_test.cpp
     trace/layout/prepared_layout_failure_test.cpp
-    trace/prepared_trace_test.cpp
-    trace/prepared_trace_stream_test.cpp
-    trace/prepared_trace_failure_test.cpp
-    trace/resolved_mapping_stream_test.cpp
-    trace/strict_input_test.cpp
-    trace/strict_resolution_test.cpp
-    trace/strict_unroller_test.cpp
-    trace/task_exclusion_test.cpp
-    trace/task_mapping_json_test.cpp
-    trace/task_trace_test.cpp
-    trace/task_trace_validation_test.cpp
-    trace/trace_test.cpp
+    trace/execution/prepared_trace_test.cpp
+    trace/execution/prepared_trace_stream_test.cpp
+    trace/execution/prepared_trace_failure_test.cpp
+    trace/output/resolved_mapping_stream_test.cpp
+    trace/access/strict_input_test.cpp
+    trace/access/strict_resolution_test.cpp
+    trace/execution/strict_unroller_test.cpp
+    trace/output/task_exclusion_test.cpp
+    trace/output/task_mapping_json_test.cpp
+    trace/output/task_trace_test.cpp
+    trace/output/task_trace_validation_test.cpp
+    trace/execution/trace_test.cpp
 )
 target_include_directories(yarda_backend_tests PRIVATE
     "${YARDA_BACKEND_SOURCE_DIR}/src"
@@ -70,7 +70,7 @@ gtest_discover_tests(yarda_backend_tests
 )
 
 add_subdirectory(cache)
-include(trace/affine_index_tests.cmake)
+include(trace/integration/affine_index_tests.cmake)
 
 if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set_target_properties(

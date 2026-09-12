@@ -1,5 +1,5 @@
 #include "trace/module/call_substitution.hpp"
-#include "trace/prepared_access_test_support.hpp"
+#include "trace/access/prepared_access_test_support.hpp"
 
 #include <limits>
 

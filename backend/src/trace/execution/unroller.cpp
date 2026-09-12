@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "access_resolver.hpp"
+#include "trace/access/access_resolver.hpp"
 #include "prepared_trace.hpp"
 
 namespace yarda::detail

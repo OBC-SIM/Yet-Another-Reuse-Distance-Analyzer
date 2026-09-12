@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include "trace/expansion_budget.hpp"
+#include "trace/execution/expansion_budget.hpp"
 
 namespace yarda::detail
 {

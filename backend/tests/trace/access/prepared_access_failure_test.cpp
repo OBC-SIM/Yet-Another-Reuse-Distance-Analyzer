@@ -1,7 +1,7 @@
 #include <limits>
 
 #include "prepared_access_test_support.hpp"
-#include "work_limits_test_support.hpp"
+#include "trace/execution/work_limits_test_support.hpp"
 
 namespace
 {

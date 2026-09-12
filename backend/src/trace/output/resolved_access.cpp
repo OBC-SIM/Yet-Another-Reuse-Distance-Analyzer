@@ -4,8 +4,8 @@
 #include <stdexcept>
 #include <string>
 
-#include "block_trace.hpp"
-#include "unroller.hpp"
+#include "trace/execution/block_trace.hpp"
+#include "trace/execution/unroller.hpp"
 #include "yarda/trace/task_access_stream.hpp"
 
 namespace yarda

@@ -3,7 +3,7 @@
 #include <functional>
 #include <stdexcept>
 
-#include "task_access_stream_test_support.hpp"
+#include "trace/output/task_access_stream_test_support.hpp"
 
 namespace yarda::test::work
 {

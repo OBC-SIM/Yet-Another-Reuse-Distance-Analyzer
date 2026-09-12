@@ -5,7 +5,7 @@
 #include "trace/module/call_expansion.hpp"
 #include "task_access_support.hpp"
 #include "trace/module/task_scope.hpp"
-#include "unroller.hpp"
+#include "trace/execution/unroller.hpp"
 
 namespace yarda
 {

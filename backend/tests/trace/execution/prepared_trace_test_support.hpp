@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../src/trace/prepared_trace.hpp"
-#include "task_access_stream_test_support.hpp"
+#include "trace/execution/prepared_trace.hpp"
+#include "trace/output/task_access_stream_test_support.hpp"
 
 namespace yarda::test::prepared
 {
