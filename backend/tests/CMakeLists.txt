@@ -63,6 +63,7 @@ gtest_discover_tests(yarda_backend_tests
 )
 
 add_subdirectory(cache)
+include(trace/affine_index_tests.cmake)
 
 if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set_target_properties(
