@@ -9,6 +9,18 @@ namespace
 
 using Json = nlohmann::json;
 
+TEST(SchemaTest, RejectsUnknownOrMalformedExplicitVersions)
+{
+  for (const Json version : {Json(3), Json(0), Json(-1), Json("2"), Json(2.0),
+                             Json(nullptr), Json(true)})
+  {
+    SCOPED_TRACE(version.dump());
+    EXPECT_THROW(yarda::normalize_module(
+                   {{"schema_version", version}, {"functions", Json::array()}}),
+                 std::invalid_argument);
+  }
+}
+
 TEST(SchemaTest, PreservesLegacyFunctionList)
 {
   const Json raw = Json::array({{

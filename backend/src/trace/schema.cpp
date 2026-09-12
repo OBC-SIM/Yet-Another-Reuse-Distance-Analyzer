@@ -45,6 +45,13 @@ Json enrich_node(Json node, const Json & objects)
 
 nlohmann::json normalize_module(const nlohmann::json & raw)
 {
+  if (raw.is_object() && raw.contains("schema_version"))
+  {
+    const auto & version = raw.at("schema_version");
+    if (!version.is_number_integer() || version != 2)
+      throw std::invalid_argument("unsupported LAT schema_version: " +
+                                  version.dump());
+  }
   Json functions;
   Json objects = Json::object();
   if (raw.is_array())
