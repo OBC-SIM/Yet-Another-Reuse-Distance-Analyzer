@@ -39,7 +39,8 @@ TEST(PreparedTraceFailureTest, ConsumerJsonExceptionPrecedesMalformedSibling)
   Collector collector;
   auto sink = collector.sink();
   const auto record = sink.access;
-  sink.access = [&](const std::string & id, const ResolvedAccess & value) {
+  sink.access = [&](const std::string & id, const ResolvedAccess & value)
+  {
     record(id, value);
     static_cast<void>(Json::object().at("consumer-token"));
   };
@@ -105,10 +106,10 @@ TEST(PreparedTraceFailureTest, MalformedIndexTypePrecedesSourceCharging)
 
 TEST(PreparedTraceFailureTest, SourceChargePrecedesUnsupportedExpression)
 {
-  const auto raw = module(Json::array(
-    {function("kernel", Json::array({
-                          loop(1, Json::array({access("global::A", "2*i")})),
-                        }))}));
+  const auto raw = module(Json::array({function(
+    "kernel", Json::array({
+                loop(1, Json::array({access("global::A", "2*i+missing")})),
+              }))}));
   TraceEmissionBudget budget({0, 0});
   Collector collector;
   expect_limit_error(
@@ -176,7 +177,8 @@ TEST(PreparedTraceFailureTest, OuterReservationPrecedesMalformedInnerLoop)
   Collector collector;
   TraceEmissionBudget budget;
   expect_limit_error(
-    [&] {
+    [&]
+    {
       stream_resolved_task_accesses(raw, addresses(), collector.sink(), budget,
                                     {1, 0});
     },

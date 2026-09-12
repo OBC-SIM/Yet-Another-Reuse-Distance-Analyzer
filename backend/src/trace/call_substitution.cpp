@@ -3,6 +3,8 @@
 #include <regex>
 #include <string>
 
+#include "affine_expression.hpp"
+
 namespace yarda::detail
 {
 namespace
@@ -10,7 +12,6 @@ namespace
 
 using Json = nlohmann::json;
 
-const std::regex kAffineName(R"(^([A-Za-z_][A-Za-z0-9_]*)([+-]\d+)?$)");
 const std::regex kIdentifier(R"(\b[A-Za-z_][A-Za-z0-9_]*\b)");
 
 std::string substitute_name(const std::string & name,
@@ -20,19 +21,32 @@ std::string substitute_name(const std::string & name,
   {
     return exact->second;
   }
-  std::smatch match;
-  if (std::regex_match(name, match, kAffineName))
+  const auto expression = parse_affine_expression(name);
+  if (expression)
   {
-    if (const auto base = mapping.find(match[1].str()); base != mapping.end())
+    AffineExpression result;
+    result.constant = expression->constant;
+    bool changed = false;
+    for (const auto & [variable, coefficient] : expression->terms)
     {
-      return base->second + match[2].str();
+      const auto actual = mapping.find(variable);
+      changed |= actual != mapping.end();
+      const auto replacement = actual == mapping.end()
+                                 ? std::optional<AffineExpression>(
+                                     AffineExpression{0, {{variable, 1}}})
+                                 : parse_affine_expression(actual->second);
+      // Preserve a deferred failure without leaving a capturable formal name.
+      if (!replacement ||
+          !add_affine_expression(result, *replacement, coefficient))
+        return "(" + name + ")";
     }
+    if (changed) return format_affine_expression(result);
   }
   return name;
 }
 
-std::string substitute_text(const std::string & text,
-                            const CallMapping & mapping)
+std::string substitute_tokens(const std::string & text,
+                              const CallMapping & mapping)
 {
   std::string output;
   std::sregex_iterator current(text.begin(), text.end(), kIdentifier);
@@ -49,6 +63,27 @@ std::string substitute_text(const std::string & text,
   }
   output.append(text, copied, std::string::npos);
   return output;
+}
+
+std::string substitute_text(const std::string & text,
+                            const CallMapping & mapping)
+{
+  std::string output;
+  std::size_t position = 0;
+  while (position < text.size())
+  {
+    const auto begin = text.find('[', position);
+    const auto end = begin == std::string::npos ? std::string::npos
+                                                : text.find(']', begin + 1);
+    if (end == std::string::npos) break;
+    output +=
+      substitute_tokens(text.substr(position, begin - position), mapping);
+    output +=
+      "[" + substitute_name(text.substr(begin + 1, end - begin - 1), mapping) +
+      "]";
+    position = end + 1;
+  }
+  return output + substitute_tokens(text.substr(position), mapping);
 }
 
 void apply_object_metadata(Json & node, const Json & objects)

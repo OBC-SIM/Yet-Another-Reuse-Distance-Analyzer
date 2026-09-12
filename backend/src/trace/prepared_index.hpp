@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace yarda::detail
@@ -30,7 +31,7 @@ public:
   PreparedIndex(std::string expression, const LoopScope * scope);
 
   /**
-   * @brief Substitute a slot value with checked addition at the access site.
+   * @brief Evaluate bound affine terms with checked arithmetic at the access.
    * @param values Borrowed current loop values from the owning traversal.
    * @return Substituted integer, or original text for fixed/unsupported input
    * and overflow. The existing consumer decides whether to reject that text.
@@ -48,10 +49,15 @@ public:
   evaluate_numeric(const std::vector<std::int64_t> & values) const;
 
 private:
+  std::optional<std::int64_t>
+  evaluate_affine(const std::vector<std::int64_t> & values) const;
+
   std::string expression_;
   std::optional<std::size_t> slot_;
   std::optional<std::int64_t> literal_;
   std::int64_t offset_ = 0;
+  std::optional<std::int64_t> constant_;
+  std::vector<std::pair<std::size_t, std::int64_t>> terms_;
 };
 
 }  // namespace yarda::detail
