@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "hierarchy_analysis_oracle_support.hpp"
-#include "hierarchy_lru_oracle_differential_support.hpp"
+#include "cache/oracle/hierarchy_lru_oracle_differential_support.hpp"
 
 namespace
 {

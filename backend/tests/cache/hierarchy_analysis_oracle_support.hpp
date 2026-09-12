@@ -4,9 +4,9 @@
 #include <map>
 #include <string>
 
-#include "exact_csrd_oracle.hpp"
+#include "cache/oracle/exact_csrd_oracle.hpp"
 #include "hierarchy_analysis_test_support.hpp"
-#include "hierarchy_lru_oracle.hpp"
+#include "cache/oracle/hierarchy_lru_oracle.hpp"
 #include "yarda/trace/mapped_trace.hpp"
 
 namespace yarda::test::support

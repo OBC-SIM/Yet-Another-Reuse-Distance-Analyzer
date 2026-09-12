@@ -32,8 +32,8 @@ add_executable(yarda_region_integration_tests
     main.cpp
     ../trace/integration/analysis_region_test.cpp
     ../cache/streaming_hierarchy_region_test.cpp
-    ../cache/exact_csrd_oracle.cpp
-    ../cache/hierarchy_lru_oracle.cpp)
+    ../cache/oracle/exact_csrd_oracle.cpp
+    ../cache/oracle/hierarchy_lru_oracle.cpp)
 add_dependencies(yarda_region_integration_tests yarda_region_fixtures)
 target_include_directories(yarda_region_integration_tests PRIVATE
     "${YARDA_BACKEND_SOURCE_DIR}/src"

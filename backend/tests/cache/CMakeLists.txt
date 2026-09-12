@@ -8,18 +8,18 @@ add_executable(yarda_hierarchy_analysis_tests
     streaming_hierarchy_failure_test.cpp
     streaming_hierarchy_summary_test.cpp
     streaming_hierarchy_task_test.cpp
-    exact_csrd_test.cpp
-    exact_csrd_differential_test.cpp
-    recency_index_test.cpp
-    exact_csrd_oracle.cpp
-    exact_csrd_oracle_test.cpp
-    hierarchy_lru_oracle.cpp
-    hierarchy_lru_oracle_contract_test.cpp
-    hierarchy_lru_oracle_differential_support.cpp
-    hierarchy_lru_oracle_differential_support_test.cpp
-    hierarchy_lru_oracle_differential_test.cpp
-    hierarchy_lru_oracle_operation_test.cpp
-    hierarchy_lru_oracle_test.cpp
+    rd/exact_csrd_test.cpp
+    rd/exact_csrd_differential_test.cpp
+    rd/recency_index_test.cpp
+    oracle/exact_csrd_oracle.cpp
+    oracle/exact_csrd_oracle_test.cpp
+    oracle/hierarchy_lru_oracle.cpp
+    oracle/hierarchy_lru_oracle_contract_test.cpp
+    oracle/hierarchy_lru_oracle_differential_support.cpp
+    oracle/hierarchy_lru_oracle_differential_support_test.cpp
+    oracle/hierarchy_lru_oracle_differential_test.cpp
+    oracle/hierarchy_lru_oracle_operation_test.cpp
+    oracle/hierarchy_lru_oracle_test.cpp
     hierarchy_model_test.cpp
     hierarchy_model_validation_test.cpp
     hierarchy_analysis_validation_test.cpp
@@ -48,8 +48,8 @@ gtest_discover_tests(yarda_hierarchy_analysis_tests
 )
 
 add_executable(yarda_cache_config_tests
-    cache_config_test.cpp
-    yaml_config_parser_test.cpp
+    config/cache_config_test.cpp
+    config/yaml_config_parser_test.cpp
 )
 target_link_libraries(yarda_cache_config_tests PRIVATE
     yarda_cache_config GTest::gtest_main

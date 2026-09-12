@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "exact_csrd_oracle.hpp"
-#include "recency_index.hpp"
+#include "cache/oracle/exact_csrd_oracle.hpp"
+#include "cache/rd/recency_index.hpp"
 #include "yarda/cache/exact_csrd.hpp"
 
 namespace yarda::test::support

@@ -6,10 +6,10 @@ foreach(kind RUNTIME LIBRARY ARCHIVE)
 endforeach()
 
 add_library(yarda_backend
-    cache/address.cpp
-    cache/line_mapping.cpp
-    cache/line_mapping_json.cpp
-    cache/lru_rd_analysis.cpp
+    cache/mapping/address.cpp
+    cache/mapping/line_mapping.cpp
+    cache/mapping/line_mapping_json.cpp
+    cache/rd/lru_rd_analysis.cpp
     trace/module/calls.cpp
     trace/module/call_substitution.cpp
     reuse/profile.cpp
@@ -47,8 +47,8 @@ target_compile_options(yarda_backend PRIVATE -Wall -Wextra -Wpedantic)
 
 find_package(yaml-cpp 0.7 REQUIRED CONFIG)
 add_library(yarda_cache_config
-    cache/cache_config.cpp
-    cache/yaml_config_parser.cpp
+    cache/config/cache_config.cpp
+    cache/config/yaml_config_parser.cpp
 )
 target_include_directories(yarda_cache_config PUBLIC "${YARDA_BACKEND_SOURCE_DIR}/include")
 target_compile_options(yarda_cache_config PRIVATE -Wall -Wextra -Wpedantic)
@@ -61,8 +61,8 @@ add_library(yarda_hierarchy_analysis
     cache/streaming_hierarchy.cpp
     cache/streaming_hierarchy_summary.cpp
     cache/streaming_hierarchy_task.cpp
-    cache/exact_csrd.cpp
-    cache/recency_index.cpp
+    cache/rd/exact_csrd.cpp
+    cache/rd/recency_index.cpp
     cache/hierarchy_model.cpp
     cache/hierarchy_analysis.cpp
     cache/hierarchy_aggregation.cpp

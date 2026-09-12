@@ -1,6 +1,6 @@
 #include "exact_csrd_test_support.hpp"
-#include "hierarchy_lru_oracle_differential_support.hpp"
-#include "hierarchy_lru_oracle_test_support.hpp"
+#include "cache/oracle/hierarchy_lru_oracle_differential_support.hpp"
+#include "cache/oracle/hierarchy_lru_oracle_test_support.hpp"
 
 namespace
 {

@@ -27,7 +27,7 @@ endforeach()
 add_custom_target(yarda_affine_fixtures DEPENDS ${affine_outputs})
 add_executable(yarda_affine_index_tests
     regions/main.cpp trace/integration/affine_index_contract_test.cpp
-    cache/exact_csrd_oracle.cpp cache/hierarchy_lru_oracle.cpp)
+    cache/oracle/exact_csrd_oracle.cpp cache/oracle/hierarchy_lru_oracle.cpp)
 add_dependencies(yarda_affine_index_tests yarda_affine_fixtures)
 target_include_directories(yarda_affine_index_tests PRIVATE
     "${YARDA_BACKEND_SOURCE_DIR}/src"
