@@ -2,6 +2,7 @@ add_executable(yarda_hierarchy_analysis_tests
     output/artifact_identity_test.cpp
     output/hierarchy_result_json_test.cpp
     output/hierarchy_result_validation_test.cpp
+    output/hierarchy_events_json_test.cpp
     output/hierarchy_artifact_boundary_test.cpp
     streaming/streaming_hierarchy_test.cpp
     streaming/streaming_hierarchy_differential_test.cpp
