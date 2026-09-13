@@ -2,8 +2,9 @@
 
 This document specifies the artifact boundary of
 [`exact-two-level-lru-demand-v1`](cache-hierarchy-rd-model-v1.md).
-The B9 library exposes pure JSON serializers and optional measurement support.
-CLI options and file publication are B10 work.
+The library exposes pure JSON serializers and optional measurement support.
+The `yarda_cpp --analysis hierarchy-rd` CLI binds inputs, executes the streaming
+analyzer and publishes these artifacts.
 
 ## 1. Common rules
 
@@ -191,3 +192,69 @@ and not child compiler RSS. Host keys are `hostname`, `os`, `release`,
 `machine`. The timestamp format is `YYYY-MM-DDTHH:MM:SSZ` in UTC.
 Clock/RSS/host/time providers are injectable; system-call adapters stay private.
 No duration is compared to an exact real-time value in tests.
+
+## 6. CLI binding and publication
+
+The hierarchy command requires a LAT file with explicit `schema_version: 2`,
+`--elf ET_EXEC`, `--cache YAML`, and `--export RESULT`. It uses the same
+invocation's input paths for raw hashes and parsing, and supplies parsed schema
+versions, ELF class/machine and the selected hierarchy to RESULT. Input files
+must remain unchanged throughout the invocation. No legacy schema version is
+invented for an unversioned LAT. Legacy CLI modes keep their existing reader
+compatibility.
+
+`--analysis mapping` requires ELF/cache and exposes the existing mapping path.
+With no `--analysis`, dispatch and legacy stdout/file behavior are unchanged.
+No core or region-selection option is added. The model selects core 0; task
+scope/identity comes from the LAT.
+
+The following options are exclusive to hierarchy mode:
+
+| Option | Default / contract |
+| --- | --- |
+| `--max-single-loop-iterations N` | 1,000,000 per dynamic loop entry |
+| `--max-cumulative-loop-iterations N` | 1,000,000 across all tasks |
+| `--max-source-accesses N` | 1,000,000 across all tasks |
+| `--max-line-references N` | 10,000,000 source-to-L1 references |
+| `--export-events FILE` | Disabled when omitted |
+| `--event-limit N` | 0; requires event export, including explicit zero |
+| `--telemetry FILE` | Disabled when omitted |
+
+Numbers must be complete unsigned decimal `uint64_t` values; signs, whitespace,
+suffixes and overflow are rejected. Zero is a real allowance, never unlimited.
+Recognized repeated options keep their final value. Work-budget exhaustion
+invalidates the whole invocation; event truncation still yields a complete
+summary. Successive command calls own fresh events and measurements.
+
+The CMake build embeds `PROJECT_VERSION+git.COMMIT[-dirty]` when the source root
+is a Git repository, or `PROJECT_VERSION` for a source archive. A nonempty
+`YARDA_TOOL_VERSION` overrides either default. Identifiers start with an ASCII
+letter/digit and contain only letters, digits, `.`, `_`, `+`, `:`, `/`, `@`, `-`.
+Every build refreshes the header if its content changes. Runtime execution
+does not query Git, paths or clocks to construct the semantic identity.
+
+The CLI constructs the collector before hashing/reading inputs, measures the
+three parse stages, lets the streaming API measure its two stages, and records
+RESULT DOM/dump in `serialize_result`. Snapshot occurs before optional JSON
+serialization and all file publication. It passes no collector when telemetry
+is disabled. Borrowed callback arguments are copied only for enabled events.
+
+All requested documents must finish strict `dump(2)` before any output is
+opened. Output paths must be distinct regular files or new files, with existing
+parent directories. Empty paths, stdout `-`, symlinks and special files are
+rejected. Normalized path and hard-link aliases among outputs or with inputs
+are rejected. Each file gets exactly one final LF.
+
+Publication stages all files in private sibling directories and checks writes
+and close. Existing outputs have sibling hard-link backups until publication
+finishes. EVENTS and TELEMETRY are replaced before RESULT. A handled staging
+failure leaves old outputs untouched; a handled rename failure restores prior
+files and removes new outputs from this invocation. Failures exit with code 1
+and identify the affected path. Analysis, measurement and dump failures publish
+nothing and preserve existing files.
+
+Rollback assumes exclusive ownership of these paths during the command; it is
+not a transaction across process crashes or concurrent writers. If restoration
+itself fails, the diagnostic identifies the retained backup directory. Cleanup
+failure after successful publication reports that the complete artifact set
+was published and identifies the remaining staging directory; it also exits 1.

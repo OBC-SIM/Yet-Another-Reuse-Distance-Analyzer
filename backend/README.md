@@ -6,8 +6,9 @@ unrolling.
 
 ## Build and test
 
-Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json, and
-GTest. The root build configures both the frontend submodule and this backend.
+Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json 3.10.5+,
+yaml-cpp 0.7+, and GTest. The root build configures both the frontend submodule
+and this backend.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -70,13 +71,70 @@ omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
 physical addresses. Without `--export`, the JSON is written to stdout.
 
 Every LAT expansion path, including streaming hierarchy analysis, is limited to
-100,000 call-expansion node visits and an inline call depth of 256. The CLI and
-legacy batch APIs retain the default 1,000,000 iterations per loop and
-1,000,000 cumulative loop iterations. These CLI and batch paths do not cap
-source access count.
+100,000 call-expansion node visits and an inline call depth of 256. Legacy CLI
+and batch APIs retain the default 1,000,000 iterations per loop and
+1,000,000 cumulative loop iterations. These legacy paths do not cap source
+access count.
 The `--elf` report materializes every resolved access and mapped line reference,
 so large traces can exhaust host memory. Exceeding a structural expansion limit
 fails the complete invocation instead of returning a partial trace.
+
+## Hierarchy analysis CLI
+
+```bash
+./build/backend/yarda_cpp task_ape.json \
+  --analysis hierarchy-rd \
+  --elf task.elf \
+  --cache backend/config/cache.32b.yaml \
+  --export result.json \
+  --export-events events.json --event-limit 1000 \
+  --telemetry telemetry.json
+```
+
+The LAT must explicitly declare `schema_version: 2`; ELF, cache, and RESULT
+paths are required. Inputs must remain unchanged throughout the invocation.
+The selected model is core 0, private L1 -> shared LLC -> Memory, equal line
+sizes, LRU, allocation on demand misses, and independent cold tasks. Only L1
+misses reach LLC. Region selection comes from the LAT; there is no backend
+region or core selector. See the [model](../docs/cache-hierarchy-rd-model-v1.md)
+and [artifact contract](../docs/cache-hierarchy-artifacts-v1.md).
+
+`--analysis mapping` explicitly selects the existing ELF mapping path and
+requires ELF/cache. Omitting `--analysis` preserves the existing dispatch,
+including unroll/profile output and mapping to stdout without `--export`.
+`--mode unroll` remains accepted. With ELF, explicit `--granularity element`
+is rejected; omitted or `cache-line` granularity is accepted.
+
+Hierarchy work limits are unsigned decimal `uint64_t` values:
+
+| Option | Default |
+| --- | ---: |
+| `--max-single-loop-iterations` | 1,000,000 |
+| `--max-cumulative-loop-iterations` | 1,000,000 |
+| `--max-source-accesses` | 1,000,000 |
+| `--max-line-references` | 10,000,000 |
+
+These four options and the diagnostic options require `hierarchy-rd`.
+Successful results are independent of work allowances, event limits and
+telemetry. `--event-limit` requires `--export-events`, even when the limit is
+zero. Its default is zero: an enabled event export then contains an empty
+prefix and indicates truncation if any line was analyzed. Set a positive limit
+to retain events. Events are bounded across the entire invocation; truncation
+does not stop analysis. Omitting each diagnostic option creates no corresponding
+artifact. Valid repeated options retain their last value.
+
+Hierarchy outputs require distinct ordinary file paths; `-`, symlinks, special
+files and aliases of inputs are rejected. All JSON is dumped before output I/O.
+Staged files are closed before publication, with RESULT published last.
+Handled write/rename failures restore old files and remove newly published
+files. Errors exit with status 1 and identify the affected path. The detailed
+rollback and cleanup boundaries are specified in the artifact contract.
+
+Each build embeds a `tool_version`. By default it uses the project version plus
+the source Git commit and a dirty suffix when appropriate; source archives use
+the project version. Set `-DYARDA_TOOL_VERSION=RELEASE_ID` to override it.
+The header is refreshed on every build, without rewriting unchanged content.
+The executable never queries Git or the wall clock for RESULT identity.
 
 ## Streaming hierarchy work limits
 
@@ -96,7 +154,8 @@ Producer callers use
 `stream_resolved_task_accesses(lat, objects, sink, emission_budget, loop_limits)`.
 The existing three- and four-argument overloads retain default loop limits.
 Hierarchy emission defaults remain 1,000,000 sources and 10,000,000 source-to-L1
-line references. These configurable settings are C++ APIs; CLI flags follow in B10.
+line references. The hierarchy CLI exposes the same settings through the four
+flags above; legacy CLI and batch defaults are unchanged.
 
 All limits are inclusive. Zero permits no iterations or emissions for that
 specific budget; it is never an unlimited sentinel. Zero-trip loops and flat
