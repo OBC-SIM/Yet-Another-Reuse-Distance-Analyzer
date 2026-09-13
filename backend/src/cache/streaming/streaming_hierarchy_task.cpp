@@ -58,7 +58,8 @@ void StreamingHierarchyTask::observe_line(const CacheLineMapping & mapping)
   auto service = FirstServiceLevel::L1;
   if (l1.outcome == LruAccessOutcome::Hit)
   {
-    summary_.ehc_l1 = checked_service_sum(summary_.ehc_l1, 1);
+    summary_.l1_first_hit_count =
+      checked_service_sum(summary_.l1_first_hit_count, 1);
   }
   else
   {
@@ -68,7 +69,8 @@ void StreamingHierarchyTask::observe_line(const CacheLineMapping & mapping)
     if (llc->outcome == LruAccessOutcome::Hit)
     {
       service = FirstServiceLevel::LLC;
-      summary_.ehc_llc = checked_service_sum(summary_.ehc_llc, 1);
+      summary_.llc_first_hit_count =
+        checked_service_sum(summary_.llc_first_hit_count, 1);
     }
     else
     {

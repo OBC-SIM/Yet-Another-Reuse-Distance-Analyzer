@@ -99,17 +99,18 @@ TEST(BatchHierarchyServiceTest, UsesAllModeledReferencesForFirstServiceRatios)
   const auto & summary = result.tasks[0].summary;
   EXPECT_EQ(summary.modeled_accesses, 5U);
   EXPECT_EQ(summary.llc.lookups, 4U);
-  EXPECT_EQ(summary.ehc_l1, 1U);
-  EXPECT_EQ(summary.ehc_llc, 1U);
+  EXPECT_EQ(summary.l1_first_hit_count, 1U);
+  EXPECT_EQ(summary.llc_first_hit_count, 1U);
   EXPECT_EQ(summary.all_cache_misses, 3U);
-  ASSERT_TRUE(summary.hr_l1);
-  ASSERT_TRUE(summary.hr_llc);
-  ASSERT_TRUE(summary.miss_ratio);
-  EXPECT_DOUBLE_EQ(*summary.hr_l1, 0.2);
-  EXPECT_DOUBLE_EQ(*summary.hr_llc, 0.2);
-  EXPECT_DOUBLE_EQ(*summary.miss_ratio, 0.6);
-  EXPECT_NEAR(*summary.hr_l1 + *summary.hr_llc + *summary.miss_ratio, 1.0,
-              1e-15);
+  ASSERT_TRUE(summary.l1_first_hit_ratio);
+  ASSERT_TRUE(summary.llc_first_hit_ratio);
+  ASSERT_TRUE(summary.all_cache_miss_ratio);
+  EXPECT_DOUBLE_EQ(*summary.l1_first_hit_ratio, 0.2);
+  EXPECT_DOUBLE_EQ(*summary.llc_first_hit_ratio, 0.2);
+  EXPECT_DOUBLE_EQ(*summary.all_cache_miss_ratio, 0.6);
+  EXPECT_NEAR(*summary.l1_first_hit_ratio + *summary.llc_first_hit_ratio +
+                *summary.all_cache_miss_ratio,
+              1.0, 1e-15);
   expect_hierarchy_invariants(summary.invariants);
 }
 
@@ -121,12 +122,12 @@ TEST(BatchHierarchyServiceTest, RetainsEmptyTaskWithAbsentRatios)
   const auto & task = result.tasks[0];
   EXPECT_EQ(task.summary.task_id, "empty");
   EXPECT_TRUE(task.events.empty());
-  EXPECT_EQ(task.summary.ehc_l1, 0U);
-  EXPECT_EQ(task.summary.ehc_llc, 0U);
+  EXPECT_EQ(task.summary.l1_first_hit_count, 0U);
+  EXPECT_EQ(task.summary.llc_first_hit_count, 0U);
   EXPECT_EQ(task.summary.all_cache_misses, 0U);
-  EXPECT_FALSE(task.summary.hr_l1);
-  EXPECT_FALSE(task.summary.hr_llc);
-  EXPECT_FALSE(task.summary.miss_ratio);
+  EXPECT_FALSE(task.summary.l1_first_hit_ratio);
+  EXPECT_FALSE(task.summary.llc_first_hit_ratio);
+  EXPECT_FALSE(task.summary.all_cache_miss_ratio);
   expect_hierarchy_invariants(task.summary.invariants);
 }
 
@@ -151,10 +152,10 @@ TEST(BatchHierarchyServiceTest, ClassifiesEachCrossLineSpanIndependently)
   EXPECT_EQ(actual.events[2].llc_mapping->line_span_ordinal, 1U);
   EXPECT_EQ(actual.events[2].llc_mapping->operation,
             yarda::AccessOperation::Store);
-  EXPECT_EQ(actual.summary.ehc_l1, 1U);
+  EXPECT_EQ(actual.summary.l1_first_hit_count, 1U);
   EXPECT_EQ(actual.summary.all_cache_misses, 2U);
-  ASSERT_TRUE(actual.summary.hr_l1);
-  EXPECT_DOUBLE_EQ(*actual.summary.hr_l1, 1.0 / 3.0);
+  ASSERT_TRUE(actual.summary.l1_first_hit_ratio);
+  EXPECT_DOUBLE_EQ(*actual.summary.l1_first_hit_ratio, 1.0 / 3.0);
 }
 
 TEST(BatchHierarchyServiceTest, CountsLlcReplacementMissAsMemoryService)
@@ -169,10 +170,10 @@ TEST(BatchHierarchyServiceTest, CountsLlcReplacementMissAsMemoryService)
   EXPECT_EQ(task.events.back().llc->outcome, LruAccessOutcome::ReplacementMiss);
   EXPECT_EQ(task.events.back().first_service, FirstServiceLevel::Memory);
   EXPECT_EQ(task.summary.all_cache_misses, 4U);
-  EXPECT_EQ(task.summary.ehc_l1, 0U);
-  EXPECT_EQ(task.summary.ehc_llc, 0U);
-  ASSERT_TRUE(task.summary.miss_ratio);
-  EXPECT_DOUBLE_EQ(*task.summary.miss_ratio, 1.0);
+  EXPECT_EQ(task.summary.l1_first_hit_count, 0U);
+  EXPECT_EQ(task.summary.llc_first_hit_count, 0U);
+  ASSERT_TRUE(task.summary.all_cache_miss_ratio);
+  EXPECT_DOUBLE_EQ(*task.summary.all_cache_miss_ratio, 1.0);
 }
 
 TEST(BatchHierarchyServiceTest, ResetsServiceCountsAndKeepsInputTaskOrder)
@@ -190,8 +191,8 @@ TEST(BatchHierarchyServiceTest, ResetsServiceCountsAndKeepsInputTaskOrder)
   for (const auto index : {0U, 2U})
   {
     const auto & task = result.tasks[index];
-    EXPECT_EQ(task.summary.ehc_l1, 1U);
-    EXPECT_EQ(task.summary.ehc_llc, 1U);
+    EXPECT_EQ(task.summary.l1_first_hit_count, 1U);
+    EXPECT_EQ(task.summary.llc_first_hit_count, 1U);
     EXPECT_EQ(task.summary.all_cache_misses, 2U);
     ASSERT_EQ(task.events.size(), 4U);
     EXPECT_EQ(task.events[0].first_service, FirstServiceLevel::Memory);

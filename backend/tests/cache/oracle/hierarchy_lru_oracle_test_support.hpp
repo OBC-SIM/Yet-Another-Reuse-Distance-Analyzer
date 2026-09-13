@@ -58,12 +58,14 @@ inline void expect_contract_invariants(const OracleTaskHierarchy & result,
   EXPECT_EQ(result.llc.lookups, result.llc.hits + result.llc.misses);
   EXPECT_EQ(result.llc.misses,
             result.llc.cold_misses + result.llc.replacement_misses);
-  EXPECT_EQ(result.ehc_l1, result.l1.hits);
-  EXPECT_EQ(result.ehc_llc, result.llc.hits);
+  EXPECT_EQ(result.l1_first_hit_count, result.l1.hits);
+  EXPECT_EQ(result.llc_first_hit_count, result.llc.hits);
   EXPECT_EQ(result.all_cache_misses, result.llc.misses);
-  EXPECT_EQ(result.ehc_l1 + result.ehc_llc + result.all_cache_misses,
+  EXPECT_EQ(result.l1_first_hit_count + result.llc_first_hit_count +
+              result.all_cache_misses,
             result.l1.lookups);
-  EXPECT_EQ(result.llc.lookups, result.ehc_llc + result.all_cache_misses);
+  EXPECT_EQ(result.llc.lookups,
+            result.llc_first_hit_count + result.all_cache_misses);
 }
 
 }  // namespace support

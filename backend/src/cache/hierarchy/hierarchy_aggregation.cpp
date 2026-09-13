@@ -50,7 +50,8 @@ aggregate_hierarchy_task(std::string task_id, const TraceCoverage & coverage,
     if (event.l1.outcome == LruAccessOutcome::Hit)
     {
       event.first_service = FirstServiceLevel::L1;
-      summary.ehc_l1 = checked_service_sum(summary.ehc_l1, 1);
+      summary.l1_first_hit_count =
+        checked_service_sum(summary.l1_first_hit_count, 1);
     }
     else
     {
@@ -63,7 +64,8 @@ aggregate_hierarchy_task(std::string task_id, const TraceCoverage & coverage,
       if (event.llc->outcome == LruAccessOutcome::Hit)
       {
         event.first_service = FirstServiceLevel::LLC;
-        summary.ehc_llc = checked_service_sum(summary.ehc_llc, 1);
+        summary.llc_first_hit_count =
+          checked_service_sum(summary.llc_first_hit_count, 1);
       }
       else
       {

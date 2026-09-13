@@ -46,8 +46,8 @@ struct OracleTaskHierarchy
   std::vector<OracleHierarchyEvent> events;
   OracleLevelCounts l1;
   OracleLevelCounts llc;
-  std::uint64_t ehc_l1 = 0;
-  std::uint64_t ehc_llc = 0;
+  std::uint64_t l1_first_hit_count = 0;
+  std::uint64_t llc_first_hit_count = 0;
   std::uint64_t all_cache_misses = 0;
 };
 

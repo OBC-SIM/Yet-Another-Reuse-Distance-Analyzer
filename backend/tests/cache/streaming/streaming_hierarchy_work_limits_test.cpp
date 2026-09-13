@@ -65,8 +65,8 @@ TEST(StreamingHierarchyWorkLimitsTest,
   for (const auto & task : result.tasks)
   {
     EXPECT_EQ(task.source_accesses, 2U);
-    EXPECT_EQ(task.ehc_l1, 1U);
-    EXPECT_EQ(task.ehc_llc, 0U);
+    EXPECT_EQ(task.l1_first_hit_count, 1U);
+    EXPECT_EQ(task.llc_first_hit_count, 0U);
     EXPECT_EQ(task.all_cache_misses, 1U);
     EXPECT_TRUE(task.invariants.all_passed);
   }
@@ -113,7 +113,7 @@ TEST(StreamingHierarchyWorkLimitsTest,
   ASSERT_EQ(result.tasks.size(), 1U);
   EXPECT_EQ(result.tasks[0].l1.lookups, 4U);
   EXPECT_EQ(result.tasks[0].llc.lookups, 2U);
-  EXPECT_EQ(result.tasks[0].ehc_l1, 2U);
+  EXPECT_EQ(result.tasks[0].l1_first_hit_count, 2U);
   EXPECT_EQ(result.tasks[0].all_cache_misses, 2U);
 }
 
@@ -188,7 +188,7 @@ TEST(StreamingHierarchyWorkLimitsTest,
     raw, byte_addresses(), make_batch_hierarchy(), options);
   ASSERT_EQ(result.tasks.size(), 1U);
   EXPECT_EQ(result.tasks[0].l1.cold_misses, 1U);
-  EXPECT_EQ(result.tasks[0].ehc_l1, 1U);
+  EXPECT_EQ(result.tasks[0].l1_first_hit_count, 1U);
 }
 
 TEST(StreamingHierarchyWorkLimitsTest,

@@ -59,7 +59,7 @@ TEST(HierarchyResultValidationTest, RejectsEachFalseInvariant)
 TEST(HierarchyResultValidationTest, RejectsForgedPassingFlagsWithBadCounts)
 {
   auto value = result();
-  ++value.tasks[0].ehc_l1;
+  ++value.tasks[0].l1_first_hit_count;
   EXPECT_THROW(hierarchy_result_json(metadata(), value), std::logic_error);
 }
 
@@ -88,7 +88,7 @@ TEST(HierarchyResultValidationTest, RejectsAbsentNonfiniteAndIncorrectRatios)
         std::optional<double>{INFINITY}})
   {
     auto value = result();
-    value.tasks[0].hr_l1 = bad;
+    value.tasks[0].l1_first_hit_ratio = bad;
     EXPECT_ANY_THROW(hierarchy_result_json(metadata(), value));
   }
 }

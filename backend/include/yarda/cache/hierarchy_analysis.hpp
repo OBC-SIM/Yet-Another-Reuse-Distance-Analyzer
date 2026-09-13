@@ -11,7 +11,11 @@
 namespace yarda
 {
 
-/** @brief Identify the first level servicing one L1 line reference. */
+/**
+ * @brief Identify the first level servicing one L1 cache-line reference.
+ *
+ * L1 and LLC identify the first cache hit; Memory identifies an All-Cache Miss.
+ */
 enum class FirstServiceLevel
 {
   L1,
@@ -63,7 +67,11 @@ struct BatchHierarchyResult
 };
 
 /**
- * @brief Analyze exact L1/LLC CSRD and first service for each cold task.
+ * @brief Run batch Hierarchy-Aware Reuse Analyzer (HARA) for each cold task.
+ *
+ * Computes full exact Cache-Set Reuse Distance (CSRD) at L1 and LLC.
+ * Miss-Stream Propagation forwards only L1 misses to LLC; first-service
+ * classification determines Level-Wise First-Hit Counts and All-Cache Misses.
  *
  * Empty tasks are retained. Each task starts with cold state at both levels.
  * Load and store have identical residency semantics. LLC mappings decode the

@@ -22,12 +22,12 @@ TEST(StreamingHierarchyTest, ClassifiesAllThreeServicesWithExactDistances)
   expect_level(task.l1,
                (CacheLevelSummary{5, 1, 4, 3, 1, 3, {{0, 1}, {2, 1}}}));
   expect_level(task.llc, (CacheLevelSummary{4, 1, 3, 3, 0, 3, {{1, 1}}}));
-  EXPECT_EQ(task.ehc_l1, 1U);
-  EXPECT_EQ(task.ehc_llc, 1U);
+  EXPECT_EQ(task.l1_first_hit_count, 1U);
+  EXPECT_EQ(task.llc_first_hit_count, 1U);
   EXPECT_EQ(task.all_cache_misses, 3U);
-  EXPECT_EQ(task.hr_l1, 0.2);
-  EXPECT_EQ(task.hr_llc, 0.2);
-  EXPECT_EQ(task.miss_ratio, 0.6);
+  EXPECT_EQ(task.l1_first_hit_ratio, 0.2);
+  EXPECT_EQ(task.llc_first_hit_ratio, 0.2);
+  EXPECT_EQ(task.all_cache_miss_ratio, 0.6);
   EXPECT_TRUE(task.invariants.all_passed);
   ASSERT_EQ(collector.events.size(), 5U);
   const auto & reused = collector.events[3].second;
@@ -59,7 +59,7 @@ TEST(StreamingHierarchyTest, PreservesTaskOrderEmptyTasksAndColdHistories)
     stream::expect_coverage(task.coverage, (TraceCoverage{2, 2, 0, 2}));
     expect_level(task.l1, (CacheLevelSummary{2, 1, 1, 1, 0, 1, {{0, 1}}}));
     expect_level(task.llc, (CacheLevelSummary{1, 0, 1, 1, 0, 1, {}}));
-    EXPECT_EQ(task.ehc_l1, 1U);
+    EXPECT_EQ(task.l1_first_hit_count, 1U);
     EXPECT_EQ(task.all_cache_misses, 1U);
     EXPECT_TRUE(task.invariants.all_passed);
   }
@@ -68,9 +68,9 @@ TEST(StreamingHierarchyTest, PreservesTaskOrderEmptyTasksAndColdHistories)
   expect_level(empty.l1, {});
   expect_level(empty.llc, {});
   EXPECT_EQ(empty.modeled_accesses, 0U);
-  EXPECT_FALSE(empty.hr_l1);
-  EXPECT_FALSE(empty.hr_llc);
-  EXPECT_FALSE(empty.miss_ratio);
+  EXPECT_FALSE(empty.l1_first_hit_ratio);
+  EXPECT_FALSE(empty.llc_first_hit_ratio);
+  EXPECT_FALSE(empty.all_cache_miss_ratio);
   EXPECT_TRUE(empty.invariants.all_passed);
   ASSERT_EQ(collector.events.size(), 4U);
   EXPECT_EQ(collector.events[2].first, "alpha");
@@ -92,7 +92,7 @@ TEST(StreamingHierarchyTest, CountsCrossLineReferencesSeparatelyFromSources)
   stream::expect_coverage(result.coverage, (TraceCoverage{2, 2, 0, 6}));
   stream::expect_coverage(result.tasks[0].coverage, result.coverage);
   EXPECT_EQ(result.tasks[0].modeled_accesses, 6U);
-  EXPECT_EQ(result.tasks[0].ehc_l1, 3U);
+  EXPECT_EQ(result.tasks[0].l1_first_hit_count, 3U);
   EXPECT_EQ(result.tasks[0].all_cache_misses, 3U);
   ASSERT_EQ(collector.events.size(), 6U);
   const std::uint64_t offsets[] = {0, 4, 36};
@@ -179,7 +179,7 @@ TEST(StreamingHierarchyTest, ProcessesCompactRepeatedLoopsInSummaryMode)
                (CacheLevelSummary{40000, 0, 40000, 2, 39998, 2, {{1, 39998}}}));
   expect_level(task.llc,
                (CacheLevelSummary{40000, 39998, 2, 2, 0, 2, {{1, 39998}}}));
-  EXPECT_EQ(task.ehc_llc, 39998U);
+  EXPECT_EQ(task.llc_first_hit_count, 39998U);
   EXPECT_EQ(task.all_cache_misses, 2U);
   EXPECT_EQ(result.event_delivery.emitted_events, 0U);
   EXPECT_FALSE(result.event_delivery.events_truncated);

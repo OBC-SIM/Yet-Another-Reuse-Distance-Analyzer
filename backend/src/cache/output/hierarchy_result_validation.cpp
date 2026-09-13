@@ -51,11 +51,13 @@ void validate_task(const TaskHierarchySummary & task,
       (task.source_accesses == 0 && task.modeled_accesses != 0))
     throw std::invalid_argument("hierarchy source and line counts disagree");
   const auto checked = finalize_hierarchy_service(task);
-  for (const auto & ratio : {task.hr_l1, task.hr_llc, task.miss_ratio})
+  for (const auto & ratio : {task.l1_first_hit_ratio, task.llc_first_hit_ratio,
+                            task.all_cache_miss_ratio})
     if (ratio && std::signbit(*ratio))
       throw std::invalid_argument("hierarchy ratio has a negative encoding");
-  if (task.hr_l1 != checked.hr_l1 || task.hr_llc != checked.hr_llc ||
-      task.miss_ratio != checked.miss_ratio)
+  if (task.l1_first_hit_ratio != checked.l1_first_hit_ratio ||
+      task.llc_first_hit_ratio != checked.llc_first_hit_ratio ||
+      task.all_cache_miss_ratio != checked.all_cache_miss_ratio)
     throw std::invalid_argument(
         "hierarchy ratios disagree with service counts");
 }

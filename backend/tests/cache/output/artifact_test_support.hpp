@@ -43,12 +43,12 @@ inline StreamingHierarchyResult histogram_result()
   task.source_accesses = task.modeled_accesses = 17;
   task.l1 = {17, 1, 16, 11, 5, 11, {{0, 1}, {2, 2}, {10, 3}}};
   task.llc = {16, 5, 11, 11, 0, 11, {{0, 5}}};
-  task.ehc_l1 = 1;
-  task.ehc_llc = 5;
+  task.l1_first_hit_count = 1;
+  task.llc_first_hit_count = 5;
   task.all_cache_misses = 11;
-  task.hr_l1 = 1.0 / 17.0;
-  task.hr_llc = 5.0 / 17.0;
-  task.miss_ratio = 11.0 / 17.0;
+  task.l1_first_hit_ratio = 1.0 / 17.0;
+  task.llc_first_hit_ratio = 5.0 / 17.0;
+  task.all_cache_miss_ratio = 11.0 / 17.0;
   task.coverage = {17, 17, 0, 17};
   task.invariants = {true, true, true, true, true};
   StreamingHierarchyResult report;
@@ -75,11 +75,11 @@ inline StreamingHierarchyResult large_histogram_result()
     task.l1.csrd_histogram.emplace(distance, 1);
     if (distance != 0) task.llc.csrd_histogram.emplace(distance, 1);
   }
-  task.ehc_l1 = 1;
+  task.l1_first_hit_count = 1;
   task.all_cache_misses = 2 * lines - 1;
-  task.hr_l1 = 1.0 / (2 * lines);
-  task.hr_llc = 0.0;
-  task.miss_ratio = static_cast<double>(2 * lines - 1) / (2 * lines);
+  task.l1_first_hit_ratio = 1.0 / (2 * lines);
+  task.llc_first_hit_ratio = 0.0;
+  task.all_cache_miss_ratio = static_cast<double>(2 * lines - 1) / (2 * lines);
   task.coverage = {2 * lines, 2 * lines, 0, 2 * lines};
   task.invariants = {true, true, true, true, true};
   StreamingHierarchyResult report;

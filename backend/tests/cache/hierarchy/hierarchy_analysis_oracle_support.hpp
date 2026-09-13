@@ -118,30 +118,33 @@ inline void expect_batch_matches_oracles(const ResolvedTaskTraceResult & input,
         decode_cache_address(row.decoded.address, hierarchy.llc.geometry);
       llc_input.push_back(row);
     }
-    EXPECT_EQ(task.summary.ehc_l1, oracle.ehc_l1);
-    EXPECT_EQ(task.summary.ehc_llc, oracle.ehc_llc);
+    EXPECT_EQ(task.summary.l1_first_hit_count, oracle.l1_first_hit_count);
+    EXPECT_EQ(task.summary.llc_first_hit_count, oracle.llc_first_hit_count);
     EXPECT_EQ(task.summary.all_cache_misses, oracle.all_cache_misses);
     if (reference.accesses.empty())
     {
-      EXPECT_FALSE(task.summary.hr_l1);
-      EXPECT_FALSE(task.summary.hr_llc);
-      EXPECT_FALSE(task.summary.miss_ratio);
+      EXPECT_FALSE(task.summary.l1_first_hit_ratio);
+      EXPECT_FALSE(task.summary.llc_first_hit_ratio);
+      EXPECT_FALSE(task.summary.all_cache_miss_ratio);
     }
     else
     {
-      ASSERT_TRUE(task.summary.hr_l1);
-      ASSERT_TRUE(task.summary.hr_llc);
-      ASSERT_TRUE(task.summary.miss_ratio);
+      ASSERT_TRUE(task.summary.l1_first_hit_ratio);
+      ASSERT_TRUE(task.summary.llc_first_hit_ratio);
+      ASSERT_TRUE(task.summary.all_cache_miss_ratio);
       const auto denominator = static_cast<double>(reference.accesses.size());
-      EXPECT_DOUBLE_EQ(*task.summary.hr_l1,
-                       static_cast<double>(oracle.ehc_l1) / denominator);
-      EXPECT_DOUBLE_EQ(*task.summary.hr_llc,
-                       static_cast<double>(oracle.ehc_llc) / denominator);
-      EXPECT_DOUBLE_EQ(*task.summary.miss_ratio,
+      EXPECT_DOUBLE_EQ(*task.summary.l1_first_hit_ratio,
+                       static_cast<double>(oracle.l1_first_hit_count) /
+                         denominator);
+      EXPECT_DOUBLE_EQ(*task.summary.llc_first_hit_ratio,
+                       static_cast<double>(oracle.llc_first_hit_count) /
+                         denominator);
+      EXPECT_DOUBLE_EQ(*task.summary.all_cache_miss_ratio,
                        static_cast<double>(oracle.all_cache_misses) /
                          denominator);
-      EXPECT_NEAR(*task.summary.hr_l1 + *task.summary.hr_llc +
-                    *task.summary.miss_ratio,
+      EXPECT_NEAR(*task.summary.l1_first_hit_ratio +
+                    *task.summary.llc_first_hit_ratio +
+                    *task.summary.all_cache_miss_ratio,
                   1.0, 1e-15);
     }
     EXPECT_TRUE(task.summary.invariants.level_conservation_l1);

@@ -24,8 +24,9 @@ TaskHierarchySummary finalize_hierarchy_service(TaskHierarchySummary summary)
   const auto llc_lookups =
     checked_service_sum(summary.llc.hits, summary.llc.misses);
   const auto llc_services =
-    checked_service_sum(summary.ehc_llc, summary.all_cache_misses);
-  const auto services = checked_service_sum(summary.ehc_l1, llc_services);
+    checked_service_sum(summary.llc_first_hit_count, summary.all_cache_misses);
+  const auto services =
+    checked_service_sum(summary.l1_first_hit_count, llc_services);
 
   auto & checks = summary.invariants;
   checks.level_conservation_l1 =
@@ -35,7 +36,8 @@ TaskHierarchySummary finalize_hierarchy_service(TaskHierarchySummary summary)
   checks.llc_input_matches_l1_misses = summary.llc.lookups == summary.l1.misses;
   checks.first_service_conservation =
     summary.modeled_accesses == summary.l1.lookups &&
-    summary.ehc_l1 == summary.l1.hits && summary.ehc_llc == summary.llc.hits &&
+    summary.l1_first_hit_count == summary.l1.hits &&
+    summary.llc_first_hit_count == summary.llc.hits &&
     summary.all_cache_misses == summary.llc.misses &&
     services == summary.modeled_accesses && llc_services == summary.llc.lookups;
   checks.all_passed =
@@ -50,15 +52,17 @@ TaskHierarchySummary finalize_hierarchy_service(TaskHierarchySummary summary)
     throw std::logic_error("hierarchy service coverage disagrees for task: " +
                            summary.task_id);
 
-  summary.hr_l1.reset();
-  summary.hr_llc.reset();
-  summary.miss_ratio.reset();
+  summary.l1_first_hit_ratio.reset();
+  summary.llc_first_hit_ratio.reset();
+  summary.all_cache_miss_ratio.reset();
   if (summary.modeled_accesses != 0)
   {
     const auto denominator = static_cast<double>(summary.modeled_accesses);
-    summary.hr_l1 = static_cast<double>(summary.ehc_l1) / denominator;
-    summary.hr_llc = static_cast<double>(summary.ehc_llc) / denominator;
-    summary.miss_ratio =
+    summary.l1_first_hit_ratio =
+      static_cast<double>(summary.l1_first_hit_count) / denominator;
+    summary.llc_first_hit_ratio =
+      static_cast<double>(summary.llc_first_hit_count) / denominator;
+    summary.all_cache_miss_ratio =
       static_cast<double>(summary.all_cache_misses) / denominator;
   }
   return summary;

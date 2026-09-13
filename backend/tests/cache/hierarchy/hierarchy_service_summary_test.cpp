@@ -23,8 +23,8 @@ protected:
     summary.modeled_accesses = 5;
     summary.l1 = fixture.l1.summary;
     summary.llc = fixture.llc.summary;
-    summary.ehc_l1 = 1;
-    summary.ehc_llc = 1;
+    summary.l1_first_hit_count = 1;
+    summary.llc_first_hit_count = 1;
     summary.all_cache_misses = 3;
     summary.coverage = fixture.coverage;
   }
@@ -39,8 +39,8 @@ TEST_F(HierarchyServiceSummaryTest, PreservesCountsCoverageAndHistograms)
   EXPECT_EQ(result.task_id, "service");
   EXPECT_EQ(result.source_accesses, 5U);
   EXPECT_EQ(result.modeled_accesses, 5U);
-  EXPECT_EQ(result.ehc_l1, 1U);
-  EXPECT_EQ(result.ehc_llc, 1U);
+  EXPECT_EQ(result.l1_first_hit_count, 1U);
+  EXPECT_EQ(result.llc_first_hit_count, 1U);
   EXPECT_EQ(result.all_cache_misses, 3U);
   EXPECT_EQ(result.coverage.source_accesses, 5U);
   EXPECT_EQ(result.coverage.resolved_accesses, 5U);
@@ -53,16 +53,16 @@ TEST_F(HierarchyServiceSummaryTest, PreservesCountsCoverageAndHistograms)
 
 TEST_F(HierarchyServiceSummaryTest, DerivesRatiosFromAuthoritativeCounts)
 {
-  summary.hr_l1 = 99;
-  summary.hr_llc = 99;
-  summary.miss_ratio = 99;
+  summary.l1_first_hit_ratio = 99;
+  summary.llc_first_hit_ratio = 99;
+  summary.all_cache_miss_ratio = 99;
   const auto result = finalize_hierarchy_service(summary);
-  ASSERT_TRUE(result.hr_l1);
-  ASSERT_TRUE(result.hr_llc);
-  ASSERT_TRUE(result.miss_ratio);
-  EXPECT_DOUBLE_EQ(*result.hr_l1, 0.2);
-  EXPECT_DOUBLE_EQ(*result.hr_llc, 0.2);
-  EXPECT_DOUBLE_EQ(*result.miss_ratio, 0.6);
+  ASSERT_TRUE(result.l1_first_hit_ratio);
+  ASSERT_TRUE(result.llc_first_hit_ratio);
+  ASSERT_TRUE(result.all_cache_miss_ratio);
+  EXPECT_DOUBLE_EQ(*result.l1_first_hit_ratio, 0.2);
+  EXPECT_DOUBLE_EQ(*result.llc_first_hit_ratio, 0.2);
+  EXPECT_DOUBLE_EQ(*result.all_cache_miss_ratio, 0.6);
   expect_hierarchy_invariants(result.invariants);
 }
 
@@ -70,13 +70,13 @@ TEST_F(HierarchyServiceSummaryTest, ClearsAllRatiosForZeroModeledAccesses)
 {
   summary = {};
   summary.task_id = "empty";
-  summary.hr_l1 = 1;
-  summary.hr_llc = 1;
-  summary.miss_ratio = 1;
+  summary.l1_first_hit_ratio = 1;
+  summary.llc_first_hit_ratio = 1;
+  summary.all_cache_miss_ratio = 1;
   const auto result = finalize_hierarchy_service(summary);
-  EXPECT_FALSE(result.hr_l1);
-  EXPECT_FALSE(result.hr_llc);
-  EXPECT_FALSE(result.miss_ratio);
+  EXPECT_FALSE(result.l1_first_hit_ratio);
+  EXPECT_FALSE(result.llc_first_hit_ratio);
+  EXPECT_FALSE(result.all_cache_miss_ratio);
   expect_hierarchy_invariants(result.invariants);
 }
 
@@ -139,20 +139,20 @@ TEST_F(HierarchyServiceSummaryTest, RejectsLlcInputDisagreeingWithL1Misses)
 {
   --summary.llc.lookups;
   --summary.llc.hits;
-  --summary.ehc_llc;
+  --summary.llc_first_hit_count;
   EXPECT_THROW(finalize_hierarchy_service(summary), std::logic_error);
 }
 
 TEST_F(HierarchyServiceSummaryTest, RejectsL1FirstServiceDisagreeingWithHits)
 {
-  ++summary.ehc_l1;
-  --summary.ehc_llc;
+  ++summary.l1_first_hit_count;
+  --summary.llc_first_hit_count;
   EXPECT_THROW(finalize_hierarchy_service(summary), std::logic_error);
 }
 
 TEST_F(HierarchyServiceSummaryTest, RejectsLlcFirstServiceDisagreeingWithHits)
 {
-  ++summary.ehc_llc;
+  ++summary.llc_first_hit_count;
   --summary.all_cache_misses;
   EXPECT_THROW(finalize_hierarchy_service(summary), std::logic_error);
 }
@@ -198,13 +198,13 @@ TEST_F(HierarchyServiceSummaryTest, RejectsLlcLookupSumOverflow)
 
 TEST_F(HierarchyServiceSummaryTest, RejectsFirstServiceSumOverflow)
 {
-  summary.ehc_l1 = maximum;
+  summary.l1_first_hit_count = maximum;
   EXPECT_THROW(finalize_hierarchy_service(summary), std::overflow_error);
 }
 
 TEST_F(HierarchyServiceSummaryTest, RejectsLlcServiceSumOverflow)
 {
-  summary.ehc_llc = maximum;
+  summary.llc_first_hit_count = maximum;
   EXPECT_THROW(finalize_hierarchy_service(summary), std::overflow_error);
 }
 
@@ -215,19 +215,20 @@ TEST_F(HierarchyServiceSummaryTest, AcceptsLargestRepresentableTotal)
   summary.coverage = {maximum, maximum, 0, maximum};
   summary.l1 = {maximum, maximum - 1, 1, 1, 0, 1, {{0, maximum - 1}}};
   summary.llc = {1, 0, 1, 1, 0, 1, {}};
-  summary.ehc_l1 = maximum - 1;
-  summary.ehc_llc = 0;
+  summary.l1_first_hit_count = maximum - 1;
+  summary.llc_first_hit_count = 0;
   summary.all_cache_misses = 1;
   const auto result = finalize_hierarchy_service(summary);
   EXPECT_EQ(result.modeled_accesses, maximum);
-  EXPECT_EQ(result.ehc_l1, maximum - 1);
+  EXPECT_EQ(result.l1_first_hit_count, maximum - 1);
   EXPECT_EQ(result.all_cache_misses, 1U);
-  ASSERT_TRUE(result.hr_l1);
-  ASSERT_TRUE(result.hr_llc);
-  ASSERT_TRUE(result.miss_ratio);
-  EXPECT_DOUBLE_EQ(*result.hr_l1, 1.0);
-  EXPECT_DOUBLE_EQ(*result.hr_llc, 0.0);
-  EXPECT_DOUBLE_EQ(*result.miss_ratio, 1.0 / static_cast<double>(maximum));
+  ASSERT_TRUE(result.l1_first_hit_ratio);
+  ASSERT_TRUE(result.llc_first_hit_ratio);
+  ASSERT_TRUE(result.all_cache_miss_ratio);
+  EXPECT_DOUBLE_EQ(*result.l1_first_hit_ratio, 1.0);
+  EXPECT_DOUBLE_EQ(*result.llc_first_hit_ratio, 0.0);
+  EXPECT_DOUBLE_EQ(*result.all_cache_miss_ratio,
+                   1.0 / static_cast<double>(maximum));
   expect_hierarchy_invariants(result.invariants);
 }
 

@@ -32,16 +32,16 @@ TEST(RegionHierarchy, OutsideReferencesDoNotWarmIndependentTasks)
     EXPECT_EQ(result.tasks[i].source_accesses, 2U);
     EXPECT_EQ(result.tasks[i].l1.cold_misses, 1U);
     EXPECT_EQ(result.tasks[i].llc.cold_misses, 1U);
-    EXPECT_EQ(result.tasks[i].ehc_l1, 1U);
+    EXPECT_EQ(result.tasks[i].l1_first_hit_count, 1U);
     EXPECT_EQ(result.tasks[i].all_cache_misses, 1U);
   }
   const auto & empty = result.tasks[3];
   EXPECT_EQ(empty.source_accesses, 0U);
   EXPECT_TRUE(empty.l1.csrd_histogram.empty());
   EXPECT_TRUE(empty.llc.csrd_histogram.empty());
-  EXPECT_FALSE(empty.hr_l1.has_value());
-  EXPECT_FALSE(empty.hr_llc.has_value());
-  EXPECT_FALSE(empty.miss_ratio.has_value());
+  EXPECT_FALSE(empty.l1_first_hit_ratio.has_value());
+  EXPECT_FALSE(empty.llc_first_hit_ratio.has_value());
+  EXPECT_FALSE(empty.all_cache_miss_ratio.has_value());
 }
 
 TEST(RegionHierarchy, LaterFailureAbortsAndCollectedEarlierEventsAreDiscarded)

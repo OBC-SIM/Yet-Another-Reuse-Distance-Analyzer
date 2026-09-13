@@ -47,8 +47,8 @@ TEST(ExplicitHierarchyLruOracleContractTest, PreservesEmptyTaskIdentity)
   EXPECT_EQ(result.llc.misses, 0U);
   EXPECT_EQ(result.llc.cold_misses, 0U);
   EXPECT_EQ(result.llc.replacement_misses, 0U);
-  EXPECT_EQ(result.ehc_l1, 0U);
-  EXPECT_EQ(result.ehc_llc, 0U);
+  EXPECT_EQ(result.l1_first_hit_count, 0U);
+  EXPECT_EQ(result.llc_first_hit_count, 0U);
   EXPECT_EQ(result.all_cache_misses, 0U);
   expect_contract_invariants(result, 0U);
 }
@@ -61,8 +61,8 @@ TEST(ExplicitHierarchyLruOracleContractTest, CountsFirstServiceLevels)
   const auto result = yarda::test::analyze_with_explicit_lru(
     make_task({0, 1, 0, 0}, l1), l1, llc);
 
-  EXPECT_EQ(result.ehc_l1, 1U);
-  EXPECT_EQ(result.ehc_llc, 1U);
+  EXPECT_EQ(result.l1_first_hit_count, 1U);
+  EXPECT_EQ(result.llc_first_hit_count, 1U);
   EXPECT_EQ(result.all_cache_misses, 2U);
   EXPECT_EQ(result.l1.lookups, 4U);
   EXPECT_EQ(result.l1.hits, 1U);

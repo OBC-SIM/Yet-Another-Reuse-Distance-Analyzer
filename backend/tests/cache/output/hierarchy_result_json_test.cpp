@@ -99,12 +99,12 @@ TEST(HierarchyResultJsonTest, PreservesCountsBeyondSignedAndDoublePrecision)
   task.source_accesses = task.modeled_accesses = count;
   task.l1 = {count, count - 1, 1, 1, 0, 1, {{0, count - 1}}};
   task.llc = {1, 0, 1, 1, 0, 1, {}};
-  task.ehc_l1 = count - 1;
-  task.ehc_llc = 0;
+  task.l1_first_hit_count = count - 1;
+  task.llc_first_hit_count = 0;
   task.all_cache_misses = 1;
-  task.hr_l1 = 1.0;
-  task.hr_llc = 0.0;
-  task.miss_ratio = 1.0 / static_cast<double>(count);
+  task.l1_first_hit_ratio = 1.0;
+  task.llc_first_hit_ratio = 0.0;
+  task.all_cache_miss_ratio = 1.0 / static_cast<double>(count);
   task.coverage = value.coverage = {count, count, 0, count};
   const auto payload = hierarchy_result_json(metadata(), value);
   EXPECT_TRUE(payload["tasks"][0]["ma"].is_number_unsigned());

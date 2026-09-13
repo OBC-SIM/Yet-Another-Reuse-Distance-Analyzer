@@ -20,17 +20,17 @@ TEST(HierarchyArtifactBoundaryTest, RejectsMoreLlcDistinctLinesThanL1)
   auto value = histogram_result();
   auto & task = value.tasks[0];
   task.llc = {16, 4, 12, 12, 0, 12, {{0, 4}}};
-  task.ehc_llc = 4;
+  task.llc_first_hit_count = 4;
   task.all_cache_misses = 12;
-  task.hr_llc = 4.0 / 17.0;
-  task.miss_ratio = 12.0 / 17.0;
+  task.llc_first_hit_ratio = 4.0 / 17.0;
+  task.all_cache_miss_ratio = 12.0 / 17.0;
   EXPECT_THROW(hierarchy_result_json(metadata(), value), std::invalid_argument);
 }
 
 TEST(HierarchyArtifactBoundaryTest, RejectsNegativeZeroRatioEncoding)
 {
   auto value = result();
-  value.tasks[0].hr_llc = -0.0;
+  value.tasks[0].llc_first_hit_ratio = -0.0;
   EXPECT_THROW(hierarchy_result_json(metadata(), value), std::invalid_argument);
 }
 

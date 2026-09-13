@@ -145,7 +145,7 @@ OracleTaskHierarchy analyze_with_explicit_lru(
     if (is_hit(event.l1_outcome))
     {
       event.first_service = OracleFirstServiceLevel::L1;
-      increment(result.ehc_l1);
+      increment(result.l1_first_hit_count);
       result.events.push_back(event);
       continue;
     }
@@ -156,7 +156,7 @@ OracleTaskHierarchy analyze_with_explicit_lru(
     if (is_hit(*event.llc_outcome))
     {
       event.first_service = OracleFirstServiceLevel::LLC;
-      increment(result.ehc_llc);
+      increment(result.llc_first_hit_count);
     }
     else
     {

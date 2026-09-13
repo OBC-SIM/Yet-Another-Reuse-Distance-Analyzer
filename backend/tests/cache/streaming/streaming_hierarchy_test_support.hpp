@@ -87,12 +87,12 @@ inline void expect_summary(const TaskHierarchySummary & actual,
   EXPECT_EQ(actual.modeled_accesses, expected.modeled_accesses);
   expect_level(actual.l1, expected.l1);
   expect_level(actual.llc, expected.llc);
-  EXPECT_EQ(actual.ehc_l1, expected.ehc_l1);
-  EXPECT_EQ(actual.ehc_llc, expected.ehc_llc);
+  EXPECT_EQ(actual.l1_first_hit_count, expected.l1_first_hit_count);
+  EXPECT_EQ(actual.llc_first_hit_count, expected.llc_first_hit_count);
   EXPECT_EQ(actual.all_cache_misses, expected.all_cache_misses);
-  EXPECT_EQ(actual.hr_l1, expected.hr_l1);
-  EXPECT_EQ(actual.hr_llc, expected.hr_llc);
-  EXPECT_EQ(actual.miss_ratio, expected.miss_ratio);
+  EXPECT_EQ(actual.l1_first_hit_ratio, expected.l1_first_hit_ratio);
+  EXPECT_EQ(actual.llc_first_hit_ratio, expected.llc_first_hit_ratio);
+  EXPECT_EQ(actual.all_cache_miss_ratio, expected.all_cache_miss_ratio);
   stream::expect_coverage(actual.coverage, expected.coverage);
   EXPECT_EQ(actual.invariants.level_conservation_l1,
             expected.invariants.level_conservation_l1);

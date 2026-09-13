@@ -47,10 +47,12 @@ struct HierarchyInvariants
  * @brief Own semantic counts for one independently cold-started task.
  *
  * No per-reference payload is retained. Source counts and coverage describe
- * source-to-L1 expansion; modeled_accesses counts L1 line references. EHC
- * counts references first serviced by each cache; all_cache_misses counts
- * references first serviced by Memory. Every ratio uses modeled_accesses as
- * its denominator and is absent when that count is zero (future JSON null).
+ * source-to-L1 expansion; modeled_accesses counts L1 cache-line references.
+ * Level-Wise First-Hit Counts count references first hitting L1 or LLC;
+ * all_cache_misses is the All-Cache Miss Count, serviced by Memory.
+ * The Cache-Level Profile consists of l1_first_hit_ratio, llc_first_hit_ratio
+ * and all_cache_miss_ratio, in that order. Every ratio uses modeled_accesses
+ * as its denominator and is absent (serialized as JSON null) when it is zero.
  * Integer counts are authoritative; ratios and invariants are derived.
  */
 struct TaskHierarchySummary
@@ -60,12 +62,12 @@ struct TaskHierarchySummary
   std::uint64_t modeled_accesses = 0;
   CacheLevelSummary l1;
   CacheLevelSummary llc;
-  std::uint64_t ehc_l1 = 0;
-  std::uint64_t ehc_llc = 0;
+  std::uint64_t l1_first_hit_count = 0;
+  std::uint64_t llc_first_hit_count = 0;
   std::uint64_t all_cache_misses = 0;
-  std::optional<double> hr_l1;
-  std::optional<double> hr_llc;
-  std::optional<double> miss_ratio;
+  std::optional<double> l1_first_hit_ratio;
+  std::optional<double> llc_first_hit_ratio;
+  std::optional<double> all_cache_miss_ratio;
   TraceCoverage coverage;
   HierarchyInvariants invariants;
 };

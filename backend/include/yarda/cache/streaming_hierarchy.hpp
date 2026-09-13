@@ -99,11 +99,14 @@ struct StreamingHierarchyResult
 };
 
 /**
- * @brief Stream exact L1/LLC analysis of independent, cold-started LAT tasks.
+ * @brief Run streaming Hierarchy-Aware Reuse Analyzer (HARA) for LAT tasks.
  *
- * Preserves batch semantics, task order and empty tasks. Only L1 misses touch
- * LLC, decoded from the original linked address with LLC geometry. One module
- * budget charges sources and source-to-L1 lines, never LLC forwarding twice.
+ * Preserves full exact Cache-Set Reuse Distance (CSRD), independent cold-task
+ * semantics, task order and empty tasks. Miss-Stream Propagation forwards only
+ * L1 misses to LLC, decoded from the original linked address with LLC geometry.
+ * Task summaries retain First-Hit Counts and the Cache-Level Profile. One
+ * module budget charges sources and source-to-L1 lines, never LLC forwarding
+ * twice.
  * Summary mode retains no resolved/mapped trace or event vector. Input DOM,
  * expanded calls, completed summaries and full distinct-line history still
  * occupy memory. Event limits affect diagnostics only.

@@ -134,7 +134,7 @@ TEST(StreamingHierarchyEventsTest,
   EXPECT_EQ(count, 1U);
   EXPECT_TRUE(result.event_delivery.events_truncated);
   EXPECT_EQ(result.coverage.emitted_line_references, 4U);
-  EXPECT_EQ(result.tasks.at(0).ehc_l1, 2U);
+  EXPECT_EQ(result.tasks.at(0).l1_first_hit_count, 2U);
   EXPECT_EQ(result.tasks.at(0).all_cache_misses, 2U);
 }
 

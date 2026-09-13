@@ -20,14 +20,14 @@ enum class LruAccessOutcome
   ReplacementMiss,
 };
 
-/** @brief LRU decision aligned with one input access. */
+/** @brief LRU decision and exact Cache-Set Reuse Distance for one reference. */
 struct LruAccessResult
 {
   LruAccessOutcome outcome = LruAccessOutcome::ColdMiss;
   std::optional<std::size_t> reuse_distance;
 };
 
-/** @brief Aggregate reuse and miss counts for one cache set. */
+/** @brief Aggregate Cache-Set Reuse Distances and miss counts for one set. */
 struct LruSetResult
 {
   std::map<std::size_t, std::uint64_t> histogram;
@@ -36,7 +36,7 @@ struct LruSetResult
   std::uint64_t replacement_misses = 0;
 };
 
-/** @brief Set-aware LRU reuse-distance result for an ordered trace. */
+/** @brief Full exact Cache-Set Reuse Distance result for an ordered trace. */
 struct LruRdAnalysis
 {
   std::vector<LruAccessResult> accesses;
@@ -48,10 +48,11 @@ struct LruRdAnalysis
 };
 
 /**
- * @brief Analyze exact LRU reuse distance independently within each set.
+ * @brief Analyze full exact Cache-Set Reuse Distance (CSRD) in a batch trace.
  *
  * The returned access decisions retain input order. A non-cold access hits
- * exactly when its set-local reuse distance is below the associativity.
+ * exactly when its CSRD is below the associativity. Only intervening distinct
+ * lines in the same cache set contribute; cold accesses have no distance.
  *
  * @param accesses Ordered mappings decoded with `geometry`.
  * @param geometry Cache geometry defining set count and associativity.
