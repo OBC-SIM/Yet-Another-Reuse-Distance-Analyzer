@@ -39,6 +39,16 @@ macro(generate_legacy name source)
         "-Wl,--section-start=.yarda_cross=0x60021c" -o "${elf}")
 endmacro()
 
+macro(generate_region name source)
+    prepare_case("${name}")
+    run_checked("C to selected LAT" "${YARDA_REGION}" "${source}" "${lat}"
+        -- -I "${YARDA_INCLUDE_DIR}" ${ARGN})
+    run_checked("region C to ET_EXEC" "${YARDA_CLANG}" -std=c11 -O0 -g
+        -fno-pie -no-pie -Wno-unknown-pragmas -I "${YARDA_INCLUDE_DIR}"
+        ${ARGN} "${source}" "-Wl,--section-start=.yarda_lines=0x600000"
+        "-Wl,--section-start=.yarda_cross=0x60021c" -o "${elf}")
+endmacro()
+
 function(check_with_oracles golden)
     run_checked("generated artifact GTest" "${YARDA_VERIFY}"
         "${lat}" "${elf}" "${YARDA_CACHE}" "${result_file}"
