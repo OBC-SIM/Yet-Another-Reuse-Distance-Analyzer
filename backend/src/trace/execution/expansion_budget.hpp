@@ -5,6 +5,7 @@
 #include <string>
 
 #include "yarda/trace/work_limits.hpp"
+#include "yarda/trace/execution_statistics.hpp"
 
 namespace yarda::detail
 {
@@ -45,13 +46,20 @@ public:
             "cumulative loop iteration count", "");
   }
 
-  void validate_inline_call_depth(std::uint64_t depth) const
+  void validate_inline_call_depth(std::uint64_t depth)
   {
     if (depth > limits_.inline_call_depth)
     {
       throw std::invalid_argument("inline call depth exceeds " +
                                   std::to_string(limits_.inline_call_depth));
     }
+    if (depth > maximum_inline_depth_) maximum_inline_depth_ = depth;
+  }
+
+  /** @brief Snapshot measured work after the complete invocation succeeds. */
+  TraceExecutionStatistics execution_statistics() const noexcept
+  {
+    return {maximum_inline_depth_, loop_iterations_};
   }
 
 private:
@@ -71,6 +79,7 @@ private:
   LoopWorkLimits loop_limits_;
   std::uint64_t expanded_nodes_ = 0;
   std::uint64_t loop_iterations_ = 0;
+  std::uint64_t maximum_inline_depth_ = 0;
 };
 
 }  // namespace yarda::detail

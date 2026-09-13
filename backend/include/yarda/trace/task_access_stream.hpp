@@ -5,6 +5,7 @@
 #include <string>
 
 #include "yarda/trace/emission_budget.hpp"
+#include "yarda/trace/execution_statistics.hpp"
 #include "yarda/trace/resolved_access.hpp"
 #include "yarda/trace/work_limits.hpp"
 
@@ -36,6 +37,8 @@ struct TaskAccessStreamResult
   TraceCoverage coverage;
   /** @brief Sum of task-local expanded static opaque-call counts. */
   std::uint64_t excluded_opaque_call_sites = 0;
+  /** @brief Actual module-wide expansion work, returned only on success. */
+  TraceExecutionStatistics execution_statistics;
 };
 
 /**

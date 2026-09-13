@@ -58,6 +58,7 @@ TaskAccessStreamResult stream_resolved_task_accesses(
       result.excluded_opaque_call_sites += excluded;
     }
     result.coverage = unroller.coverage();
+    result.execution_statistics = expansion_budget.execution_statistics();
     return result;
   }
   catch (const detail::TaskSinkFailure & failure)

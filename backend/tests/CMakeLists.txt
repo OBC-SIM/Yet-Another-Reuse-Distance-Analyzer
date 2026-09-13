@@ -26,6 +26,7 @@ add_executable(yarda_backend_tests
     trace/layout/access_layout_test.cpp
     trace/module/schema_test.cpp
     trace/execution/expansion_budget_test.cpp
+    trace/execution/execution_statistics_test.cpp
     trace/output/mapped_trace_test.cpp
     trace/output/mapped_trace_strict_test.cpp
     trace/output/resolved_access_test.cpp
