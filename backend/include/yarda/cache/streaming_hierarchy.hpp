@@ -7,10 +7,13 @@
 
 #include "yarda/cache/hierarchy_analysis.hpp"
 #include "yarda/trace/emission_budget.hpp"
+#include "yarda/trace/execution_statistics.hpp"
 #include "yarda/trace/work_limits.hpp"
 
 namespace yarda
 {
+
+class AnalysisTelemetryCollector;
 
 /**
  * @brief Receive one diagnostic event synchronously with its task identity.
@@ -50,6 +53,13 @@ struct StreamingHierarchyOptions
    * a partial result. Legacy batch adapters retain the default loop limits.
    */
   LoopWorkLimits loop_limits{};
+  /**
+   * @brief Optional borrowed collector, alive throughout this invocation.
+   *
+   * Records the inclusive stream and nested task-consumer intervals. Null
+   * performs no clock calls. Discard all measurements if analysis fails.
+   */
+  AnalysisTelemetryCollector * telemetry = nullptr;
 };
 
 /** @brief Diagnostic delivery metadata, separate from semantic task counts. */
@@ -71,6 +81,8 @@ struct StreamingHierarchyResult
   /** @brief Diagnostics metadata; event options do not affect semantic counts.
    */
   HierarchyEventDelivery event_delivery;
+  /** @brief Measured producer work; excluded from semantic serialization. */
+  TraceExecutionStatistics execution_statistics;
 };
 
 /**

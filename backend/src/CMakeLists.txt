@@ -64,6 +64,10 @@ add_library(yarda_hierarchy_analysis
     cache/output/hierarchy_json_fields.cpp
     cache/output/hierarchy_events_json.cpp
     cache/output/hierarchy_event_validation.cpp
+    cache/output/analysis_telemetry.cpp
+    cache/output/analysis_telemetry_validation.cpp
+    cache/output/hierarchy_telemetry_json.cpp
+    cache/output/runtime_measurement.cpp
     cache/streaming/streaming_hierarchy.cpp
     cache/streaming/streaming_hierarchy_summary.cpp
     cache/streaming/streaming_hierarchy_task.cpp
