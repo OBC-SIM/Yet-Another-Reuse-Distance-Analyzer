@@ -43,4 +43,13 @@ if(BUILD_TESTING)
     target_compile_options(yarda_evaluation_tests PRIVATE -Wall -Wextra -Wpedantic)
     include(GoogleTest)
     gtest_discover_tests(yarda_evaluation_tests)
+    foreach(case smoke failures)
+        add_test(NAME yarda_hierarchy_evaluation_${case}
+            COMMAND ${CMAKE_COMMAND}
+                "-DYARDA_BUILD_DIR=${CMAKE_BINARY_DIR}"
+                "-DYARDA_EXPERIMENTS=${CMAKE_CURRENT_SOURCE_DIR}"
+                "-DYARDA_WORK=${CMAKE_CURRENT_BINARY_DIR}/test-artifacts"
+                -P "${YARDA_BACKEND_SOURCE_DIR}/tests/experiments/${case}.cmake")
+        set_tests_properties(yarda_hierarchy_evaluation_${case} PROPERTIES TIMEOUT 120)
+    endforeach()
 endif()
