@@ -113,5 +113,9 @@ add_executable(yarda_elf_regions_cli cli/elf_regions_main.cpp)
 set_target_properties(yarda_elf_regions_cli PROPERTIES OUTPUT_NAME yarda_elf_regions)
 target_link_libraries(yarda_elf_regions_cli PRIVATE yarda_elf_regions)
 
+add_library(yarda_cli_support
+    cli/artifact_output.cpp
+)
+target_compile_options(yarda_cli_support PRIVATE -Wall -Wextra -Wpedantic)
 add_executable(yarda_cpp cli/main.cpp)
 target_link_libraries(yarda_cpp PRIVATE yarda_cache_config yarda_elf_regions)
