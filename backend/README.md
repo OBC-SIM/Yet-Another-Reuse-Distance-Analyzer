@@ -97,7 +97,14 @@ The selected model is core 0, private L1 -> shared LLC -> Memory, equal line
 sizes, LRU, allocation on demand misses, and independent cold tasks. Only L1
 misses reach LLC. Region selection comes from the LAT; there is no backend
 region or core selector. See the [model](../docs/cache-hierarchy-rd-model-v1.md)
-and [artifact contract](../docs/cache-hierarchy-artifacts-v1.md).
+and [artifact contract](../docs/cache-hierarchy-artifacts-v2.md).
+
+RESULT uses `schema_version: 2` and glossary metric keys:
+`modeled_accesses`, `l1_first_hit_count`, `llc_first_hit_count`,
+`all_cache_miss_count`, `l1_first_hit_ratio`, `llc_first_hit_ratio`, and
+`all_cache_miss_ratio`. Ratios use L1 line references as their denominator;
+`source_accesses` remains separate. EVENTS and TELEMETRY retain schema 1 and
+share the RESULT v2 analysis ID. See the contract for migration from v1 keys.
 
 `--analysis mapping` explicitly selects the existing ELF mapping path and
 requires ELF/cache. Omitting `--analysis` preserves the existing dispatch,

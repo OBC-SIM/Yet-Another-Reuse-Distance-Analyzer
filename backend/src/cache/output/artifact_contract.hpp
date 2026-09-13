@@ -6,7 +6,9 @@
 namespace yarda::detail
 {
 
-inline constexpr auto kArtifactSchemaVersion = 1;
+inline constexpr auto kResultSchemaVersion = 2;
+inline constexpr auto kEventsSchemaVersion = 1;
+inline constexpr auto kTelemetrySchemaVersion = 1;
 inline constexpr auto kAnalysisMode = "hierarchy-rd";
 inline constexpr auto kModelId = "exact-two-level-lru-demand-v1";
 inline constexpr auto kCsrdMode = "full-exact";

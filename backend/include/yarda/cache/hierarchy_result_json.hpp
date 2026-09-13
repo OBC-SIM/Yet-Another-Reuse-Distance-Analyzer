@@ -53,7 +53,7 @@ struct HierarchyEventMetadata
  * @brief Serialize complete semantic summaries without reading external state.
  * @param metadata Borrowed input identity and effective selected hierarchy.
  * @param result Borrowed successful streaming result, with at least one task.
- * @return Ordered schema-v1 JSON; use dump() directly to preserve key order.
+ * @return Ordered RESULT schema-v2 JSON; dump() preserves glossary key order.
  * @throws std::invalid_argument for inconsistent metadata or summaries.
  * @throws std::logic_error for violated analyzer conservation contracts.
  * @throws std::overflow_error for count or byte-capacity overflow.

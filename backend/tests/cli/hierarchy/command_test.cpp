@@ -12,9 +12,9 @@ TEST_F(HierarchyCommandTest, BindsBuildIdentityAndPreservesColdTasks)
   const auto result = Json::parse(read(options.export_path));
   EXPECT_EQ(result["tool_version"], yarda::cli::kToolVersion);
   ASSERT_EQ(result["tasks"].size(), 3U);
-  EXPECT_EQ(result["tasks"][0]["amc"], 2);
-  EXPECT_EQ(result["tasks"][1]["amc"], 2);
-  EXPECT_EQ(result["tasks"][2]["hr_l1"], nullptr);
+  EXPECT_EQ(result["tasks"][0]["all_cache_miss_count"], 2);
+  EXPECT_EQ(result["tasks"][1]["all_cache_miss_count"], 2);
+  EXPECT_EQ(result["tasks"][2]["l1_first_hit_ratio"], nullptr);
   EXPECT_FALSE(fs::exists(temporary.directory / "events.json"));
   EXPECT_FALSE(fs::exists(temporary.directory / "telemetry.json"));
 }

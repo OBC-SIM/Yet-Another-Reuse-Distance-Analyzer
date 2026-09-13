@@ -18,7 +18,7 @@ hierarchy_result_json(const HierarchyResultMetadata & metadata,
   for (const auto & task : result.tasks)
     tasks.push_back(detail::hierarchy_task_json(task));
   return {
-      {"schema_version", detail::kArtifactSchemaVersion},
+      {"schema_version", detail::kResultSchemaVersion},
       {"analysis_mode", detail::kAnalysisMode},
       {"model_id", detail::kModelId},
       {"csrd_mode", detail::kCsrdMode},

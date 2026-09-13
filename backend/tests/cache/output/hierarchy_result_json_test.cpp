@@ -56,11 +56,11 @@ TEST(HierarchyResultJsonTest, CountsCrossLineStoreAsOneSourceAndTwoReferences)
       raw, stream::stream::addresses(8), metadata().hierarchy);
   const auto task = hierarchy_result_json(metadata(), value)["tasks"][0];
   EXPECT_EQ(task["source_accesses"], 1);
-  EXPECT_EQ(task["ma"], 2);
-  EXPECT_EQ(task["ehc_l1"], 0);
-  EXPECT_EQ(task["ehc_llc"], 0);
-  EXPECT_EQ(task["amc"], 2);
-  EXPECT_EQ(task["mr"], 1.0);
+  EXPECT_EQ(task["modeled_accesses"], 2);
+  EXPECT_EQ(task["l1_first_hit_count"], 0);
+  EXPECT_EQ(task["llc_first_hit_count"], 0);
+  EXPECT_EQ(task["all_cache_miss_count"], 2);
+  EXPECT_EQ(task["all_cache_miss_ratio"], 1.0);
   EXPECT_EQ(task["l1"]["lookups"], 2);
   EXPECT_EQ(task["llc"]["cold_misses"], 2);
   EXPECT_EQ(task["coverage"]["source_accesses"], 1);
@@ -84,10 +84,10 @@ TEST(HierarchyResultJsonTest, RetainsEmptyTasksInLatOrderWithNullRatios)
   EXPECT_EQ(tasks[2]["task_id"], "a");
   for (const auto & task : tasks)
   {
-    EXPECT_TRUE(task["hr_l1"].is_null());
-    EXPECT_TRUE(task["hr_llc"].is_null());
-    EXPECT_TRUE(task["mr"].is_null());
-    EXPECT_EQ(task["ma"], 0);
+    EXPECT_TRUE(task["l1_first_hit_ratio"].is_null());
+    EXPECT_TRUE(task["llc_first_hit_ratio"].is_null());
+    EXPECT_TRUE(task["all_cache_miss_ratio"].is_null());
+    EXPECT_EQ(task["modeled_accesses"], 0);
   }
 }
 
@@ -107,8 +107,8 @@ TEST(HierarchyResultJsonTest, PreservesCountsBeyondSignedAndDoublePrecision)
   task.all_cache_miss_ratio = 1.0 / static_cast<double>(count);
   task.coverage = value.coverage = {count, count, 0, count};
   const auto payload = hierarchy_result_json(metadata(), value);
-  EXPECT_TRUE(payload["tasks"][0]["ma"].is_number_unsigned());
-  EXPECT_EQ(payload["tasks"][0]["ma"].dump(), "18446744073709551615");
+  EXPECT_TRUE(payload["tasks"][0]["modeled_accesses"].is_number_unsigned());
+  EXPECT_EQ(payload["tasks"][0]["modeled_accesses"].dump(), "18446744073709551615");
   EXPECT_EQ(payload["tasks"][0]["l1"]["csrd_histogram"]["0"].dump(),
             "18446744073709551614");
 }

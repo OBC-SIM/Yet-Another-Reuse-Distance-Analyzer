@@ -35,7 +35,7 @@ run_checked("explicit empty-loop allowance" "${YARDA_CPP}" ${base} ${diagnostics
     --max-single-loop-iterations 1000001 --max-cumulative-loop-iterations 1000001
     --max-source-accesses 0 --max-line-references 0)
 file(READ "${result_file}" payload)
-assert_json("0" tasks 0 ma)
+assert_json("0" tasks 0 modeled_accesses)
 file(READ "${telemetry_file}" payload)
 assert_json("1000001" loop_iterations_expanded)
 assert_json("0" source_accesses_emitted)

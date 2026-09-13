@@ -19,6 +19,7 @@ TEST_P(HierarchyEventsBoundaryTest, SerializesExactModulePrefixAndStableResult)
   const auto actual = collect(GetParam());
   const auto baseline = collect(5);
   const auto payload = hierarchy_events_json(actual.metadata, actual.events);
+  EXPECT_EQ(payload["schema_version"], 1);
   EXPECT_EQ(payload["events"].size(), std::min<std::uint64_t>(GetParam(), 5));
   EXPECT_EQ(payload["events_truncated"], GetParam() < 5);
   EXPECT_EQ(payload["event_limit"], GetParam());

@@ -45,7 +45,7 @@ function(check_input_identity)
         "\"analysis_mode\":\"hierarchy-rd\",\"cache_config_sha256\":\"${cache_config_sha256}\","
         "\"csrd_mode\":\"full-exact\",\"elf_sha256\":\"${elf_sha256}\","
         "\"lat_sha256\":\"${lat_sha256}\",\"model_id\":\"exact-two-level-lru-demand-v1\","
-        "\"schema_version\":1,\"semantic_analysis_options\":{},\"tool_version\":\"${version}\"}")
+        "\"schema_version\":2,\"semantic_analysis_options\":{},\"tool_version\":\"${version}\"}")
     string(SHA256 expected_id "${preimage}")
     assert_json("${expected_id}" analysis_id)
 endfunction()

@@ -48,7 +48,7 @@ target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
     yarda_hierarchy_analysis GTest::gtest_main
 )
 target_compile_definitions(yarda_hierarchy_analysis_tests PRIVATE
-    YARDA_RESULT_GOLDEN_PATH="${CMAKE_CURRENT_SOURCE_DIR}/output/fixtures/hierarchy_result_v1.json"
+    YARDA_RESULT_GOLDEN_PATH="${CMAKE_CURRENT_SOURCE_DIR}/output/fixtures/hierarchy_result_v2.json"
     YARDA_CACHE_CONFIG_32B_PATH="${YARDA_BACKEND_SOURCE_DIR}/config/cache.32b.yaml"
     YARDA_CACHE_CONFIG_EXAMPLE_PATH="${YARDA_BACKEND_SOURCE_DIR}/config/cache.example.yaml"
 )

@@ -64,17 +64,15 @@ nlohmann::ordered_json hierarchy_level_json(const AnalysisCacheLevel & level)
 
 nlohmann::ordered_json hierarchy_task_json(const TaskHierarchySummary & task)
 {
-  // Artifact schema v1 retains its original keys for the glossary-named counts
-  // and Cache-Level Profile ratios; C++ terminology does not rename the schema.
   return {{"task_id", task.task_id},
           {"source_accesses", task.source_accesses},
-          {"ma", task.modeled_accesses},
-          {"ehc_l1", task.l1_first_hit_count},
-          {"ehc_llc", task.llc_first_hit_count},
-          {"amc", task.all_cache_misses},
-          {"hr_l1", ratio_json(task.l1_first_hit_ratio)},
-          {"hr_llc", ratio_json(task.llc_first_hit_ratio)},
-          {"mr", ratio_json(task.all_cache_miss_ratio)},
+          {"modeled_accesses", task.modeled_accesses},
+          {"l1_first_hit_count", task.l1_first_hit_count},
+          {"llc_first_hit_count", task.llc_first_hit_count},
+          {"all_cache_miss_count", task.all_cache_misses},
+          {"l1_first_hit_ratio", ratio_json(task.l1_first_hit_ratio)},
+          {"llc_first_hit_ratio", ratio_json(task.llc_first_hit_ratio)},
+          {"all_cache_miss_ratio", ratio_json(task.all_cache_miss_ratio)},
           {"l1", level_summary_json(task.l1)},
           {"llc", level_summary_json(task.llc)},
           {"coverage", coverage_json(task.coverage)},

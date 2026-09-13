@@ -66,7 +66,7 @@ hierarchy_events_json(const HierarchyEventMetadata & metadata,
   auto rows = Json::array();
   for (const auto & record : events)
     rows.push_back(event_json(record));
-  return {{"schema_version", detail::kArtifactSchemaVersion},
+  return {{"schema_version", detail::kEventsSchemaVersion},
           {"analysis_id", metadata.analysis_id},
           {"event_limit", metadata.event_limit},
           {"events_truncated", metadata.delivery.events_truncated},

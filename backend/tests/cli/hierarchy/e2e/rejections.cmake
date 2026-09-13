@@ -63,7 +63,7 @@ generate_legacy(skipped "${fixtures}/rejections.c" -DSKIPPED_BODY)
 run_checked("unreached unresolved access" "${YARDA_CPP}" ${base} ${diagnostics})
 file(READ "${result_file}" payload)
 assert_json("1" tasks 0 source_accesses)
-assert_json("1" tasks 0 amc)
+assert_json("1" tasks 0 all_cache_miss_count)
 
 # The reached source budget error precedes its unresolved index error.
 generate_legacy(error_order "${fixtures}/rejections.c" -DLATER_FAILURE)

@@ -13,7 +13,7 @@ hierarchy_telemetry_json(const AnalysisTelemetry & telemetry)
   auto stages = nlohmann::ordered_json::object();
   for (std::size_t i = 0; i < telemetry.stage_time_ns.size(); ++i)
     stages[detail::kAnalysisStageNames[i]] = *telemetry.stage_time_ns[i];
-  return {{"schema_version", detail::kArtifactSchemaVersion},
+  return {{"schema_version", detail::kTelemetrySchemaVersion},
           {"analysis_id", telemetry.analysis_id},
           {"total_time_ns", telemetry.total_time_ns},
           {"stage_time_ns", std::move(stages)},

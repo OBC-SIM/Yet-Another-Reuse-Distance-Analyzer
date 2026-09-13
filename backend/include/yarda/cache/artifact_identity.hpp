@@ -34,7 +34,10 @@ struct AnalysisIdentityInput
 std::string sha256_file_bytes(const std::string & path);
 
 /**
- * @brief Hash the compact, lexicographically ordered v1 identity preimage.
+ * @brief Hash the compact, lexicographically ordered RESULT v2 preimage.
+ *
+ * The result schema version separates v1 and v2 identities. EVENTS and
+ * TELEMETRY share this identity while retaining their own schema versions.
  * @param input Borrowed effective identity; option leaves must be integers,
  * booleans or strings, with object keys sorted and array order preserved.
  * @return Lowercase SHA-256 digest, independent of insertion order.

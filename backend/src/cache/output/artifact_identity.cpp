@@ -72,7 +72,7 @@ std::string hierarchy_analysis_id(const AnalysisIdentityInput & input)
     throw std::invalid_argument("semantic analysis options must be an object");
   validate_options(input.semantic_analysis_options);
   const nlohmann::json preimage = {
-      {"schema_version", detail::kArtifactSchemaVersion},
+      {"schema_version", detail::kResultSchemaVersion},
       {"analysis_mode", detail::kAnalysisMode},
       {"model_id", detail::kModelId},
       {"csrd_mode", detail::kCsrdMode},

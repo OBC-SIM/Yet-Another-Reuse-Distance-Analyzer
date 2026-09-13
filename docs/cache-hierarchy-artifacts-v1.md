@@ -1,5 +1,9 @@
 # Hierarchy artifacts v1
 
+This document preserves the historical v1 contract. Current exports follow
+[RESULT v2](cache-hierarchy-artifacts-v2.md), which renames task metrics and
+updates analysis identity while retaining EVENTS and TELEMETRY schema 1.
+
 This document specifies the artifact boundary of
 [`exact-two-level-lru-demand-v1`](cache-hierarchy-rd-model-v1.md).
 The library exposes pure JSON serializers and optional measurement support.

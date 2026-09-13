@@ -4,7 +4,11 @@ This optional C++ runner compares the materialized batch core with streaming
 summaries on identical LAT, ET_EXEC and cache bytes. It uses the existing
 `exact-two-level-lru-demand-v1`, `full-exact`, `linked_absolute` model, core 0,
 and independently cold tasks. Scripts orchestrate compilation and processes;
-they do not implement CSRD, residency or EHC calculations.
+they do not implement CSRD, residency or First-Hit Count calculations.
+
+Current runs export [RESULT v2](../../docs/cache-hierarchy-artifacts-v2.md)
+with glossary metric names. Historical B12 measurements retain their original
+v1 artifacts and identities.
 
 ## Build and run
 
