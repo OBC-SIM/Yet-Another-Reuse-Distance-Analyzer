@@ -8,3 +8,8 @@ add_subdirectory(src)
 if(BUILD_TESTING)
     add_subdirectory(tests)
 endif()
+
+option(YARDA_BUILD_HIERARCHY_EXPERIMENTS "Build hierarchy evaluation tools" OFF)
+if(YARDA_BUILD_HIERARCHY_EXPERIMENTS)
+    add_subdirectory(experiments)
+endif()
