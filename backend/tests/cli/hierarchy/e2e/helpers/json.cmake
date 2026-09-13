@@ -1,0 +1,51 @@
+function(assert_json expected)
+    string(JSON actual ERROR_VARIABLE error GET "${payload}" ${ARGN})
+    if(error OR NOT actual STREQUAL expected)
+        message(FATAL_ERROR "${ARGN}: expected '${expected}', got '${actual}': ${error}")
+    endif()
+endfunction()
+
+function(assert_json_type expected)
+    string(JSON actual ERROR_VARIABLE error TYPE "${payload}" ${ARGN})
+    if(error OR NOT actual STREQUAL expected)
+        message(FATAL_ERROR "${ARGN}: expected type ${expected}, got ${actual}: ${error}")
+    endif()
+endfunction()
+
+function(assert_json_length expected)
+    string(JSON actual ERROR_VARIABLE error LENGTH "${payload}" ${ARGN})
+    if(error OR NOT actual EQUAL expected)
+        message(FATAL_ERROR "${ARGN}: expected length ${expected}, got ${actual}: ${error}")
+    endif()
+endfunction()
+
+function(assert_absent)
+    string(JSON actual ERROR_VARIABLE error GET "${payload}" ${ARGN})
+    if(NOT error)
+        message(FATAL_ERROR "unexpected field ${ARGN}")
+    endif()
+endfunction()
+
+function(check_input_identity)
+    foreach(kind lat elf cache)
+        if(kind STREQUAL "cache")
+            set(path "${YARDA_CACHE}")
+            set(field cache_config_sha256)
+        else()
+            set(path "${${kind}}")
+            set(field "${kind}_sha256")
+        endif()
+        file(SHA256 "${path}" digest)
+        assert_json("${digest}" inputs ${field})
+        set(${field} "${digest}")
+    endforeach()
+    string(JSON version GET "${payload}" tool_version)
+    string(CONCAT preimage
+        "{\"address_basis\":\"linked_absolute\",\"analysis_core_id\":0,"
+        "\"analysis_mode\":\"hierarchy-rd\",\"cache_config_sha256\":\"${cache_config_sha256}\","
+        "\"csrd_mode\":\"full-exact\",\"elf_sha256\":\"${elf_sha256}\","
+        "\"lat_sha256\":\"${lat_sha256}\",\"model_id\":\"exact-two-level-lru-demand-v1\","
+        "\"schema_version\":1,\"semantic_analysis_options\":{},\"tool_version\":\"${version}\"}")
+    string(SHA256 expected_id "${preimage}")
+    assert_json("${expected_id}" analysis_id)
+endfunction()

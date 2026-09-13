@@ -1,0 +1,5 @@
+[
+  {"source": "test_call.c", "golden": "task_call.json", "append_main": false},
+  {"source": "test_2steps.c", "golden": "task_step.json", "append_main": false},
+  {"source": "test_empty_loop.c", "golden": "task_empty.json", "append_main": true}
+]

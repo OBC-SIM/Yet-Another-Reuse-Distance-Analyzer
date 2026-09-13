@@ -1,0 +1,24 @@
+{
+  "bases": {"global::lines": 6291456, "global::crossing": 6291996},
+  "tasks": [
+    {"id": "conflicts", "sources": [
+      ["global::lines", 0, 4, "store"],
+      ["global::lines", 0, 4, "store"],
+      ["global::lines", 64, 4, "store"],
+      ["global::lines", 128, 4, "store"],
+      ["global::lines", 0, 4, "store"],
+      ["global::lines", 256, 4, "store"],
+      ["global::lines", 384, 4, "store"],
+      ["global::lines", 64, 4, "store"],
+      ["global::lines", 32, 4, "store"],
+      ["global::lines", 0, 4, "store"],
+      ["global::lines", 0, 4, "load"]
+    ]},
+    {"id": "span", "sources": [
+      ["global::crossing", 0, 8, "store"],
+      ["global::crossing", 0, 8, "load"]
+    ]},
+    {"id": "cold", "sources": [["global::lines", 0, 4, "load"]]},
+    {"id": "empty", "sources": []}
+  ]
+}

@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+include("${CMAKE_CURRENT_LIST_DIR}/helpers/generate.cmake")
+set(fixtures "${CMAKE_CURRENT_LIST_DIR}/fixtures")
+generate_legacy(positive "${fixtures}/hierarchy.c")
+run_checked("hierarchy CLI" "${YARDA_CPP}" ${base} ${diagnostics})
+check_with_oracles("${fixtures}/hierarchy.json")
+include("${CMAKE_CURRENT_LIST_DIR}/helpers/hand_result.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/helpers/hand_events.cmake")

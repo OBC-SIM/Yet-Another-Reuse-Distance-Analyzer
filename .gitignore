@@ -5,6 +5,7 @@ logs/
 !backend/tests/cli/task_mapping_fixture.json
 !backend/tests/cli/missing_symbol_fixture.json
 !backend/tests/cache/output/fixtures/hierarchy_result_v1.json
+!backend/tests/cli/hierarchy/e2e/fixtures/*.json
 *.ll
 *.log
 system-prompt-extraction/

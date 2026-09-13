@@ -1,0 +1,21 @@
+{
+  "columns": ["linked_address", "l1_set", "l1_tag", "l1_csrd", "l1_outcome", "llc_set", "llc_tag", "llc_csrd", "llc_outcome", "first_service_level"],
+  "rows": [
+    [6291456, 0, 98304, null, "cold-miss", 0, 49152, null, "cold-miss", "Memory"],
+    [6291456, 0, 98304, 0, "hit", null, null, null, null, "L1"],
+    [6291520, 0, 98305, null, "cold-miss", 2, 49152, null, "cold-miss", "Memory"],
+    [6291584, 0, 98306, null, "cold-miss", 0, 49153, null, "cold-miss", "Memory"],
+    [6291456, 0, 98304, 2, "replacement-miss", 0, 49152, 1, "hit", "LLC"],
+    [6291712, 0, 98308, null, "cold-miss", 0, 49154, null, "cold-miss", "Memory"],
+    [6291840, 0, 98310, null, "cold-miss", 0, 49155, null, "cold-miss", "Memory"],
+    [6291520, 0, 98305, 4, "replacement-miss", 2, 49152, 0, "hit", "LLC"],
+    [6291488, 1, 98304, null, "cold-miss", 1, 49152, null, "cold-miss", "Memory"],
+    [6291456, 0, 98304, 3, "replacement-miss", 0, 49152, 2, "replacement-miss", "Memory"],
+    [6291456, 0, 98304, 0, "hit", null, null, null, null, "L1"],
+    [6291996, 0, 98312, null, "cold-miss", 0, 49156, null, "cold-miss", "Memory"],
+    [6292000, 1, 98312, null, "cold-miss", 1, 49156, null, "cold-miss", "Memory"],
+    [6291996, 0, 98312, 0, "hit", null, null, null, null, "L1"],
+    [6292000, 1, 98312, 0, "hit", null, null, null, null, "L1"],
+    [6291456, 0, 98304, null, "cold-miss", 0, 49152, null, "cold-miss", "Memory"]
+  ]
+}

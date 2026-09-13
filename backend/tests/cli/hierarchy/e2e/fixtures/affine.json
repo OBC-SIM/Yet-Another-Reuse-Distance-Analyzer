@@ -1,0 +1,150 @@
+{
+  "bases": {},
+  "tasks": [
+    {"id": "offset", "sources": [
+      ["global::a",4,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",12,4,"store"]
+    ]},
+    {"id": "stride", "sources": [
+      ["global::a",8,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",24,4,"store"]
+    ]},
+    {"id": "descending", "sources": [
+      ["global::a",16,4,"store"],
+      ["global::a",12,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",4,4,"store"],
+      ["global::a",0,4,"store"]
+    ]},
+    {"id": "constant", "sources": [
+      ["global::a",12,4,"store"],
+      ["global::a",12,4,"store"],
+      ["global::a",12,4,"store"]
+    ]},
+    {"id": "dimensions", "sources": [
+      ["global::matrix",0,4,"store"],
+      ["global::matrix",4,4,"store"],
+      ["global::matrix",8,4,"store"],
+      ["global::matrix",12,4,"store"],
+      ["global::matrix",16,4,"store"],
+      ["global::matrix",20,4,"store"]
+    ]},
+    {"id": "caller", "sources": [
+      ["global::a",0,4,"load"],
+      ["global::a",4,4,"store"],
+      ["global::a",0,4,"load"],
+      ["global::a",8,4,"store"],
+      ["global::a",0,4,"load"],
+      ["global::a",12,4,"store"]
+    ]},
+    {"id": "fields", "sources": [
+      ["global::records",12,4,"store"],
+      ["global::records",20,4,"store"],
+      ["global::records",28,4,"store"]
+    ]},
+    {"id": "shadowed", "sources": [
+      ["global::a",20,4,"store"],
+      ["global::a",0,4,"store"],
+      ["global::a",4,4,"store"]
+    ]},
+    {"id": "capture", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",0,4,"store"],
+      ["global::a",4,4,"store"],
+      ["global::a",4,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",8,4,"store"]
+    ]},
+    {"id": "unsigned_caller", "sources": [
+      ["global::a",4,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",12,4,"store"]
+    ]},
+    {"id": "unsigned_forward", "sources": [
+      ["global::a",4,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",12,4,"store"]
+    ]},
+    {"id": "unsigned_boundary", "sources": [
+      ["global::unsigned_matrix",1532,4,"store"],
+      ["global::unsigned_matrix",1536,4,"store"],
+      ["global::unsigned_matrix",2044,4,"store"]
+    ]},
+    {"id": "scaled_left", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",24,4,"store"]
+    ]},
+    {"id": "scaled_right", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",24,4,"store"]
+    ]},
+    {"id": "chained", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",32,4,"store"],
+      ["global::a",48,4,"store"]
+    ]},
+    {"id": "nested_product", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",32,4,"store"],
+      ["global::a",48,4,"store"]
+    ]},
+    {"id": "constant_product", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",32,4,"store"],
+      ["global::a",48,4,"store"]
+    ]},
+    {"id": "temporary", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",16,4,"store"],
+      ["global::a",24,4,"store"]
+    ]},
+    {"id": "scaled_stride", "sources": [
+      ["global::a",20,4,"store"],
+      ["global::a",36,4,"store"],
+      ["global::a",52,4,"store"]
+    ]},
+    {"id": "scaled_descending", "sources": [
+      ["global::a",44,4,"store"],
+      ["global::a",28,4,"store"],
+      ["global::a",12,4,"store"]
+    ]},
+    {"id": "negative_coefficient", "sources": [
+      ["global::a",28,4,"store"],
+      ["global::a",24,4,"store"],
+      ["global::a",20,4,"store"],
+      ["global::a",16,4,"store"]
+    ]},
+    {"id": "flattened", "sources": [
+      ["global::a",0,4,"store"],
+      ["global::a",4,4,"store"],
+      ["global::a",8,4,"store"],
+      ["global::a",32,4,"store"],
+      ["global::a",36,4,"store"],
+      ["global::a",40,4,"store"]
+    ]},
+    {"id": "scaled_fields", "sources": [
+      ["global::records",4,4,"store"],
+      ["global::records",20,4,"store"]
+    ]},
+    {"id": "affine_actual", "sources": [
+      ["global::affine_data",12,4,"store"],
+      ["global::affine_data",20,4,"store"],
+      ["global::affine_data",28,4,"store"]
+    ]},
+    {"id": "affine_boundary", "sources": [
+      ["global::affine_data",1020,4,"store"],
+      ["global::affine_data",1028,4,"store"],
+      ["global::affine_data",2044,4,"store"]
+    ]}
+  ]
+}

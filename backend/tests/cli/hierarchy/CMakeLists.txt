@@ -38,3 +38,5 @@ add_test(NAME yarda_cpp_hierarchy_build_version
         "-DYARDA_VERSION_SCRIPT=${YARDA_BACKEND_SOURCE_DIR}/src/cli/build_version.cmake"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/version.cmake"
 )
+
+add_subdirectory(e2e)

@@ -1,0 +1,39 @@
+{
+  "bases": {},
+  "tasks": [
+    {"id": "call_kernel", "sources": [
+      ["global::a",0,4,"load"],
+      ["global::a",0,4,"store"],
+      ["global::a",4,4,"load"],
+      ["global::a",4,4,"store"],
+      ["global::a",8,4,"load"],
+      ["global::a",8,4,"store"],
+      ["global::a",12,4,"load"],
+      ["global::a",12,4,"store"],
+      ["global::a",16,4,"load"],
+      ["global::a",16,4,"store"],
+      ["global::a",20,4,"load"],
+      ["global::a",20,4,"store"],
+      ["global::a",24,4,"load"],
+      ["global::a",24,4,"store"],
+      ["global::a",28,4,"load"],
+      ["global::a",28,4,"store"],
+      ["global::a",32,4,"load"],
+      ["global::a",32,4,"store"],
+      ["global::a",36,4,"load"],
+      ["global::a",36,4,"store"],
+      ["global::a",40,4,"load"],
+      ["global::a",40,4,"store"],
+      ["global::a",44,4,"load"],
+      ["global::a",44,4,"store"],
+      ["global::a",48,4,"load"],
+      ["global::a",48,4,"store"],
+      ["global::a",52,4,"load"],
+      ["global::a",52,4,"store"],
+      ["global::a",56,4,"load"],
+      ["global::a",56,4,"store"],
+      ["global::a",60,4,"load"],
+      ["global::a",60,4,"store"]
+    ]}
+  ]
+}
