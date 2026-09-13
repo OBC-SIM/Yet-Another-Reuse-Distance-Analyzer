@@ -8,8 +8,10 @@
 namespace yarda
 {
 
-ExactCsrdAnalyzer::ExactCsrdAnalyzer(CacheGeometry geometry)
+ExactCsrdAnalyzer::ExactCsrdAnalyzer(CacheGeometry geometry,
+                                     bool measure_statistics)
   : geometry_(geometry), set_count_(cache_set_count(geometry))
+  , measure_statistics_(measure_statistics)
 {
 }
 
@@ -29,7 +31,8 @@ CsrdObservation ExactCsrdAnalyzer::observe(const DecodedCacheAddress & address)
   auto state = sets_.find(address.set_index);
   if (state == sets_.end())
     state =
-      sets_.emplace(address.set_index, std::make_unique<detail::RecencyIndex>())
+      sets_.emplace(address.set_index, std::make_unique<detail::RecencyIndex>(
+        16, std::numeric_limits<std::uint64_t>::max(), measure_statistics_))
         .first;
   const auto distance = state->second->observe(address.block_number);
   if (!distance)

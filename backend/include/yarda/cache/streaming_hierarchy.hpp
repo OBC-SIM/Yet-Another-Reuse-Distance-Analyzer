@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "yarda/cache/hierarchy_analysis.hpp"
+#include "yarda/cache/csrd_statistics.hpp"
 #include "yarda/trace/emission_budget.hpp"
 #include "yarda/trace/execution_statistics.hpp"
 #include "yarda/trace/work_limits.hpp"
@@ -24,6 +25,16 @@ class AnalysisTelemetryCollector;
  */
 using HierarchyEventSink =
   std::function<void(const std::string &, const HierarchyAccessEvent &)>;
+
+/**
+ * @brief Receive one successful task's measured L1 and LLC storage snapshots.
+ *
+ * Borrowed arguments expire on return. A callback exception aborts execution;
+ * discard all snapshots if any task fails. An empty sink disables compaction
+ * clocks and snapshot aggregation. Snapshots contain no reference vectors.
+ */
+using HierarchyStatisticsSink = std::function<void(
+  const std::string &, const CsrdStatistics &, const CsrdStatistics &)>;
 
 /** @brief Configure one complete streaming module execution. */
 struct StreamingHierarchyOptions
@@ -60,6 +71,8 @@ struct StreamingHierarchyOptions
    * performs no clock calls. Discard all measurements if analysis fails.
    */
   AnalysisTelemetryCollector * telemetry = nullptr;
+  /** @brief Optional task-boundary diagnostics, excluded from RESULT. */
+  HierarchyStatisticsSink statistics_sink{};
 };
 
 /** @brief Diagnostic delivery metadata, separate from semantic task counts. */

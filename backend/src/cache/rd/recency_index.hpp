@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "yarda/cache/csrd_statistics.hpp"
+
 namespace yarda::detail
 {
 
@@ -24,12 +26,14 @@ public:
    * @brief Create an empty index with bounded slot storage.
    * @param capacity_floor Minimum capacity; positive, also usable in tests.
    * @param slot_limit Inclusive capacity ceiling for checked arithmetic tests.
+   * @param measure_statistics Enable compaction counters and clocks.
    * @throws std::invalid_argument for a zero floor or floor above the ceiling.
    * @throws std::overflow_error if storage including the sentinel cannot fit.
    */
   explicit RecencyIndex(
     std::uint64_t capacity_floor = 16,
-    std::uint64_t slot_limit = std::numeric_limits<std::uint64_t>::max());
+    std::uint64_t slot_limit = std::numeric_limits<std::uint64_t>::max(),
+    bool measure_statistics = false);
 
   /**
    * @brief Return a key's distinct newer-key count and make it most recent.
@@ -40,11 +44,19 @@ public:
    */
   std::optional<std::uint64_t> observe(std::uint64_t key);
 
+  /**
+   * @brief Snapshot measured storage after successful observations.
+   * @return Owned counts for this one set.
+   * @throws std::logic_error if measurement was disabled.
+   */
+  CsrdStatistics statistics() const;
+
 private:
   friend struct RecencyIndexTestAccess;
   std::uint64_t prefix_sum(std::uint64_t slot) const;
   void update(std::uint64_t slot, bool insert);
   void compact();
+  void compact_storage();
 
   std::unordered_map<std::uint64_t, std::uint64_t> slots_;
   std::vector<std::uint64_t> tree_;
@@ -53,6 +65,10 @@ private:
   std::uint64_t capacity_ = 0;
   std::uint64_t next_slot_ = 1;
   std::uint64_t active_count_ = 0;
+  bool measure_statistics_ = false;
+  std::uint64_t compaction_count_ = 0;
+  std::uint64_t compaction_time_ns_ = 0;
+  std::uint64_t maximum_compaction_scratch_bytes_ = 0;
 };
 
 }  // namespace yarda::detail

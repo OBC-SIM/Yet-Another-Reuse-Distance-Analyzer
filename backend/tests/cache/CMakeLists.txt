@@ -7,6 +7,7 @@ add_executable(yarda_hierarchy_analysis_tests
     output/hierarchy_telemetry_integration_test.cpp
     output/hierarchy_artifact_boundary_test.cpp
     streaming/streaming_hierarchy_test.cpp
+    streaming/streaming_statistics_test.cpp
     streaming/streaming_hierarchy_differential_test.cpp
     streaming/streaming_hierarchy_events_test.cpp
     streaming/streaming_hierarchy_budget_test.cpp
@@ -16,6 +17,7 @@ add_executable(yarda_hierarchy_analysis_tests
     streaming/streaming_hierarchy_summary_test.cpp
     streaming/streaming_hierarchy_task_test.cpp
     rd/exact_csrd_test.cpp
+    rd/csrd_statistics_test.cpp
     rd/exact_csrd_differential_test.cpp
     rd/recency_index_test.cpp
     oracle/exact_csrd_oracle.cpp

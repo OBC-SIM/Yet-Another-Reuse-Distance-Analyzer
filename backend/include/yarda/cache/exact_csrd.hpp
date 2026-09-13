@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/csrd_statistics.hpp"
 
 namespace yarda
 {
@@ -52,9 +53,11 @@ public:
    * @brief Start an independent cache-level history.
    * @param geometry Valid power-of-two cache geometry, copied into the
    * instance.
+   * @param measure_statistics Enable storage snapshots and compaction clocks.
    * @throws std::invalid_argument if the geometry is invalid.
    */
-  explicit ExactCsrdAnalyzer(CacheGeometry geometry);
+  explicit ExactCsrdAnalyzer(CacheGeometry geometry,
+                             bool measure_statistics = false);
 
   /** @brief Release the owned history and invalidate borrowed summary views. */
   ~ExactCsrdAnalyzer();
@@ -82,10 +85,20 @@ public:
    */
   const ExactCsrdSummary & summary() const noexcept;
 
+  /**
+   * @brief Snapshot storage and compaction costs across this task's sets.
+   * @return Owned measurements; no per-reference data is collected.
+   * @pre No observation on this instance has failed.
+   * @throws std::logic_error if measurement was disabled.
+   * @throws std::overflow_error if aggregate counters overflow.
+   */
+  CsrdStatistics statistics() const;
+
 private:
   friend struct detail::ExactCsrdTestAccess;
   CacheGeometry geometry_;
   std::uint64_t set_count_ = 0;
+  bool measure_statistics_ = false;
   ExactCsrdSummary summary_;
   std::map<std::uint64_t, std::unique_ptr<detail::RecencyIndex>> sets_;
 };

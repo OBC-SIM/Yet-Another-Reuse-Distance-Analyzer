@@ -18,8 +18,8 @@ StreamingHierarchyTask::StreamingHierarchyTask(
   , budget_(budget)
   , options_(options)
   , delivery_(delivery)
-  , l1_(hierarchy.l1.geometry)
-  , llc_(hierarchy.llc.geometry)
+  , l1_(hierarchy.l1.geometry, static_cast<bool>(options.statistics_sink))
+  , llc_(hierarchy.llc.geometry, static_cast<bool>(options.statistics_sink))
   , line_sink_(
       [this](const CacheLineMapping & mapping) { observe_line(mapping); })
 {
@@ -112,7 +112,10 @@ StreamingHierarchyTask::finish(const TraceCoverage & coverage)
   summary_.coverage.emitted_line_references = summary_.modeled_accesses;
   summary_.l1 = summarize_streaming_level(l1_.summary());
   summary_.llc = summarize_streaming_level(llc_.summary());
-  return finalize_hierarchy_service(std::move(summary_));
+  auto result = finalize_hierarchy_service(std::move(summary_));
+  if (options_.statistics_sink)
+    options_.statistics_sink(result.task_id, l1_.statistics(), llc_.statistics());
+  return result;
 }
 
 }  // namespace yarda::detail

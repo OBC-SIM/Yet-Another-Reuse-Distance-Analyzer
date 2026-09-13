@@ -72,7 +72,9 @@ add_library(yarda_hierarchy_analysis
     cache/streaming/streaming_hierarchy_summary.cpp
     cache/streaming/streaming_hierarchy_task.cpp
     cache/rd/exact_csrd.cpp
+    cache/rd/csrd_statistics.cpp
     cache/rd/recency_index.cpp
+    cache/rd/recency_statistics.cpp
     cache/hierarchy/hierarchy_model.cpp
     cache/hierarchy/hierarchy_analysis.cpp
     cache/hierarchy/hierarchy_aggregation.cpp

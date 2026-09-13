@@ -11,8 +11,9 @@ namespace yarda::detail
 {
 
 RecencyIndex::RecencyIndex(std::uint64_t capacity_floor,
-                           std::uint64_t slot_limit)
+                           std::uint64_t slot_limit, bool measure_statistics)
   : floor_(capacity_floor), slot_limit_(slot_limit), capacity_(capacity_floor)
+  , measure_statistics_(measure_statistics)
 {
   if (floor_ == 0 || floor_ > slot_limit_)
   {
@@ -80,7 +81,7 @@ void RecencyIndex::update(std::uint64_t slot, bool insert)
   }
 }
 
-void RecencyIndex::compact()
+void RecencyIndex::compact_storage()
 {
   const auto capacity = std::max(
     floor_, csrd_checked_add(active_count_, active_count_, slot_limit_));
@@ -89,6 +90,11 @@ void RecencyIndex::compact()
     csrd_storage_size(csrd_checked_add(capacity, 1), tree_.max_size()), 0);
   std::vector<std::pair<std::uint64_t, std::uint64_t>> ordered;
   ordered.reserve(csrd_storage_size(active_count_, ordered.max_size()));
+  if (measure_statistics_)
+    maximum_compaction_scratch_bytes_ = std::max(
+      maximum_compaction_scratch_bytes_,
+      csrd_checked_add(rebuilt.capacity() * sizeof(std::uint64_t),
+                       ordered.capacity() * sizeof(ordered.front())));
   for (const auto & [key, slot] : slots_) ordered.emplace_back(slot, key);
   std::sort(ordered.begin(), ordered.end());
 
