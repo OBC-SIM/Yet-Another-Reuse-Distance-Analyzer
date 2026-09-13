@@ -1,4 +1,4 @@
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 
 #include <cstdint>
 #include <map>
@@ -47,7 +47,7 @@ struct IndexedLine
   std::uint64_t tag = 0;
 };
 
-void record_reuse(LruRdAnalysis & result, LruSetResult & set,
+void record_reuse(BatchCsrdResult & result, LruSetResult & set,
                   std::size_t input_index, std::size_t distance,
                   std::uint64_t associativity)
 {
@@ -70,7 +70,7 @@ void record_reuse(LruRdAnalysis & result, LruSetResult & set,
 }
 
 void analyze_set(const std::vector<IndexedLine> & lines,
-                 std::uint64_t associativity, LruRdAnalysis & result,
+                 std::uint64_t associativity, BatchCsrdResult & result,
                  LruSetResult & set)
 {
   FenwickTree positions(lines.size());
@@ -101,11 +101,12 @@ void analyze_set(const std::vector<IndexedLine> & lines,
 
 }  // namespace
 
-LruRdAnalysis analyze_lru_reuse(const std::vector<CacheLineMapping> & accesses,
-                                const CacheGeometry & geometry)
+BatchCsrdResult
+analyze_batch_csrd(const std::vector<CacheLineMapping> & accesses,
+                   const CacheGeometry & geometry)
 {
   const auto set_count = cache_set_count(geometry);
-  LruRdAnalysis result;
+  BatchCsrdResult result;
   result.accesses.resize(accesses.size());
 
   std::map<std::uint64_t, std::vector<IndexedLine>> lines_by_set;

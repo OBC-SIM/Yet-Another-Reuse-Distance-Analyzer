@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "yarda/cache/line_mapping.hpp"
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 
 namespace yarda
 {

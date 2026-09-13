@@ -9,7 +9,7 @@ add_library(yarda_backend
     cache/mapping/address.cpp
     cache/mapping/line_mapping.cpp
     cache/mapping/line_mapping_json.cpp
-    cache/rd/lru_rd_analysis.cpp
+    cache/rd/batch_csrd.cpp
     trace/module/calls.cpp
     trace/module/call_substitution.cpp
     reuse/profile.cpp

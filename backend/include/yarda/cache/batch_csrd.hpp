@@ -37,7 +37,7 @@ struct LruSetResult
 };
 
 /** @brief Full exact Cache-Set Reuse Distance result for an ordered trace. */
-struct LruRdAnalysis
+struct BatchCsrdResult
 {
   std::vector<LruAccessResult> accesses;
   std::map<std::size_t, std::uint64_t> histogram;
@@ -59,7 +59,8 @@ struct LruRdAnalysis
  * @return Per-access decisions plus set-level and aggregate counts.
  * @throws std::invalid_argument if geometry or a set index is invalid.
  */
-LruRdAnalysis analyze_lru_reuse(const std::vector<CacheLineMapping> & accesses,
-                                const CacheGeometry & geometry);
+BatchCsrdResult
+analyze_batch_csrd(const std::vector<CacheLineMapping> & accesses,
+                   const CacheGeometry & geometry);
 
 }  // namespace yarda

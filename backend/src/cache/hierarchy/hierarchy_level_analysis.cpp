@@ -36,7 +36,7 @@ std::uint64_t checked_sum(std::uint64_t left, std::uint64_t right)
 }  // namespace
 
 CacheLevelSummary
-summarize_hierarchy_level(const LruRdAnalysis & analysis,
+summarize_hierarchy_level(const BatchCsrdResult & analysis,
                           const std::vector<CacheLineMapping> & mappings)
 {
   if (analysis.accesses.size() != mappings.size())
@@ -82,7 +82,7 @@ summarize_hierarchy_level(const LruRdAnalysis & analysis,
 BatchCacheLevelResult analyze_hierarchy_level(
   std::vector<CacheLineMapping> mappings, const CacheGeometry & geometry)
 {
-  auto analysis = analyze_lru_reuse(mappings, geometry);
+  auto analysis = analyze_batch_csrd(mappings, geometry);
   auto summary = summarize_hierarchy_level(analysis, mappings);
   return {std::move(summary), std::move(mappings),
           std::move(analysis.accesses)};

@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 #include "yarda/trace/mapped_trace.hpp"
 #include "yarda/trace/resolution_error.hpp"
 #include "yarda/trace/resolved_access.hpp"
@@ -210,9 +210,9 @@ TEST(TaskTraceTest, MapsAndAnalyzesEachTaskWithColdState)
   ASSERT_EQ(directly_mapped.tasks[1].accesses.size(), 1U);
   EXPECT_EQ(directly_mapped.tasks[1].accesses[0].source_access_ordinal, 0U);
   const auto first =
-    yarda::analyze_lru_reuse(mapped.tasks[0].accesses, geometry);
+    yarda::analyze_batch_csrd(mapped.tasks[0].accesses, geometry);
   const auto second =
-    yarda::analyze_lru_reuse(mapped.tasks[1].accesses, geometry);
+    yarda::analyze_batch_csrd(mapped.tasks[1].accesses, geometry);
   ASSERT_EQ(first.accesses.size(), 2U);
   ASSERT_EQ(second.accesses.size(), 1U);
   EXPECT_EQ(first.accesses[0].outcome, yarda::LruAccessOutcome::ColdMiss);

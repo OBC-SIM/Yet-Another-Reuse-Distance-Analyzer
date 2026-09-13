@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 #include "yarda/trace/mapped_trace.hpp"
 
 namespace
 {
 
-TEST(LruRdIntegrationTest, PreservesLruStateAcrossMappedBlocks)
+TEST(BatchCsrdIntegrationTest, PreservesLruStateAcrossMappedBlocks)
 {
   const yarda::CacheGeometry geometry{64, 1, 1};
 
@@ -24,7 +24,7 @@ TEST(LruRdIntegrationTest, PreservesLruStateAcrossMappedBlocks)
   };
 
   const auto accesses = yarda::flatten_mapped_traces(blocks);
-  const auto result = yarda::analyze_lru_reuse(accesses, geometry);
+  const auto result = yarda::analyze_batch_csrd(accesses, geometry);
 
   ASSERT_EQ(accesses.size(), 2);
   ASSERT_EQ(result.accesses.size(), 2);

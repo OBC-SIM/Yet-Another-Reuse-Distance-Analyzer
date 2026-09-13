@@ -22,7 +22,7 @@ protected:
     analysis.histogram = {{1, 1}};
   }
 
-  yarda::LruRdAnalysis analysis;
+  yarda::BatchCsrdResult analysis;
   std::vector<yarda::CacheLineMapping> mappings;
 };
 

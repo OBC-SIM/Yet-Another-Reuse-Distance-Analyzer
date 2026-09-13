@@ -5,7 +5,7 @@
 
 #include "yarda/cache/hierarchy_model.hpp"
 #include "yarda/cache/hierarchy_summary.hpp"
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 #include "yarda/trace/resolved_access.hpp"
 
 namespace yarda

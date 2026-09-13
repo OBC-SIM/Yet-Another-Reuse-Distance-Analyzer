@@ -151,7 +151,7 @@ expect_incremental_parity(const std::vector<CacheLineMapping> & mappings,
                           const CacheGeometry & geometry)
 {
   const auto oracle = naive_exact_csrd(mappings, geometry);
-  const auto batch = analyze_lru_reuse(mappings, geometry);
+  const auto batch = analyze_batch_csrd(mappings, geometry);
   ExactCsrdAnalyzer analyzer(geometry);
   ExactCsrdSummary expected;
   std::set<std::uint64_t> blocks;

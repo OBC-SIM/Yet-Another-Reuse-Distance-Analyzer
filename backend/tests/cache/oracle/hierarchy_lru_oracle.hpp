@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 #include "yarda/trace/mapped_trace.hpp"
 
 namespace yarda

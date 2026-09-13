@@ -8,7 +8,7 @@ namespace yarda::detail
 /**
  * @brief Convert a batch primitive result to checked semantic level counts.
  *
- * @param analysis Decisions and counts from the batch LRU primitive.
+ * @param analysis Decisions and counts from the batch CSRD primitive.
  * @param mappings Ordered input of the primitive.
  * @return Summary with independently counted unique linked blocks.
  * @throws std::overflow_error if a size, distance or count exceeds uint64_t.
@@ -16,7 +16,7 @@ namespace yarda::detail
  * disagree.
  */
 CacheLevelSummary
-summarize_hierarchy_level(const LruRdAnalysis & analysis,
+summarize_hierarchy_level(const BatchCsrdResult & analysis,
                           const std::vector<CacheLineMapping> & mappings);
 
 /**

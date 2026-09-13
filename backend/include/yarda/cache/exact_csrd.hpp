@@ -5,7 +5,7 @@
 #include <memory>
 #include <optional>
 
-#include "yarda/cache/lru_rd_analysis.hpp"
+#include "yarda/cache/batch_csrd.hpp"
 #include "yarda/cache/csrd_statistics.hpp"
 
 namespace yarda

@@ -19,8 +19,8 @@ add_executable(yarda_backend_tests
     cache/mapping/address_test.cpp
     cache/mapping/line_mapping_test.cpp
     cache/mapping/line_mapping_json_test.cpp
-    cache/rd/lru_rd_analysis_test.cpp
-    cache/rd/lru_rd_integration_test.cpp
+    cache/rd/batch_csrd_test.cpp
+    cache/rd/batch_csrd_integration_test.cpp
     trace/module/calls_test.cpp
     reuse/profile_test.cpp
     trace/layout/access_layout_test.cpp
