@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "analysis_mode": "hierarchy-rd",
+  "model_id": "exact-two-level-lru-demand-v1",
+  "csrd_mode": "full-exact",
+  "address_basis": "linked_absolute",
+  "tool_version": "test-build",
+  "analysis_id": "62f65847e39d1c10f02be86acad6ec5a67166cb03e69c20c8ab6abc528ddd4b4",
+  "inputs": {
+    "lat_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "elf_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "cache_config_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "lat_schema_version": 2,
+    "cache_schema_version": 1,
+    "elf_class": "ELF64",
+    "elf_machine": 62
+  },
+  "selected_path": {
+    "core_id": 0,
+    "l1_name": "L1D0",
+    "llc_name": "L2",
+    "memory_name": "Memory"
+  },
+  "cache_hierarchy": {
+    "levels": [
+      {
+        "name": "L1D0",
+        "role": "L1",
+        "size_bytes": 64,
+        "line_size_bytes": 32,
+        "associativity": 1,
+        "set_count": 2,
+        "replacement": "LRU"
+      },
+      {
+        "name": "L2",
+        "role": "LLC",
+        "size_bytes": 128,
+        "line_size_bytes": 32,
+        "associativity": 1,
+        "set_count": 4,
+        "replacement": "LRU"
+      }
+    ],
+    "allocation": "all-demand-misses",
+    "lower_level_requests": "l1-misses-only",
+    "inclusion": "independent-no-back-invalidation-or-victim-insertion",
+    "task_initial_state": "cold"
+  },
+  "tasks": [
+    {
+      "task_id": "kernel",
+      "source_accesses": 4,
+      "ma": 4,
+      "ehc_l1": 2,
+      "ehc_llc": 0,
+      "amc": 2,
+      "hr_l1": 0.5,
+      "hr_llc": 0.0,
+      "mr": 0.5,
+      "l1": {
+        "lookups": 4,
+        "hits": 2,
+        "misses": 2,
+        "cold_misses": 2,
+        "replacement_misses": 0,
+        "unique_lines": 2,
+        "csrd_histogram": {
+          "0": 2
+        }
+      },
+      "llc": {
+        "lookups": 2,
+        "hits": 0,
+        "misses": 2,
+        "cold_misses": 2,
+        "replacement_misses": 0,
+        "unique_lines": 2,
+        "csrd_histogram": {}
+      },
+      "coverage": {
+        "source_accesses": 4,
+        "resolved_accesses": 4,
+        "rejected_accesses": 0,
+        "emitted_line_references": 4,
+        "excluded_opaque_call_sites": 0,
+        "complete": true
+      },
+      "invariants": {
+        "level_conservation_l1": true,
+        "level_conservation_llc": true,
+        "llc_input_matches_l1_misses": true,
+        "first_service_conservation": true,
+        "all_passed": true
+      }
+    }
+  ]
+}

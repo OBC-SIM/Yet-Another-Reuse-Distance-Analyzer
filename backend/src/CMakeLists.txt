@@ -58,6 +58,10 @@ target_link_libraries(yarda_cache_config
 )
 
 add_library(yarda_hierarchy_analysis
+    cache/output/artifact_identity.cpp
+    cache/output/hierarchy_result_json.cpp
+    cache/output/hierarchy_result_validation.cpp
+    cache/output/hierarchy_json_fields.cpp
     cache/streaming/streaming_hierarchy.cpp
     cache/streaming/streaming_hierarchy_summary.cpp
     cache/streaming/streaming_hierarchy_task.cpp
@@ -74,6 +78,9 @@ target_include_directories(yarda_hierarchy_analysis PRIVATE
     "${YARDA_BACKEND_SOURCE_DIR}/src"
 )
 target_link_libraries(yarda_hierarchy_analysis PUBLIC yarda_cache_config)
+llvm_map_components_to_libnames(YARDA_ARTIFACT_LLVM_LIBS support)
+target_include_directories(yarda_hierarchy_analysis SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(yarda_hierarchy_analysis PRIVATE ${YARDA_ARTIFACT_LLVM_LIBS})
 target_compile_options(yarda_hierarchy_analysis PRIVATE -Wall -Wextra -Wpedantic)
 
 llvm_map_components_to_libnames(YARDA_ELF_LLVM_LIBS object support)

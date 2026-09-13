@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CTest)
-find_package(nlohmann_json 3.2.0 REQUIRED)
+find_package(nlohmann_json 3.10.5 REQUIRED)
 
 add_subdirectory(frontend)
 

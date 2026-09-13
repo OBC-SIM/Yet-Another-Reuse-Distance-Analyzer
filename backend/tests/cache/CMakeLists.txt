@@ -1,4 +1,8 @@
 add_executable(yarda_hierarchy_analysis_tests
+    output/artifact_identity_test.cpp
+    output/hierarchy_result_json_test.cpp
+    output/hierarchy_result_validation_test.cpp
+    output/hierarchy_artifact_boundary_test.cpp
     streaming/streaming_hierarchy_test.cpp
     streaming/streaming_hierarchy_differential_test.cpp
     streaming/streaming_hierarchy_events_test.cpp
@@ -39,6 +43,7 @@ target_link_libraries(yarda_hierarchy_analysis_tests PRIVATE
     yarda_hierarchy_analysis GTest::gtest_main
 )
 target_compile_definitions(yarda_hierarchy_analysis_tests PRIVATE
+    YARDA_RESULT_GOLDEN_PATH="${CMAKE_CURRENT_SOURCE_DIR}/output/fixtures/hierarchy_result_v1.json"
     YARDA_CACHE_CONFIG_32B_PATH="${YARDA_BACKEND_SOURCE_DIR}/config/cache.32b.yaml"
     YARDA_CACHE_CONFIG_EXAMPLE_PATH="${YARDA_BACKEND_SOURCE_DIR}/config/cache.example.yaml"
 )
