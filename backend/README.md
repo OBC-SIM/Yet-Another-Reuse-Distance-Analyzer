@@ -188,3 +188,11 @@ analysis call. Prepared nodes borrow the immutable expanded input and are
 released when traversal returns or fails. Their storage follows static nodes,
 indices and loop slots, with no per-access history or cache shared between
 analyses. Full-exact cache history remains a separate distinct-line cost.
+
+## Hierarchy evaluation
+
+Enable `YARDA_BUILD_HIERARCHY_EXPERIMENTS=ON` together with the region frontend
+to build the optional C++ batch/streaming comparison tools. The
+[evaluation README](experiments/README.md) describes input preparation,
+independent source checks, work limits, timing/RSS boundaries and reproduction.
+Long measurements are explicit runs; CTest adds only short correctness checks.
