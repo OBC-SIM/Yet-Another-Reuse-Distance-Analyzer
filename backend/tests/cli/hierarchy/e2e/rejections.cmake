@@ -1,0 +1,71 @@
+cmake_minimum_required(VERSION 3.20)
+include("${CMAKE_CURRENT_LIST_DIR}/helpers/generate.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/helpers/json.cmake")
+set(fixtures "${CMAKE_CURRENT_LIST_DIR}/fixtures")
+generate_legacy(valid "${fixtures}/hierarchy.c")
+set(required --elf --cache --export)
+foreach(flag IN LISTS required)
+    set(incomplete ${base})
+    list(FIND incomplete "${flag}" position)
+    math(EXPR value_position "${position}+1")
+    list(REMOVE_AT incomplete ${value_position} ${position})
+    expect_analysis_failure("${flag}.*required|required.*${flag}" ${incomplete} ${diagnostics})
+endforeach()
+run_checked("PIE image" "${YARDA_CLANG}" -O0 -fPIE -pie
+    -I "${YARDA_INCLUDE_DIR}" "${fixtures}/hierarchy.c" -o "${case_dir}/pie.elf")
+expect_analysis_failure("ET_EXEC" ${base} ${diagnostics} --elf "${case_dir}/pie.elf")
+file(READ "${lat}" original)
+string(REPLACE "global::lines" "global::missing" invalid "${original}")
+file(WRITE "${case_dir}/missing.json" "${invalid}")
+expect_analysis_failure("symbol.*unavailable" "${case_dir}/missing.json"
+    --analysis hierarchy-rd --elf "${elf}" --cache "${YARDA_CACHE}"
+    --export "${result_file}" ${diagnostics})
+
+include("${CMAKE_CURRENT_LIST_DIR}/helpers/cache_rejections.cmake")
+foreach(flag --export --export-events --telemetry)
+    expect_analysis_failure("export path.*missing" ${base} ${diagnostics}
+        ${flag} "${case_dir}/missing/output.json")
+endforeach()
+if(UNIX)
+    set(analysis_prefix sh
+        "${YARDA_REPOSITORY}/frontend/experiments/analysis_regions/helpers/limit_output.sh")
+    expect_analysis_failure("failed artifact export path:.*events.json"
+        ${base} ${diagnostics})
+    unset(analysis_prefix)
+endif()
+
+set(unsupported "${YARDA_REPOSITORY}/backend/tests/cli/task_mapping_unsupported_e2e.c")
+foreach(kind LOCAL POINTER RUNTIME_INDEX TLS HEAP)
+    generate_legacy("storage_${kind}" "${unsupported}" "-DYARDA_CASE_${kind}")
+    if(kind STREQUAL "POINTER")
+        set(reason "pointer-backed storage")
+    elseif(kind STREQUAL "RUNTIME_INDEX")
+        set(reason "runtime-dependent index")
+    elseif(kind STREQUAL "TLS")
+        set(reason "symbol.*unavailable")
+    else()
+        set(reason "non-global storage")
+    endif()
+    expect_analysis_failure("${reason}" ${base} ${diagnostics})
+endforeach()
+foreach(kind NO_ROOT LATER_FAILURE)
+    generate_legacy("${kind}" "${fixtures}/rejections.c" "-D${kind}")
+    if(kind STREQUAL "NO_ROOT")
+        set(reason "error: LAT module contains no analyzed task root(\n|$)")
+    else()
+        set(reason "runtime-dependent")
+    endif()
+    expect_analysis_failure("${reason}" ${base} ${diagnostics})
+endforeach()
+
+# Lazy preparation must not validate a source inside an unexecuted body.
+generate_legacy(skipped "${fixtures}/rejections.c" -DSKIPPED_BODY)
+run_checked("unreached unresolved access" "${YARDA_CPP}" ${base} ${diagnostics})
+file(READ "${result_file}" payload)
+assert_json("1" tasks 0 source_accesses)
+assert_json("1" tasks 0 amc)
+
+# The reached source budget error precedes its unresolved index error.
+generate_legacy(error_order "${fixtures}/rejections.c" -DLATER_FAILURE)
+expect_analysis_failure("emitted source accesses exceeds 1" ${base} ${diagnostics}
+    --max-source-accesses 1)
