@@ -113,9 +113,27 @@ add_executable(yarda_elf_regions_cli cli/elf_regions_main.cpp)
 set_target_properties(yarda_elf_regions_cli PROPERTIES OUTPUT_NAME yarda_elf_regions)
 target_link_libraries(yarda_elf_regions_cli PRIVATE yarda_elf_regions)
 
+set(YARDA_TOOL_VERSION "" CACHE STRING "Fixed release identifier (default: source commit)")
+set(YARDA_CLI_GENERATED "${CMAKE_CURRENT_BINARY_DIR}/cli-generated")
+add_custom_target(yarda_cli_version
+    COMMAND ${CMAKE_COMMAND}
+        "-DYARDA_SOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+        "-DYARDA_RELEASE_VERSION=${PROJECT_VERSION}"
+        "-DYARDA_TOOL_VERSION=${YARDA_TOOL_VERSION}"
+        "-DYARDA_VERSION_OUTPUT=${YARDA_CLI_GENERATED}/build_version.hpp"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/cli/build_version.cmake"
+    BYPRODUCTS "${YARDA_CLI_GENERATED}/build_version.hpp"
+    VERBATIM
+)
 add_library(yarda_cli_support
     cli/artifact_output.cpp
+    cli/options.cpp cli/json_output.cpp
+    cli/hierarchy_command.cpp
 )
+add_dependencies(yarda_cli_support yarda_cli_version)
+target_include_directories(yarda_cli_support PRIVATE "${YARDA_CLI_GENERATED}")
+target_link_libraries(yarda_cli_support PUBLIC yarda_hierarchy_analysis yarda_elf_regions)
 target_compile_options(yarda_cli_support PRIVATE -Wall -Wextra -Wpedantic)
 add_executable(yarda_cpp cli/main.cpp)
-target_link_libraries(yarda_cpp PRIVATE yarda_cache_config yarda_elf_regions)
+target_link_libraries(yarda_cpp PRIVATE yarda_cli_support)
+target_compile_options(yarda_cpp PRIVATE -Wall -Wextra -Wpedantic)
