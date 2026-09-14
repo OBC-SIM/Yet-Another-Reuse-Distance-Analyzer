@@ -1,0 +1,92 @@
+#include "yarda/trace/schema.hpp"
+
+#include <nlohmann/json.hpp>
+
+#include <gtest/gtest.h>
+
+namespace
+{
+
+using Json = nlohmann::json;
+
+TEST(SchemaTest, RejectsUnknownOrMalformedExplicitVersions)
+{
+  for (const Json version : {Json(3), Json(0), Json(-1), Json("2"), Json(2.0),
+                             Json(nullptr), Json(true)})
+  {
+    SCOPED_TRACE(version.dump());
+    EXPECT_THROW(yarda::normalize_module(
+                   {{"schema_version", version}, {"functions", Json::array()}}),
+                 std::invalid_argument);
+  }
+}
+
+TEST(SchemaTest, PreservesLegacyFunctionList)
+{
+  const Json raw = Json::array({{
+    {"function", "kernel"},
+    {"body", Json::array({{
+               {"type", "Array"},
+               {"name", "A"},
+               {"indices", Json::array({"i"})},
+             }})},
+  }});
+
+  const auto module = yarda::normalize_module(raw);
+
+  ASSERT_EQ(module.size(), 1);
+  EXPECT_EQ(module[0]["function"], "kernel");
+}
+
+TEST(SchemaTest, EnrichesV2ArrayMetadata)
+{
+  const Json raw = {
+    {"schema_version", 2},
+    {"metadata",
+     {{"objects",
+       {{"obj-A",
+         {
+           {"shape", Json::array({4, 8})},
+           {"elem_size", 8},
+         }}}}}},
+    {"functions", Json::array({{
+                    {"function", "kernel"},
+                    {"body", Json::array({{
+                               {"type", "Array"},
+                               {"name", "A"},
+                               {"object", "obj-A"},
+                               {"indices", Json::array({"i", "j"})},
+                             }})},
+                  }})},
+  };
+
+  const auto node = yarda::normalize_module(raw)[0]["body"][0];
+
+  EXPECT_EQ(node["shape"], Json::array({4, 8}));
+  EXPECT_EQ(node["elem_size"], 8);
+}
+
+TEST(SchemaTest, EnrichesV2ScalarMetadata)
+{
+  const Json raw = {
+    {"schema_version", 2},
+    {"metadata",
+     {{"objects", {{"global::flag", {{"kind", "scalar"}, {"elem_size", 4}}}}}}},
+    {"functions",
+     Json::array({{{"function", "kernel"},
+                   {"body", Json::array({{{"type", "Scalar"},
+                                          {"name", "flag"},
+                                          {"object", "global::flag"}}})}}})},
+  };
+
+  const auto node = yarda::normalize_module(raw)[0]["body"][0];
+
+  EXPECT_EQ(node["elem_size"], 4);
+}
+
+TEST(SchemaTest, RejectsUnsupportedRoot)
+{
+  EXPECT_THROW(yarda::normalize_module(Json::object()), std::invalid_argument);
+}
+
+}  // namespace

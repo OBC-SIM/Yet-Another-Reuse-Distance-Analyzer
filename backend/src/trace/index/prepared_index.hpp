@@ -1,0 +1,63 @@
+#pragma once
+
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace yarda::detail
+{
+
+/** @brief Borrow lexical bindings only while preparing a reached node. */
+struct LoopScope
+{
+  std::string_view variable;
+  std::size_t slot;
+  const LoopScope * parent = nullptr;
+};
+
+/** @brief Bind supported expressions once, retaining legacy fallback text. */
+class PreparedIndex
+{
+public:
+  /**
+   * @brief Bind the nearest matching loop variable without reading its value.
+   * @param expression Owned original spelling, also used on evaluation failure.
+   * @param scope Borrowed nullable lexical scope; never retained.
+   */
+  PreparedIndex(std::string expression, const LoopScope * scope);
+
+  /**
+   * @brief Evaluate bound affine terms with checked arithmetic at the access.
+   * @param values Borrowed current loop values from the owning traversal.
+   * @return Substituted integer, or original text for fixed/unsupported input
+   * and overflow. The existing consumer decides whether to reject that text.
+   * @pre Every slot bound during preparation exists in values.
+   */
+  std::string evaluate(const std::vector<std::int64_t> & values) const;
+
+  /**
+   * @brief Read a numeric value without a string round trip.
+   * @param values Borrowed current loop slots from the owning traversal.
+   * @return Exact substituted or fallback integer, or no exact numeric value.
+   * @pre Every bound slot exists in values; rejection belongs to the consumer.
+   */
+  std::optional<std::int64_t>
+  evaluate_numeric(const std::vector<std::int64_t> & values) const;
+
+private:
+  std::optional<std::int64_t>
+  evaluate_affine(const std::vector<std::int64_t> & values) const;
+
+  std::string expression_;
+  std::optional<std::size_t> slot_;
+  std::optional<std::int64_t> literal_;
+  std::int64_t offset_ = 0;
+  std::optional<std::int64_t> constant_;
+  std::vector<std::pair<std::size_t, std::int64_t>> terms_;
+};
+
+}  // namespace yarda::detail

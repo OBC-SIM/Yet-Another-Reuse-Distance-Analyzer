@@ -6,8 +6,9 @@ unrolling.
 
 ## Build and test
 
-Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json, and
-GTest. The root build configures both the frontend submodule and this backend.
+Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json 3.10.5+,
+yaml-cpp 0.7+, and GTest. The root build configures both the frontend submodule
+and this backend.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -16,6 +17,14 @@ ctest --test-dir build --output-on-failure
 ```
 
 CTest runs the frontend and backend test suites together.
+
+Region LAT is accepted by the task mapping and streaming hierarchy APIs. Its
+`analysis_scope` is validated before task delivery, and result/event IDs use
+`region:<UTF-8 byte length>:<original function>:APE_ANALYZE`. Original function
+and object bindings remain unchanged; legacy whole-module unroll rejects region
+LAT. Enable the optional source frontend with `YARDA_BUILD_REGION_FRONTEND=ON`
+to also build the C-to-LAT/ET_EXEC integration fixtures. See the
+[region contract](../docs/analysis-regions-v1.md) for selection semantics.
 
 ## Run
 
@@ -61,9 +70,136 @@ omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
 `linked_absolute` addresses are linked virtual addresses, not automatically
 physical addresses. Without `--export`, the JSON is written to stdout.
 
-Each invocation is limited to 100,000 call-expansion node visits, 1,000,000
-cumulative loop iterations, and an inline call depth of 256. An individual loop
-also cannot exceed 1,000,000 iterations. Source access count is not capped.
+Every LAT expansion path, including streaming hierarchy analysis, is limited to
+100,000 call-expansion node visits and an inline call depth of 256. Legacy CLI
+and batch APIs retain the default 1,000,000 iterations per loop and
+1,000,000 cumulative loop iterations. These legacy paths do not cap source
+access count.
 The `--elf` report materializes every resolved access and mapped line reference,
 so large traces can exhaust host memory. Exceeding a structural expansion limit
 fails the complete invocation instead of returning a partial trace.
+
+## Hierarchy analysis CLI
+
+```bash
+./build/backend/yarda_cpp task_ape.json \
+  --analysis hierarchy-rd \
+  --elf task.elf \
+  --cache backend/config/cache.32b.yaml \
+  --export result.json \
+  --export-events events.json --event-limit 1000 \
+  --telemetry telemetry.json
+```
+
+The LAT must explicitly declare `schema_version: 2`; ELF, cache, and RESULT
+paths are required. Inputs must remain unchanged throughout the invocation.
+The selected model is core 0, private L1 -> shared LLC -> Memory, equal line
+sizes, LRU, allocation on demand misses, and independent cold tasks. Only L1
+misses reach LLC. Region selection comes from the LAT; there is no backend
+region or core selector. See the [model](../docs/cache-hierarchy-rd-model-v1.md)
+and [artifact contract](../docs/cache-hierarchy-artifacts-v2.md).
+
+RESULT uses `schema_version: 2` and glossary metric keys:
+`modeled_accesses`, `l1_first_hit_count`, `llc_first_hit_count`,
+`all_cache_miss_count`, `l1_first_hit_ratio`, `llc_first_hit_ratio`, and
+`all_cache_miss_ratio`. Ratios use L1 line references as their denominator;
+`source_accesses` remains separate. EVENTS and TELEMETRY retain schema 1 and
+share the RESULT v2 analysis ID. See the contract for migration from v1 keys.
+
+`--analysis mapping` explicitly selects the existing ELF mapping path and
+requires ELF/cache. Omitting `--analysis` preserves the existing dispatch,
+including unroll/profile output and mapping to stdout without `--export`.
+`--mode unroll` remains accepted. With ELF, explicit `--granularity element`
+is rejected; omitted or `cache-line` granularity is accepted.
+
+Hierarchy work limits are unsigned decimal `uint64_t` values:
+
+| Option | Default |
+| --- | ---: |
+| `--max-single-loop-iterations` | 1,000,000 |
+| `--max-cumulative-loop-iterations` | 1,000,000 |
+| `--max-source-accesses` | 1,000,000 |
+| `--max-line-references` | 10,000,000 |
+
+These four options and the diagnostic options require `hierarchy-rd`.
+Successful results are independent of work allowances, event limits and
+telemetry. `--event-limit` requires `--export-events`, even when the limit is
+zero. Its default is zero: an enabled event export then contains an empty
+prefix and indicates truncation if any line was analyzed. Set a positive limit
+to retain events. Events are bounded across the entire invocation; truncation
+does not stop analysis. Omitting each diagnostic option creates no corresponding
+artifact. Valid repeated options retain their last value.
+
+Hierarchy outputs require distinct ordinary file paths; `-`, symlinks, special
+files and aliases of inputs are rejected. All JSON is dumped before output I/O.
+Staged files are closed before publication, with RESULT published last.
+Handled write/rename failures restore old files and remove newly published
+files. Errors exit with status 1 and identify the affected path. The detailed
+rollback and cleanup boundaries are specified in the artifact contract.
+
+Each build embeds a `tool_version`. By default it uses the project version plus
+the source Git commit and a dirty suffix when appropriate; source archives use
+the project version. Set `-DYARDA_TOOL_VERSION=RELEASE_ID` to override it.
+The header is refreshed on every build, without rewriting unchanged content.
+The executable never queries Git or the wall clock for RESULT identity.
+
+## Streaming hierarchy work limits
+
+The C++ streaming APIs expose independent single-loop and cumulative-loop
+allowances through `LoopWorkLimits` in `yarda/trace/work_limits.hpp`. Both
+default to 1,000,000 iterations. Hierarchy callers set them alongside the
+existing source/line emission allowances:
+
+```cpp
+yarda::StreamingHierarchyOptions options;
+options.loop_limits = {2'000'000, 20'000'000};
+options.emission_limits = {10'000'000, 20'000'000};
+auto result = yarda::analyze_streaming_hierarchy(lat, objects, hierarchy, options);
+```
+
+Producer callers use
+`stream_resolved_task_accesses(lat, objects, sink, emission_budget, loop_limits)`.
+The existing three- and four-argument overloads retain default loop limits.
+Hierarchy emission defaults remain 1,000,000 sources and 10,000,000 source-to-L1
+line references. The hierarchy CLI exposes the same settings through the four
+flags above; legacy CLI and batch defaults are unchanged.
+
+All limits are inclusive. Zero permits no iterations or emissions for that
+specific budget; it is never an unlimited sentinel. Zero-trip loops and flat
+accesses do not consume loop work, while loops with empty bodies still do.
+At each dynamic loop entry, the single-loop allowance is checked and the entire
+trip count is reserved from one module budget before the body executes. For
+example, a two-iteration outer loop with a three-iteration inner loop consumes
+`2 + 2 * 3 = 8` cumulative iterations. Task boundaries reset cache state and
+source ordinals, but do not reset cumulative loop/source/line allowances.
+
+Raising source/line limits alone does not raise loop limits. Cross-line accesses
+consume one line allowance per source-to-L1 reference; LLC forwarding is not
+charged again. Node/depth guards, checked arithmetic and address validation
+remain active. Any exhaustion fails the whole invocation, stops callbacks and
+returns no partial result. Discard any previously collected sink events on
+failure. Event truncation alone still permits complete analysis.
+
+## Prepared loop execution
+
+Task and legacy unrolling prepare each reached static LAT node once per subtree
+traversal. Repeated execution reuses the loop body and integer variable slots,
+including lexical shadowing, instead of copying JSON bodies and variable maps.
+Supported index expressions keep their existing spelling and rejection rules;
+address layout and ELF extent checks still run through the existing resolver.
+
+Preparation follows execution order. Zero-trip bodies are not prepared, loop
+work is reserved at every dynamic entry, and later malformed nodes cannot
+preempt an earlier consumer exception. All preparation occurs inside the
+analysis call. Prepared nodes borrow the immutable expanded input and are
+released when traversal returns or fails. Their storage follows static nodes,
+indices and loop slots, with no per-access history or cache shared between
+analyses. Full-exact cache history remains a separate distinct-line cost.
+
+## Hierarchy evaluation
+
+Enable `YARDA_BUILD_HIERARCHY_EXPERIMENTS=ON` together with the region frontend
+to build the optional C++ batch/streaming comparison tools. The
+[evaluation README](experiments/README.md) describes input preparation,
+independent source checks, work limits, timing/RSS boundaries and reproduction.
+Long measurements are explicit runs; CTest adds only short correctness checks.

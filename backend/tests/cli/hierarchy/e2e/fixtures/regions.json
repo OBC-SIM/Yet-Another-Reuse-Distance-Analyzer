@@ -1,0 +1,31 @@
+{
+  "bases": {"global::lines":6291456},
+  "tasks": [
+    {"id": "whole", "sources": [
+      ["global::lines",4,4,"load"],
+      ["global::lines",4,4,"store"],
+      ["global::lines",8,4,"load"],
+      ["global::lines",8,4,"store"],
+      ["global::lines",12,4,"load"],
+      ["global::lines",12,4,"store"]
+    ]},
+    {"id": "region:8:selected:APE_ANALYZE", "sources": [
+      ["global::lines",4,4,"load"],
+      ["global::lines",4,4,"store"],
+      ["global::lines",8,4,"load"],
+      ["global::lines",8,4,"store"],
+      ["global::lines",12,4,"load"],
+      ["global::lines",12,4,"store"]
+    ]},
+    {"id": "region:6:second:APE_ANALYZE", "sources": [
+      ["global::lines",4,4,"load"],
+      ["global::lines",4,4,"store"],
+      ["global::lines",8,4,"load"],
+      ["global::lines",8,4,"store"],
+      ["global::lines",12,4,"load"],
+      ["global::lines",12,4,"store"]
+    ]},
+    {"id": "region:5:empty:APE_ANALYZE", "sources": [
+    ]}
+  ]
+}

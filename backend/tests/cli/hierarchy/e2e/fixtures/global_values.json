@@ -1,0 +1,16 @@
+{
+  "bases": {},
+  "tasks": [
+    {"id": "region:19:global_values_probe:APE_ANALYZE", "sources": [
+      ["global::external_value",0,4,"load"],
+      ["global::inside",4,4,"load"],
+      ["global::inside",4,4,"store"],
+      ["global::external_value",0,4,"load"],
+      ["global::inside",8,4,"load"],
+      ["global::inside",8,4,"store"],
+      ["global::external_value",0,4,"load"],
+      ["global::inside",12,4,"load"],
+      ["global::inside",12,4,"store"]
+    ]}
+  ]
+}

@@ -11,7 +11,10 @@ namespace yarda
 {
 
 /**
- * @brief Exact reuse-distance profile for a memory-reference trace.
+ * @brief Own a Global Reuse-Distance Profile for a memory-reference trace.
+ *
+ * Distances count intervening distinct reference keys across the whole trace;
+ * this profile does not partition references by cache set or cache level.
  */
 struct ReuseProfile
 {
@@ -20,7 +23,7 @@ struct ReuseProfile
 };
 
 /**
- * @brief Calculate exact LRU stack distances in O(N log N) time.
+ * @brief Calculate exact Global Reuse Distances in O(N log N) time.
  *
  * @param trace Ordered cache-line or element reference keys.
  * @return Histogram and unique cold-reference set.

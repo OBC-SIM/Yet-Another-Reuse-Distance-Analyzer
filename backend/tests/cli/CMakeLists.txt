@@ -201,3 +201,5 @@ add_task_unroll_semantics_test(
 add_task_unroll_semantics_test(
     yarda_cpp_unroll_task_regular_block_element_semantics
     test_regular_block.c regular_block_element element)
+
+add_subdirectory(hierarchy)
