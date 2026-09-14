@@ -1,0 +1,30 @@
+# GR740 geometry, YARDA exact-two-level-lru-demand-v1 policy assumptions.
+# Physical GR740 L1 is write-through/no-write-allocate and is NOT this model.
+schema_version: 1
+cores:
+  count: 1
+  mapping:
+    - id: 0
+      l1: L1D0
+caches:
+  - name: L1D0
+    role: L1
+    private_to: 0
+    size_bytes: 16 KiB
+    line_size: 32 B
+    associativity: 4
+    replacement: LRU
+    write_policy: write-back
+    write_allocate: true
+    next: L2
+  - name: L2
+    role: LLC
+    size_bytes: 2 MiB
+    line_size: 32 B
+    associativity: 4
+    replacement: LRU
+    write_policy: write-back
+    write_allocate: true
+    next: Memory
+memory:
+  name: Memory
