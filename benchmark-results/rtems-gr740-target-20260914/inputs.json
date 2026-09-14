@@ -1,0 +1,98 @@
+{
+  "atax-micro": {
+    "kernel": "atax",
+    "defines": "-DM=2 -DN=3",
+    "elf_sha256": "23cd7247f6e696ecdd82cbe7107405e78503408dfd67031f1d8189fec82df583",
+    "elf_bytes": 2452284
+  },
+  "bicg-micro": {
+    "kernel": "bicg",
+    "defines": "-DM=2 -DN=3",
+    "elf_sha256": "630fc0bae629478bd0ebf6a6c6b80e2ffc56ce7d0de2f3e177534de59c2dba31",
+    "elf_bytes": 2451976
+  },
+  "mvt-micro": {
+    "kernel": "mvt",
+    "defines": "-DN=3",
+    "elf_sha256": "632095bef3eef993fdf556f8f1ebbee7e23a51f555e88a88717aeb88b99a2073",
+    "elf_bytes": 2451936
+  },
+  "atax-mini": {
+    "kernel": "atax",
+    "defines": "-DM=38 -DN=42",
+    "elf_sha256": "2e7c2d8178a473cbe26131a8b99020938484869baaa812409e9e436a7b6ce37c",
+    "elf_bytes": 2452292
+  },
+  "bicg-mini": {
+    "kernel": "bicg",
+    "defines": "-DM=38 -DN=42",
+    "elf_sha256": "8a9d98fb3e848c546e24bd0d9010daf38184a7bab4e4e6704f476c2291ea5bd8",
+    "elf_bytes": 2451976
+  },
+  "mvt-mini": {
+    "kernel": "mvt",
+    "defines": "-DN=40",
+    "elf_sha256": "8b71aef0e898da1c9a0085add0db7bc96e47eafe2449543caeec7a33687abc0d",
+    "elf_bytes": 2452000
+  },
+  "atax-small": {
+    "kernel": "atax",
+    "defines": "-DM=116 -DN=124",
+    "elf_sha256": "8606543b7deb0658a48600ba999e1596929d30f99ebea6ff993cbfdda271dc4b",
+    "elf_bytes": 2452292
+  },
+  "bicg-small": {
+    "kernel": "bicg",
+    "defines": "-DM=116 -DN=124",
+    "elf_sha256": "463010be6198a44bd43b4df0d546335ad8e121878f46888541ad83943ece0136",
+    "elf_bytes": 2451976
+  },
+  "mvt-small": {
+    "kernel": "mvt",
+    "defines": "-DN=120",
+    "elf_sha256": "f0c86249c94f9a5e311e6580ce446deb23c0623e41c28900cee57c5fda3a28f9",
+    "elf_bytes": 2452000
+  },
+  "atax-medium": {
+    "kernel": "atax",
+    "defines": "-DM=390 -DN=410",
+    "elf_sha256": "471c0eb6375163440b4564bdb62fe190c779c850963b54dcf16d09ae8bc37e3f",
+    "elf_bytes": 2452292
+  },
+  "bicg-medium": {
+    "kernel": "bicg",
+    "defines": "-DM=390 -DN=410",
+    "elf_sha256": "d8ee726b471e6be30db0641c147bce343c9f678b3414c5cc60bc000dd6af64d5",
+    "elf_bytes": 2451984
+  },
+  "mvt-medium": {
+    "kernel": "mvt",
+    "defines": "-DN=400",
+    "elf_sha256": "71955dbeaa870f47f9930da837d5b2de2db2c9e3278689e9e55300fe15a08e19",
+    "elf_bytes": 2451936
+  },
+  "mvt-llc-crossing-custom": {
+    "kernel": "mvt",
+    "defines": "-DN=520",
+    "elf_sha256": "d430fe60f89c7c5a99b7834033fbdee39b427a0e0017978850958c1f817f13c7",
+    "elf_bytes": 2452000
+  },
+  "sweep-v4096-r1": {
+    "kernel": "sweep",
+    "defines": "-DDOMAIN=4096 -DREPEATS=1",
+    "elf_sha256": "9d3fe47c23f2be0beced20bc84ac954c289181ca75de4b0e343cdbfc8d48e2d2",
+    "elf_bytes": 2450936
+  },
+  "sweep-v4096-r16": {
+    "kernel": "sweep",
+    "defines": "-DDOMAIN=4096 -DREPEATS=16",
+    "elf_sha256": "8e4822d1564362797bf4b352546e52eb2989dc8cb71f14b8950df2cd3cf93d0c",
+    "elf_bytes": 2450936
+  },
+  "sweep-v4096-r128": {
+    "kernel": "sweep",
+    "defines": "-DDOMAIN=4096 -DREPEATS=128",
+    "elf_sha256": "f580172eb86a94b20e33f03e3ee2f4c2717bc0f52a69e040fb601d6c717e0797",
+    "elf_bytes": 2450936
+  }
+}
