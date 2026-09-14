@@ -53,3 +53,5 @@ if(BUILD_TESTING)
         set_tests_properties(yarda_hierarchy_evaluation_${case} PROPERTIES TIMEOUT 120)
     endforeach()
 endif()
+
+add_subdirectory(rtems_gr740)
