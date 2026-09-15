@@ -40,6 +40,13 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
 ResolvedTaskTraceResult resolved_task_traces(const nlohmann::json & raw,
                                              const ObjectAddressModel & objects)
 {
+  return resolved_task_traces(raw, objects, LoopWorkLimits{});
+}
+
+ResolvedTaskTraceResult resolved_task_traces(const nlohmann::json & raw,
+                                             const ObjectAddressModel & objects,
+                                             const LoopWorkLimits & loop_limits)
+{
   ResolvedTaskTraceResult result;
   const TaskAccessSink sink{
     [&](const std::string & task_id, std::uint64_t excluded) {
@@ -55,7 +62,7 @@ ResolvedTaskTraceResult resolved_task_traces(const nlohmann::json & raw,
   const auto maximum = std::numeric_limits<std::uint64_t>::max();
   TraceEmissionBudget budget({maximum, maximum});
   const auto summary =
-    stream_resolved_task_accesses(raw, objects, sink, budget);
+    stream_resolved_task_accesses(raw, objects, sink, budget, loop_limits);
   result.coverage = summary.coverage;
   result.excluded_opaque_call_sites = summary.excluded_opaque_call_sites;
   return result;

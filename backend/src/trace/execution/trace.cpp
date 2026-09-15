@@ -24,8 +24,17 @@ std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
                                      Granularity granularity,
                                      std::size_t cache_line_size)
 {
+  return block_traces(raw, granularity, cache_line_size, LoopWorkLimits{});
+}
+
+std::vector<NamedTrace> block_traces(const nlohmann::json & raw,
+                                     Granularity granularity,
+                                     std::size_t cache_line_size,
+                                     const LoopWorkLimits & loop_limits)
+{
   const detail::AccessLayoutResolver layouts(raw);
-  detail::ExpansionBudget expansion_budget;
+  detail::ExpansionBudget expansion_budget(detail::kExpansionLimits,
+                                            loop_limits);
   const detail::TraceUnroller unroller(granularity, cache_line_size, layouts,
                                        expansion_budget);
   return detail::build_block_traces<NamedTrace, std::string>(

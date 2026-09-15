@@ -37,10 +37,12 @@ void print_usage()
             << " [--cache FILE] [--elf FILE] [--export PATH]\n"
             << "  --analysis mapping|hierarchy-rd (omitted: legacy dispatch)\n"
             << "  hierarchy-rd requires --elf, --cache and --export FILE\n"
-            << "  --export-events FILE [--event-limit N] (default: 0)\n"
-            << "  --telemetry FILE\n"
+            << "  Loop-work limits (all analysis modes):\n"
             << "  --max-single-loop-iterations N (default: 1000000)\n"
             << "  --max-cumulative-loop-iterations N (default: 1000000)\n"
+            << "  Hierarchy-rd only:\n"
+            << "  --export-events FILE [--event-limit N] (default: 0)\n"
+            << "  --telemetry FILE\n"
             << "  --max-source-accesses N (default: 1000000)\n"
             << "  --max-line-references N (default: 10000000)\n"
             << "  Limits are inclusive; zero permits no work.\n";
@@ -85,7 +87,9 @@ Options parse_options(int argc, char ** argv)
              argument == "--max-source-accesses" ||
              argument == "--max-line-references")
     {
-      hierarchy_options = true;
+      if (argument != "--max-single-loop-iterations" &&
+          argument != "--max-cumulative-loop-iterations")
+        hierarchy_options = true;
       const auto value = unsigned_value(next(argument), argument);
       if (argument == "--event-limit")
       {
@@ -162,7 +166,7 @@ Options parse_options(int argc, char ** argv)
   }
   if (options.analysis_mode != AnalysisMode::HierarchyRd && hierarchy_options)
     throw std::invalid_argument(
-        "diagnostic and work-limit options require --analysis hierarchy-rd");
+        "diagnostic and emission-limit options require --analysis hierarchy-rd");
   if (options.analysis_mode != AnalysisMode::Legacy && options.elf_path.empty())
     throw std::invalid_argument("--elf is required for explicit analysis");
   if (options.analysis_mode == AnalysisMode::HierarchyRd)

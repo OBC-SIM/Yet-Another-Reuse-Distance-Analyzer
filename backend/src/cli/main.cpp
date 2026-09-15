@@ -77,7 +77,8 @@ void map_elf_tasks(const Options & options, const Json & raw,
   }
   const auto & cache = yarda::entry_cache_config(config, 0);
   const auto geometry = yarda::make_cache_geometry(cache);
-  const auto resolved = yarda::resolved_task_traces(raw, objects);
+  const auto resolved =
+    yarda::resolved_task_traces(raw, objects, options.loop_limits);
   const auto mapped = yarda::map_resolved_task_traces(resolved, geometry);
   yarda::TaskMappingReportMetadata metadata;
   metadata.lat_path = options.input;
@@ -131,7 +132,8 @@ int main(int argc, char ** argv)
     yarda::ReuseProfile program;
     Json block_payload = Json::array();
     const auto blocks =
-      yarda::block_traces(raw, options.granularity, cache_line_size);
+      yarda::block_traces(raw, options.granularity, cache_line_size,
+                          options.loop_limits);
     std::vector<std::string> program_trace;
     for (const auto & block : blocks)
     {

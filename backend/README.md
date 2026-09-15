@@ -71,10 +71,21 @@ omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
 physical addresses. Without `--export`, the JSON is written to stdout.
 
 Every LAT expansion path, including streaming hierarchy analysis, is limited to
-100,000 call-expansion node visits and an inline call depth of 256. Legacy CLI
-and batch APIs retain the default 1,000,000 iterations per loop and
-1,000,000 cumulative loop iterations. These legacy paths do not cap source
-access count.
+100,000 call-expansion node visits and an inline call depth of 256. All CLI
+analysis modes default to 1,000,000 iterations per loop and 1,000,000 cumulative
+loop iterations. Override them with `--max-single-loop-iterations` and
+`--max-cumulative-loop-iterations`, including for `--mode unroll` and ELF
+mapping. The cumulative budget covers the entire LAT module, not each function
+separately. For example, a module requiring 2,949,120 cumulative iterations can
+be analyzed with:
+
+```bash
+./build/backend/yarda_cpp exp2_workload_g_ape.json --mode unroll \
+  --max-cumulative-loop-iterations 2949120 --export exp2_rdh.json
+```
+
+The legacy paths do not cap source access count, and raising loop limits does
+not change their trace materialization or memory usage per access.
 The `--elf` report materializes every resolved access and mapped line reference,
 so large traces can exhaust host memory. Exceeding a structural expansion limit
 fails the complete invocation instead of returning a partial trace.
@@ -112,16 +123,16 @@ including unroll/profile output and mapping to stdout without `--export`.
 `--mode unroll` remains accepted. With ELF, explicit `--granularity element`
 is rejected; omitted or `cache-line` granularity is accepted.
 
-Hierarchy work limits are unsigned decimal `uint64_t` values:
+Work limits are unsigned decimal `uint64_t` values:
 
-| Option | Default |
-| --- | ---: |
-| `--max-single-loop-iterations` | 1,000,000 |
-| `--max-cumulative-loop-iterations` | 1,000,000 |
-| `--max-source-accesses` | 1,000,000 |
-| `--max-line-references` | 10,000,000 |
+| Option | Default | Available modes |
+| --- | ---: | --- |
+| `--max-single-loop-iterations` | 1,000,000 | All |
+| `--max-cumulative-loop-iterations` | 1,000,000 | All |
+| `--max-source-accesses` | 1,000,000 | `hierarchy-rd` |
+| `--max-line-references` | 10,000,000 | `hierarchy-rd` |
 
-These four options and the diagnostic options require `hierarchy-rd`.
+Source/line emission limits and the diagnostic options require `hierarchy-rd`.
 Successful results are independent of work allowances, event limits and
 telemetry. `--event-limit` requires `--export-events`, even when the limit is
 zero. Its default is zero: an enabled event export then contains an empty
@@ -163,6 +174,9 @@ The existing three- and four-argument overloads retain default loop limits.
 Hierarchy emission defaults remain 1,000,000 sources and 10,000,000 source-to-L1
 line references. The hierarchy CLI exposes the same settings through the four
 flags above; legacy CLI and batch defaults are unchanged.
+Collecting callers can use `block_traces(lat, granularity, line_size, loop_limits)`
+or `resolved_task_traces(lat, objects, loop_limits)`. Existing overloads retain
+their default loop limits.
 
 All limits are inclusive. Zero permits no iterations or emissions for that
 specific budget; it is never an unlimited sentinel. Zero-trip loops and flat
