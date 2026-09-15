@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "yarda/trace/work_limits.hpp"
+
 namespace yarda
 {
 
@@ -61,5 +63,23 @@ std::vector<std::string> unroll_node_actual(
 std::vector<NamedTrace> block_traces(
   const nlohmann::json & raw, Granularity granularity = Granularity::Element,
   std::size_t cache_line_size = 32);
+
+/**
+ * @brief Generate block traces with explicit module-wide loop allowances.
+ *
+ * Uses the same layout, call-expansion and ordering contract as block_traces
+ * with default limits. All functions share one cumulative loop budget.
+ *
+ * @param raw Borrowed legacy or APE v2 LAT module, unchanged by traversal.
+ * @param granularity Element or cache-line reference identity.
+ * @param cache_line_size Cache-line size in bytes.
+ * @param loop_limits Borrowed inclusive allowances, copied for this invocation.
+ * @return Named loop and flat traces in module order.
+ * @throws std::invalid_argument for unsupported input or exhausted loop work.
+ * Structural node/depth limits remain unchanged.
+ */
+std::vector<NamedTrace> block_traces(
+  const nlohmann::json & raw, Granularity granularity,
+  std::size_t cache_line_size, const LoopWorkLimits & loop_limits);
 
 }  // namespace yarda

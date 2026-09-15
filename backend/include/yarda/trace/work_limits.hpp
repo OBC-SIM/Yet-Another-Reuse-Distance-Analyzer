@@ -6,7 +6,7 @@ namespace yarda
 {
 
 /**
- * @brief Inclusive loop-work limits for one streaming module invocation.
+ * @brief Inclusive loop-work limits for one LAT module invocation.
  *
  * Zero allows no iterations, including in loops with empty bodies. Zero-trip
  * loops and accesses outside loops remain allowed. Limits are finite uint64_t

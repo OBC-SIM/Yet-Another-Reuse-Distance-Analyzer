@@ -169,6 +169,18 @@ add_test(NAME yarda_cpp_legacy_export
         -P "${CMAKE_CURRENT_SOURCE_DIR}/check_legacy_export.cmake"
 )
 
+foreach(mode element cache-line implicit-mapping mapping)
+    add_test(NAME yarda_cpp_loop_limits_${mode}
+        COMMAND ${CMAKE_COMMAND}
+            "-DYARDA_CPP=$<TARGET_FILE:yarda_cpp>"
+            "-DYARDA_ELF=${YARDA_ELF_EXEC_FIXTURE}"
+            "-DYARDA_CACHE=${YARDA_CPP_CACHE_32B}"
+            "-DYARDA_MODE=${mode}"
+            "-DYARDA_WORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/loop_limits/${mode}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/loop_limits.cmake"
+    )
+endforeach()
+
 function(add_task_unroll_semantics_test test_name source case_name granularity)
     add_test(NAME ${test_name}
         COMMAND ${CMAKE_COMMAND}

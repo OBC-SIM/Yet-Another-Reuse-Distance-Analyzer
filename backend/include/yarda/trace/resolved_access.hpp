@@ -11,6 +11,7 @@
 #include "yarda/trace/resolution_error.hpp"
 #include "yarda/trace/task_trace.hpp"
 #include "yarda/trace/trace_coverage.hpp"
+#include "yarda/trace/work_limits.hpp"
 
 namespace yarda
 {
@@ -115,5 +116,22 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
  */
 ResolvedTaskTraceResult resolved_task_traces(
   const nlohmann::json & raw, const ObjectAddressModel & objects);
+
+/**
+ * @brief Collect resolved task traces with explicit module-wide loop limits.
+ *
+ * Preserves the task selection, resolution and structural-limit contract of
+ * the default overload. Task boundaries do not reset cumulative loop work.
+ *
+ * @param raw Borrowed APE v2 LAT module with canonical object metadata.
+ * @param objects Borrowed linked global object addresses, ownership retained.
+ * @param loop_limits Borrowed inclusive allowances, copied for this invocation.
+ * @return Task-isolated resolved traces in deterministic module order.
+ * @throws std::invalid_argument for invalid input or exhausted expansion work.
+ * @throws ResolutionError for unsupported storage or unresolved byte ranges.
+ */
+ResolvedTaskTraceResult resolved_task_traces(
+  const nlohmann::json & raw, const ObjectAddressModel & objects,
+  const LoopWorkLimits & loop_limits);
 
 }  // namespace yarda
