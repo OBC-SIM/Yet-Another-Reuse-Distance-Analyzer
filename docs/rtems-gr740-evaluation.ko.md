@@ -4,12 +4,18 @@
 
 **실제 GR740 BSP로 링크한 16개 SPARC RTEMS 입력에서 정적 e2e 검증을
 통과했고, 480개 측정 RESULT가 모두 기준 결과와 바이트 단위로 일치했다.**
-각 입력을 두 번 생성한 ELF와 MAP도 각각 동일했다. 이 결과는 호스트에서
-수행하는 YARDA 분석의 재현성이다. **GR740 실기/시뮬레이터 실행과 물리 캐시
-적중률의 일치는 검증하지 못했다.**
+
+각 입력을 두 번 생성한 ELF와 LAT도 각각 동일했다. 이 결과는 호스트에서
+수행하는 YARDA 분석의 재현성이다.
+
+**2026-09-14 후속 실행에서 16개 입력 전부가 GR740 시뮬레이터에서 RTEMS
+실행을 완료했고, 176개 job이 모두 target 수치 검증을 통과했다.** 이는
+시뮬레이터 관측이며 **GR740 실기 실행과 물리 캐시 적중률의 일치는 여전히
+검증하지 못했다.** 시뮬레이터는 캐시 적중/실패 counter를 제공하지 않는다.
 
 실행 가능한 실험은 [rtems_gr740/README.md](../backend/experiments/rtems_gr740/README.md),
-이번 원본 증거는 [실험 archive](../benchmark-results/rtems-gr740-20260914/README.md)에 있다.
+이번 원본 증거는 [실험 archive](../benchmark-results/rtems-gr740-20260914/README.md),
+target 실행 증거는 [target archive](../benchmark-results/rtems-gr740-target-20260914/README.md)에 있다.
 기존 B11/B12 archive는 변경하지 않았다.
 
 ## 1. 대상과 모델 경계
@@ -33,8 +39,9 @@ MAP + ELF의 실제 링크 주소 + cache-model.yaml
   커널 함수와 분석 대상 배열을 포함한다. 배열은 32-byte 정렬의 static 저장이며,
   GNU `nm`의 주소/크기와 YARDA의 ELF 해석을 대조했다.
 - 실행 wrapper는 CPU 하나를 활성화하고 warm-up 1회와 측정 job 10회를 수행하도록
-  구성했다. 수치 검증은 모든 출력 원소를 확인한다. 이번에는 이 wrapper의
-  **RTEMS 실행 성공을 확인하지 못했으며**, 같은 커널의 호스트 수치 검증은 통과했다.
+  구성했다. 수치 검증은 모든 출력 원소를 확인한다. 이 wrapper의 **RTEMS 실행
+  성공은 후속 시뮬레이터 실행에서 16개 입력 전부 확인했다**(§5). 같은 커널의
+  호스트 수치 검증도 통과했다.
 
 [GR740 매뉴얼 §6.3](https://www.gaisler.com/doc/gr740/GR740-UM-DS.pdf)의
 L1 D-cache는 16 KiB, 4-way, 32-byte line이며 write-through/no-write-allocate다.
@@ -163,31 +170,99 @@ instrumented analysis 안에 포함되며 total에 다시 더하면 안 된다. 
 상수 메모리, 전체 process RSS의 수학적 상한, 모든 워크로드에서의 속도 우위,
 GR740 실기 속도 향상을 입증하지는 않는다.
 
-## 5. RTEMS 실행 상태와 재현 자료
+## 5. RTEMS target 실행 결과
 
-다음 실제 이미지를 pseudo-terminal을 붙여 시뮬레이터에 전달했다.
-
-```sh
-/workspace/laysim-gr740/laysim-gr740-cli -r -core0 \
-  /workspace/YARDA/benchmark-results/rtems-gr740-20260914/inputs/atax-micro/input.elf
-```
-
-프로세스는 `Gtk-WARNING: cannot open display`로 exit 1했고,
-`YARDA_RTEMS_COMPLETE`에 도달하지 못했다. RTEMS 실행 여부는
+최초 시도는 `Gtk-WARNING: cannot open display`로 exit 1했고
 [target-runtime.json](../benchmark-results/rtems-gr740-20260914/target-runtime.json)에
-`unavailable`로 보존했다. 이 기록으로 부팅 성공·target 수치 검증·실행 시간·cache
-counter를 주장하지 않는다. 시뮬레이터와 display 환경을 준비하면 동일 ELF와
-동일 실행 wrapper로 이어서 확인할 수 있다. 물리 cache counter와의 비교에는
-별도로 현 모델과 실제 정책 차이를 처리해야 한다.
+`unavailable`로 보존했다. 후속 실행에서 이 실패는 재현되지 않았고, 별도 display
+없이 16개 이미지 전부가 실행을 완료했다. 원본 증거는
+[target archive](../benchmark-results/rtems-gr740-target-20260914/README.md)에 있다.
 
-이번 정식 실행 명령:
+각 ELF를 command-line console을 갖춘 GR740 명령어 집합 시뮬레이터에 core 0 RAM
+이미지로 적재해 끝까지 실행하고, console의 성능 통계를 읽었다. ELF는 §1과 같은
+도구/옵션으로 다시 빌드했으며, 표본 재빌드에서 bytes가 동일했다.
+
+| 검증 | 결과 |
+| --- | --- |
+| `YARDA_RTEMS_COMPLETE` 도달 | 16/16 |
+| job 수치 검증 `valid=1` (warm-up 1 + 측정 10) | 176/176 |
+| `valid=0` 발생 | 0 |
+| D-cache on/off 양쪽 arm 완료·검증 | 32/32 |
+
+### 5.1 Target 측정치
+
+`cycles`/`CPI`는 시뮬레이터 `perf`의 전체 프로그램 값이라 RTEMS 부팅을 포함한다.
+커널 시간은 guest의 `rtems_clock_get_uptime_nanoseconds()`가 `benchmark_kernel()`
+둘레에서 잰 값의 측정 10회 중앙값이며 부팅·초기화·출력 검증을 제외한다.
+`L1D off`는 core 0의 L1 data cache만 끄고 L2는 켠 채 다시 실행한 결과다.
+
+| Case | Cycles | CPI | 커널 median ns | 모델 L1 miss% | L1D off ns | slowdown |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| atax-micro | 49,653,558 | 1.50 | 4,348 | 9.43% | 11,400 | 2.62x |
+| bicg-micro | 49,652,805 | 1.50 | 3,752 | 11.32% | 10,284 | 2.74x |
+| mvt-micro | 49,653,533 | 1.50 | 5,244 | 9.72% | 14,624 | 2.79x |
+| atax-mini | 53,175,237 | 1.50 | 696,592 | 3.35% | 2,100,564 | 3.02x |
+| bicg-mini | 52,968,471 | 1.50 | 625,976 | 3.43% | 1,899,632 | 3.03x |
+| mvt-mini | 53,315,709 | 1.50 | 730,068 | 3.44% | 2,132,392 | 2.92x |
+| atax-small | 76,322,861 | 1.50 | 6,697,024 | 3.20% | 19,100,120 | 2.85x |
+| bicg-small | 73,103,535 | 1.51 | 5,711,548 | 3.22% | 16,947,100 | 2.97x |
+| mvt-small | 76,816,753 | 1.51 | 6,880,988 | 6.33% | 19,085,996 | 2.77x |
+| atax-medium | 312,318,037 | 1.52 | 70,332,084 | 3.15% | 207,786,804 | 2.95x |
+| bicg-medium | 292,678,084 | 1.52 | 63,232,776 | 3.15% | 187,778,816 | 2.97x |
+| mvt-medium | 336,692,215 | 1.64 | 79,201,832 | 16.52% | 207,798,576 | 2.62x |
+| mvt-llc-crossing-custom | 573,621,341 | 1.64 | 145,088,744 | 17.26% | 362,489,096 | 2.50x |
+| sweep-v4096-r1 | 55,942,174 | 1.53 | 775,700 | 50.00% | 1,614,852 | 2.08x |
+| sweep-v4096-r16 | 89,288,669 | 1.66 | 12,378,052 | 50.00% | 25,888,848 | 2.09x |
+| sweep-v4096-r128 | 327,577,468 | 1.87 | 99,029,768 | 50.00% | 207,092,416 | 2.09x |
+
+모델 L1 miss%는 §3 RESULT의 `(MA - FHC L1) / MA`다.
+
+### 5.2 모델 예측과 target 캐시 민감도
+
+모델 miss%가 3.15%에서 50%로 변하는 구간에서 `slowdown`이 단조 감소한다.
+참조가 53~72개뿐이라 고정 오버헤드가 지배하는 micro 3개를 제외한 13개 케이스에서
+Pearson `r = -0.978`, Spearman `r = -0.797`이다.
+
+이 상관을 예측력으로 읽으면 안 된다. miss%는 약 3.2%, 6.3%, 16.5~17.3%, 50%의
+네 덩어리라 13개 독립 관측이 아니며, Pearson 값은 sweep 3점의 지렛대가 크다.
+그룹 안에서는 해상도가 없다. 모델 miss 3.15~3.44%인 7개 케이스의 slowdown은
+2.85~3.03x로 흩어지고 모델은 이 차이를 설명하지 못한다.
+
+참조당 절감 사이클은 24.3~27.4 cyc/ref로 거의 평평하다. L1D를 꺼도 L2는 켜져
+있어 차분이 L1 대 L2 지연을 접근 횟수에 비례해 재기 때문이며, 이 축은 재사용
+구조를 구분하지 못한다. 순서 정보는 절대량이 아니라 slowdown 비율에만 남는다.
+
+### 5.3 시뮬레이터가 제공하지 않는 것
+
+이 시뮬레이터는 캐시 적중/실패 counter를 제공하지 않으므로 이 실행으로
+FHC/AMC/CSRD의 하드웨어 대조를 주장하지 않는다. 확인한 범위는 다음과 같다.
+
+- `perf`는 cycles, instructions, CPI, MIPS만 출력한다.
+- L4STAT는 `info sys`에 없고 `0xFFA0C000`/`0xFFA0D000`이 0으로 읽힌다.
+- L2C control(`0xF0000000`)은 hit rate status mode bit 쓰기를 받지만
+  status(`0xF0000004`)는 `0x00502803`에서 변하지 않는다.
+- `dcache 0 dump`는 `icache 0 dump`와 같은 bytes를 돌려준다.
+
+데이터 캐시 자체는 모델링된다. 끄면 cycles와 guest 커널 시간이 바뀐다.
+L2C status는 4-way × 512 KiB = 2 MiB, 32 B line으로 디코드되어
+`cache-model.yaml`의 LLC 기하와 일치한다. 기하 일치는 정책 일치가 아니며,
+§1의 write-through/no-write-allocate 차이는 그대로 남는다.
+
+## 6. 재현 자료
+
+§3 호스트 측정의 정식 실행 명령:
 
 ```sh
 python3 backend/experiments/rtems_gr740/run.py \
   /tmp/yarda-rtems-gr740-20260914/build \
   benchmark-results/rtems-gr740-20260914 \
-  --simulator /workspace/laysim-gr740/laysim-gr740-cli
+  --simulator <GR740 시뮬레이터 CLI 경로>
 ```
+
+§5 target 실행은 같은 Makefile로 케이스별 이미지를 빌드한 뒤 시뮬레이터에
+직접 전달했다. 실행 절차와 케이스별 defines·ELF 해시는
+[target archive](../benchmark-results/rtems-gr740-target-20260914/README.md)와
+그 `inputs.json`에 있다.
 
 새 실행은 다른 출력 디렉터리를 사용한다. Git stage/commit은 수행하지 않았다.
 로컬 `benchmark-results/`와 `/tmp`는 Git clone에 포함되지 않으므로 원본 증거가
