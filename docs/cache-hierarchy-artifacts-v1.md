@@ -16,7 +16,7 @@ analyzer and publishes these artifacts.
   exception invalidates the whole invocation, including retained events and
   measurements from previously completed tasks.
 - A module must contain at least one selected task. A task with no accesses is
-  retained. Function/region identity and LAT order follow
+  retained. Function/region identity and MAP order follow
   [analysis-regions-v1.md](analysis-regions-v1.md).
 - `RESULT.json` contains semantic data. `EVENTS.json` contains a bounded
   diagnostic prefix. `TELEMETRY.json` contains process measurements.
@@ -40,7 +40,7 @@ analyzer and publishes these artifacts.
 
 ## 2. Input identity
 
-`lat_sha256`, `elf_sha256`, and `cache_config_sha256` hash exact raw file bytes.
+`map_sha256`, `elf_sha256`, and `cache_config_sha256` hash exact raw file bytes.
 Digests use lowercase hexadecimal with exactly 64 characters. File hashing
 streams bounded buffers and fails on open/read errors.
 
@@ -55,7 +55,7 @@ csrd_mode = full-exact
 address_basis = linked_absolute
 tool_version
 analysis_core_id = 0
-lat_sha256
+map_sha256
 elf_sha256
 cache_config_sha256
 semantic_analysis_options
@@ -68,7 +68,7 @@ effective result-changing option, including defaults, must be supplied.
 The current analyzer has no such options, so the effective object is `{}`.
 Work allowances govern successful completion, not successful-result semantics,
 and are excluded, like output paths, event limits and telemetry settings.
-Input selection is already represented by raw LAT bytes and task identities.
+Input selection is already represented by raw MAP bytes and task identities.
 
 ## 3. RESULT
 
@@ -79,7 +79,7 @@ schema_version, analysis_mode, model_id, csrd_mode, address_basis,
 tool_version, analysis_id, inputs, selected_path, cache_hierarchy, tasks
 ```
 
-`inputs` contains the three raw hashes followed by `lat_schema_version` (2),
+`inputs` contains the three raw hashes followed by `map_schema_version` (2),
 `cache_schema_version` (1), `elf_class` (`ELF32` or `ELF64`) and `elf_machine`.
 The caller binds metadata to the same ET_EXEC inputs used by the analyzer.
 `selected_path` contains `core_id`, `l1_name`, `llc_name`, `memory_name`.
@@ -165,7 +165,7 @@ source_accesses_emitted, line_references_emitted, maximum_inline_depth,
 loop_iterations_expanded, host, measured_at_utc
 ```
 
-Stable stage names are `parse_lat`, `parse_cache`, `parse_elf`,
+Stable stage names are `parse_map`, `parse_cache`, `parse_elf`,
 `resolve_and_stream`, `hierarchy_analysis`, `serialize_result`.
 Every stage must have an actual recorded interval, including zero-duration
 intervals. Missing measurements are rejected, not filled with zero.
@@ -199,18 +199,18 @@ No duration is compared to an exact real-time value in tests.
 
 ## 6. CLI binding and publication
 
-The hierarchy command requires a LAT file with explicit `schema_version: 2`,
+The hierarchy command requires a MAP file with explicit `schema_version: 2`,
 `--elf ET_EXEC`, `--cache YAML`, and `--export RESULT`. It uses the same
 invocation's input paths for raw hashes and parsing, and supplies parsed schema
 versions, ELF class/machine and the selected hierarchy to RESULT. Input files
 must remain unchanged throughout the invocation. No legacy schema version is
-invented for an unversioned LAT. Legacy CLI modes keep their existing reader
+invented for an unversioned MAP. Legacy CLI modes keep their existing reader
 compatibility.
 
 `--analysis mapping` requires ELF/cache and exposes the existing mapping path.
 With no `--analysis`, dispatch and legacy stdout/file behavior are unchanged.
 No core or region-selection option is added. The model selects core 0; task
-scope/identity comes from the LAT.
+scope/identity comes from the MAP.
 
 The following options are exclusive to hierarchy mode:
 

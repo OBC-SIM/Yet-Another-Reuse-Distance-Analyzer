@@ -6,7 +6,7 @@ namespace yarda::detail
 {
 
 inline constexpr std::array<const char *, 6> kAnalysisStageNames{
-    "parse_lat",          "parse_cache",        "parse_elf",
+    "parse_map",          "parse_cache",        "parse_elf",
     "resolve_and_stream", "hierarchy_analysis", "serialize_result"};
 
 /** @brief Reject overflow while accumulating measured nanoseconds. */

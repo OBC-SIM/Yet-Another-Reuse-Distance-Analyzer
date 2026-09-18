@@ -30,20 +30,20 @@ void run_hierarchy_command(const Options & options,
   }
   HierarchyResultMetadata metadata;
   metadata.identity.tool_version = kToolVersion;
-  metadata.identity.lat_sha256 = sha256_file_bytes(options.input);
+  metadata.identity.map_sha256 = sha256_file_bytes(options.input);
   metadata.identity.cache_config_sha256 = sha256_file_bytes(options.cache_path);
   metadata.identity.elf_sha256 = sha256_file_bytes(options.elf_path);
 
   auto started = collector ? collector->now_ns() : 0;
   std::ifstream input(options.input, std::ios::binary);
   if (!input)
-    throw std::runtime_error("cannot open LAT input: " + options.input);
+    throw std::runtime_error("cannot open MAP input: " + options.input);
   const auto raw = nlohmann::json::parse(input);
   if (!raw.is_object() || !raw.contains("schema_version") ||
       !raw["schema_version"].is_number_integer() || raw["schema_version"] != 2)
-    throw std::invalid_argument("hierarchy-rd requires LAT schema_version 2");
-  metadata.lat_schema_version = raw["schema_version"].get<std::uint32_t>();
-  if (collector) collector->finish_stage(AnalysisStage::ParseLat, started);
+    throw std::invalid_argument("hierarchy-rd requires MAP schema_version 2");
+  metadata.map_schema_version = raw["schema_version"].get<std::uint32_t>();
+  if (collector) collector->finish_stage(AnalysisStage::ParseMap, started);
 
   started = collector ? collector->now_ns() : 0;
   const auto config = parse_cache_config(options.cache_path);

@@ -212,7 +212,7 @@ TEST(TaskTraceValidationTest, RejectsInvalidTaskMappingGeometry)
                std::invalid_argument);
 }
 
-TEST(TaskTraceValidationTest, NormalizesMalformedTaskLatException)
+TEST(TaskTraceValidationTest, NormalizesMalformedTaskMapException)
 {
   const Json malformed_loop = {
     {"type", "Loop"}, {"var", 7}, {"bound", 1}, {"body", Json::array()}};
@@ -226,7 +226,7 @@ TEST(TaskTraceValidationTest, NormalizesMalformedTaskLatException)
       yarda::resolved_task_traces(raw, yarda::ObjectAddressModel{}));
   });
 
-  EXPECT_NE(message.find("malformed LAT input"), std::string::npos);
+  EXPECT_NE(message.find("malformed MAP input"), std::string::npos);
 }
 
 TEST(TaskTraceValidationTest, RejectsEmptyPublicRemappingInput)

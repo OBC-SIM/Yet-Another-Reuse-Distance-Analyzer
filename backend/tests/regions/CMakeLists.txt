@@ -16,15 +16,15 @@ endforeach()
 set(region_outputs)
 foreach(name boundary global_values atax tasks)
     set(source "${REGION_FIXTURE_DIR}/${name}.c")
-    set(lat "${REGION_FIXTURE_DIR}/${name}.json")
+    set(map "${REGION_FIXTURE_DIR}/${name}.json")
     set(elf "${REGION_FIXTURE_DIR}/${name}.elf")
-    add_custom_command(OUTPUT "${lat}" "${elf}"
-        COMMAND yarda_region_lat "${source}" "${lat}"
+    add_custom_command(OUTPUT "${map}" "${elf}"
+        COMMAND yarda_region_map "${source}" "${map}"
         COMMAND "${YARDA_REGION_CLANG}" -std=c11 -O0 -g -Wno-unknown-pragmas
                 -no-pie "${source}" -o "${elf}"
-        DEPENDS yarda_region_lat "${source}"
+        DEPENDS yarda_region_map "${source}"
         VERBATIM)
-    list(APPEND region_outputs "${lat}" "${elf}")
+    list(APPEND region_outputs "${map}" "${elf}")
 endforeach()
 add_custom_target(yarda_region_fixtures DEPENDS ${region_outputs})
 

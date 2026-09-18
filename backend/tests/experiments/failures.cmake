@@ -55,7 +55,7 @@ if(NOT status STREQUAL "1" OR NOT error MATCHES "artifact output aliases input:"
     message(FATAL_ERROR "summary output overwrote its raw input sample")
 endif()
 
-# A compact LAT produces a large batch without a large compiler working set.
+# A compact MAP produces a large batch without a large compiler working set.
 string(JSON row GET "${manifest}" cases 3)
 prepare_input("${row}" large_case)
 set(YARDA_MEMORY_KIB 262144)

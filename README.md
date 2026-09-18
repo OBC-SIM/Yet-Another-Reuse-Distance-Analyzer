@@ -30,15 +30,15 @@ ctest --test-dir build --output-on-failure
 
 ## 빠른 시작: L1/LLC 계층 분석
 
-저장소 루트에서 예제 `tasks/test_1d.c`의 LAT와 non-PIE ELF를 생성한 뒤 분석합니다.
-`yarda_cpp`는 C source 대신 LAT JSON을 입력받습니다.
+저장소 루트에서 예제 `tasks/test_1d.c`의 MAP와 non-PIE ELF를 생성한 뒤 분석합니다.
+`yarda_cpp`는 C source 대신 MAP JSON을 입력받습니다.
 
 ```sh
 clang-14 -O0 -Xclang -disable-O0-optnone -g \
   -emit-llvm -S -o tasks/test_1d_g.ll tasks/test_1d.c
 
 cd tasks
-opt-14 -load-pass-plugin ../build/libLoopAnnotatedTrace.so \
+opt-14 -load-pass-plugin ../build/libMemoryAccessPatterns.so \
   '-passes=function(mem2reg),loop-simplify,loop-annotated-trace' \
   test_1d_g.ll -o /dev/null
 cd ..
@@ -66,7 +66,7 @@ L1 miss만 LLC로 전달하고 load/store에 같은 residency 규칙을 적용�
 ## 상세 문서
 
 - [Backend CLI·API와 기존 RDH/mapping 사용법](backend/README.md)
-- [LLVM frontend·annotation·LAT schema](frontend/README.md)
+- [LLVM frontend·annotation·MAP schema](frontend/README.md)
 - [선택 구간 frontend 빌드와 사용법](frontend/docs/analysis-regions.md)
 - [RESULT v2 지표·JSON 계약](docs/cache-hierarchy-artifacts-v2.md)
 - [계층 평가 실행 가이드](backend/experiments/README.md)

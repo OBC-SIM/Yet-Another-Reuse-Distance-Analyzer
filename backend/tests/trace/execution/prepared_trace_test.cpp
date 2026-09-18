@@ -19,7 +19,7 @@ TEST(PreparedTraceTest, RejectsUnknownNodeTypeAtVisit)
   }
   catch (const std::invalid_argument & error)
   {
-    EXPECT_STREQ(error.what(), "Unknown LAT node type: Widget");
+    EXPECT_STREQ(error.what(), "Unknown MAP node type: Widget");
   }
 }
 
@@ -33,7 +33,7 @@ TEST(PreparedTraceTest, RejectsMissingNodeTypeAtVisit)
   }
   catch (const std::invalid_argument & error)
   {
-    EXPECT_STREQ(error.what(), "Unknown LAT node type: ");
+    EXPECT_STREQ(error.what(), "Unknown MAP node type: ");
   }
 }
 

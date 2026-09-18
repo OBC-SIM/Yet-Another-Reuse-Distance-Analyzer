@@ -18,7 +18,7 @@ struct ExpansionLimits
 
 inline constexpr ExpansionLimits kExpansionLimits{100'000, 256};
 
-/** Bound structural expansion and dynamic loop work for one LAT module. */
+/** Bound structural expansion and dynamic loop work for one MAP module. */
 class ExpansionBudget
 {
 public:

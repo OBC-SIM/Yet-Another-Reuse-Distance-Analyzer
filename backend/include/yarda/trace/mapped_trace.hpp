@@ -63,14 +63,14 @@ flatten_mapped_traces(const std::vector<NamedMappedTrace> & traces);
 /**
  * @brief Generate exact traces with linked global cache-address mapping.
  *
- * @param raw APE v2 LAT module containing canonical object IDs.
+ * @param raw APE v2 MAP module containing canonical object IDs.
  * @param geometry Cache geometry used to decode Tag, Index, and Offset.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Named cache-line traces retaining resolved provenance and
  * deterministic address-only mapping-table rows. Source access ordinals are
  * module-wide across functions. Every visited access must resolve; unsupported
  * or unresolved accesses fail the operation instead of being omitted.
- * @throws std::invalid_argument for invalid geometry, malformed LAT input,
+ * @throws std::invalid_argument for invalid geometry, malformed MAP input,
  * call expansion, or an expansion resource limit violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
@@ -97,13 +97,13 @@ MappedTaskTraceResult map_resolved_task_traces(
 /**
  * @brief Resolve and map every analyzed task without merging task boundaries.
  *
- * @param raw APE v2 LAT module containing canonical object IDs.
+ * @param raw APE v2 MAP module containing canonical object IDs.
  * @param geometry Cache geometry used to decode Tag, Index, and Offset.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Task-isolated cache-line traces with complete coverage.
  * @throws std::invalid_argument for invalid geometry or any condition rejected
  * by resolved_task_traces, including a missing analyzed root, overlapping
- * roles, ambiguous identities, unknown targets, malformed LAT input, or an
+ * roles, ambiguous identities, unknown targets, malformed MAP input, or an
  * expansion resource limit violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */

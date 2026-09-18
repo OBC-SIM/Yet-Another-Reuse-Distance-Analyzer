@@ -118,7 +118,7 @@ TEST_F(HierarchyCommandTest, ResultDumpFailurePrecedesSnapshotAndPublication)
 }
 
 TEST_F(HierarchyCommandTest,
-       RejectsUnversionedLatInsteadOfInventingInputVersion)
+       RejectsUnversionedMapInsteadOfInventingInputVersion)
 {
   auto input = raw();
   input.erase("schema_version");

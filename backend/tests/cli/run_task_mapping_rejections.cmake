@@ -19,9 +19,9 @@ function(run_checked label working_directory)
     endif()
 endfunction()
 
-function(expect_cli_failure label lat elf expected_error)
+function(expect_cli_failure label map elf expected_error)
     execute_process(
-        COMMAND "${YARDA_CPP}" "${lat}" --elf "${elf}"
+        COMMAND "${YARDA_CPP}" "${map}" --elf "${elf}"
                 --cache "${YARDA_CACHE}"
         WORKING_DIRECTORY "${YARDA_WORK_DIR}"
         RESULT_VARIABLE result
@@ -40,14 +40,14 @@ endfunction()
 
 function(run_rejection case_name definition expected_error)
     set(ir "${YARDA_WORK_DIR}/unsupported_${case_name}.ll")
-    set(lat "${YARDA_WORK_DIR}/unsupported_${case_name}_ape.json")
+    set(map "${YARDA_WORK_DIR}/unsupported_${case_name}_ape.json")
     set(elf "${YARDA_WORK_DIR}/unsupported_${case_name}.elf")
 
     run_checked("${case_name} C to LLVM IR" "${YARDA_WORK_DIR}"
         "${YARDA_CLANG}" -O0 -Xclang -disable-O0-optnone -g
         -I "${YARDA_INCLUDE_DIR}" "-D${definition}"
         -emit-llvm -S "${YARDA_SOURCE}" -o "${ir}")
-    run_checked("${case_name} LLVM IR to LAT" "${YARDA_WORK_DIR}"
+    run_checked("${case_name} LLVM IR to MAP" "${YARDA_WORK_DIR}"
         "${YARDA_OPT}" -load-pass-plugin "${YARDA_PLUGIN}"
         "-passes=function(mem2reg),loop-simplify,loop-annotated-trace"
         "${ir}" -o /dev/null)
@@ -55,7 +55,7 @@ function(run_rejection case_name definition expected_error)
         "${YARDA_CLANG}" -O0 -g -fno-pie -no-pie
         -I "${YARDA_INCLUDE_DIR}" "-D${definition}"
         "${YARDA_SOURCE}" -o "${elf}")
-    expect_cli_failure("${case_name}" "${lat}" "${elf}" "${expected_error}")
+    expect_cli_failure("${case_name}" "${map}" "${elf}" "${expected_error}")
 endfunction()
 
 file(REMOVE_RECURSE "${YARDA_WORK_DIR}")
@@ -71,13 +71,13 @@ run_rejection(tls YARDA_CASE_TLS "ELF object symbol is unavailable")
 run_rejection(heap YARDA_CASE_HEAP
     "non-global storage is outside ELF task analysis")
 
-set(local_lat "${YARDA_WORK_DIR}/unsupported_local_ape.json")
-expect_cli_failure(missing_symbol "${local_lat}" "${YARDA_OTHER_ELF}"
+set(local_map "${YARDA_WORK_DIR}/unsupported_local_ape.json")
+expect_cli_failure(missing_symbol "${local_map}" "${YARDA_OTHER_ELF}"
     "ELF object symbol is unavailable")
 
 set(pie "${YARDA_WORK_DIR}/unsupported_pie.elf")
 run_checked("PIE fixture" "${YARDA_WORK_DIR}"
     "${YARDA_CLANG}" -O0 -g -fPIE -pie -I "${YARDA_INCLUDE_DIR}"
     -DYARDA_CASE_LOCAL "${YARDA_SOURCE}" -o "${pie}")
-expect_cli_failure(pie "${local_lat}" "${pie}"
+expect_cli_failure(pie "${local_map}" "${pie}"
     "--elf task mapping requires an ET_EXEC image")

@@ -22,13 +22,13 @@ foreach(index RANGE 0 3)
     endif()
 endforeach()
 # Empty loops still reserve work, even when emission limits are zero.
-file(READ "${lat}" raw)
+file(READ "${map}" raw)
 string(JSON empty GET "${raw}" functions 2)
 string(JSON empty SET "${empty}" body [=[[
   {"type":"Loop","var":"i","start":0,"bound":1000001,"step":1,"body":[]}
 ]]=])
 string(JSON raw SET "${raw}" functions "[${empty}]")
-file(WRITE "${lat}" "${raw}")
+file(WRITE "${map}" "${raw}")
 run_error("exceeds|limit|budget" ${base} --max-source-accesses 0 --max-line-references 0)
 run_ok(${base} --max-source-accesses 0 --max-line-references 0
     --max-single-loop-iterations 1000001 --max-cumulative-loop-iterations 1000001)

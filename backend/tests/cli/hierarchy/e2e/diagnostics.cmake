@@ -40,7 +40,7 @@ foreach(limit 0 1 11 12 16 17)
     assert_json("0" maximum_inline_depth)
     assert_json("0" loop_iterations_expanded)
     assert_json_length(6 stage_time_ns)
-    foreach(stage parse_lat parse_cache parse_elf resolve_and_stream
+    foreach(stage parse_map parse_cache parse_elf resolve_and_stream
                   hierarchy_analysis serialize_result)
         assert_json_type(NUMBER stage_time_ns ${stage})
         string(JSON duration GET "${payload}" stage_time_ns ${stage})
@@ -71,12 +71,12 @@ foreach(limit 0 1 11 12 16 17)
     endif()
 endforeach()
 
-foreach(kind lat elf)
+foreach(kind map elf)
     configure_file("${${kind}}" "${case_dir}/renamed.${kind}" COPYONLY)
 endforeach()
 configure_file("${YARDA_CACHE}" "${case_dir}/renamed.yaml" COPYONLY)
 run_checked("input and output paths are not identity" "${YARDA_CPP}"
-    "${case_dir}/renamed.lat" --analysis hierarchy-rd
+    "${case_dir}/renamed.map" --analysis hierarchy-rd
     --elf "${case_dir}/renamed.elf" --cache "${case_dir}/renamed.yaml"
     --export "${case_dir}/renamed-result.json")
 compare_files("${case_dir}/renamed-result.json" "${case_dir}/summary.json")

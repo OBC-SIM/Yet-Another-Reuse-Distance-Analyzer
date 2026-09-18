@@ -97,7 +97,7 @@ TEST(HierarchyResultValidationTest, RejectsIncompleteOrUnsupportedMetadata)
 {
   for (const auto mutate :
        std::vector<std::function<void(HierarchyResultMetadata &)>>{
-           [](auto & m) { m.lat_schema_version = 0; },
+           [](auto & m) { m.map_schema_version = 0; },
            [](auto & m) { m.cache_schema_version = 2; },
            [](auto & m) { m.elf_address_size = 3; },
            [](auto & m) { m.elf_machine = 0; },

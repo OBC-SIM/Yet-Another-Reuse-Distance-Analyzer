@@ -9,7 +9,7 @@ ctest --test-dir build -R yarda_cpp_hierarchy_e2e --output-on-failure
 
 Seven tests run with the default frontend. Enabling
 `YARDA_BUILD_REGION_FRONTEND=ON` adds `regions` and `region_rejections`.
-Each test generates its own LAT/ET_EXEC inputs before invoking `yarda_cpp`.
+Each test generates its own MAP/ET_EXEC inputs before invoking `yarda_cpp`.
 Inputs, outputs and `commands.log` stay in the test's build directory.
 Each new case removes its previous RESULT/EVENTS/TELEMETRY before execution.
 Negative cases separately verify absent outputs and preservation of old files.
@@ -18,32 +18,32 @@ Negative cases separately verify absent outputs and preservation of old files.
 | --- | --- |
 | `positive` | Fixed addresses, hand CSRD/FSL/counts, cross-line source provenance, independent cold/empty tasks |
 | `affine` | Existing H2-B fixture: 25 tasks / 95 sources in both debug-information modes |
-| `affine_rejections` | Unsupported source expressions fail before LAT publication |
+| `affine_rejections` | Unsupported source expressions fail before MAP publication |
 | `diagnostics` | RESULT byte determinism, independent input hashes/ID, bounded EVENTS, separate TELEMETRY |
 | `limits` | Exact/higher allowances, each lower allowance, cumulative tasks, cross-line charges, empty-loop and structural expansion guards |
 | `rejections` | Invalid inputs/cache/output, storage/index failures, skipped-body and error-order regression; Unix file-write failure |
 | `tasks` | The three supported `tasks/*.c` entries in `fixtures/tasks.json` |
 | `regions` | Whole-function/region parity, outside exclusion, inline pointer binding, external global values, fixed 2-by-3 static ATAX |
-| `region_rejections` | Source selection/pipeline restrictions, malformed LAT scope, legacy unroll rejection, retained opaque calls |
+| `region_rejections` | Source selection/pipeline restrictions, malformed MAP scope, legacy unroll rejection, retained opaque calls |
 
 The legacy producer uses Clang 14 O0 with `optnone` disabled, followed by
 `function(mem2reg),loop-simplify,loop-annotated-trace`. Region cases use
-`yarda_region_lat`'s fixed `clang14-o0-region-v1` pipeline. ELF generation uses
+`yarda_region_map`'s fixed `clang14-o0-region-v1` pipeline. ELF generation uses
 the same source, target and preprocessing flags, with `-fno-pie -no-pie`.
 Only the ELF compiler ignores the region pragmas.
 
-The legacy producer intentionally omits non-inline calls; its LAT alone cannot
+The legacy producer intentionally omits non-inline calls; its MAP alone cannot
 prove their absence in the source. Opaque-call rejection is consequently tested
 with the strict frontend, which preserves these call sites in function and
 region tasks. Legacy affine support does not extend strict region index syntax;
 scaled and runtime-parameter indices remain rejected by that frontend.
 
-`fixtures/*.json` source sequences are specified from C independently of LAT.
+`fixtures/*.json` source sequences are specified from C independently of MAP.
 The oracle GTest runner first checks actual resolved sources against those
 sequences, including object/offset/width/operation/ordinal. It then feeds the
 independently specified sources to the existing exact-distance and resident-LRU
 oracles, and compares published RESULT/EVENTS bytes against batch serialization.
-No actual LAT-derived source stream supplies the oracle's expected trace.
+No actual MAP-derived source stream supplies the oracle's expected trace.
 For non-fixed globals only the ELF symbol base is shared; expected offsets are
 independent. `hierarchy.json` additionally fixes ELF bases, and
 `observations.json` fixes every hand-trace address/set/tag/CSRD/outcome/FSL.

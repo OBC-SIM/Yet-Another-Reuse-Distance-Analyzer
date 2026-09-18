@@ -140,7 +140,7 @@ MappedTraceResult mapped_block_traces(const nlohmann::json & raw,
   }
   catch (const nlohmann::json::exception & error)
   {
-    throw std::invalid_argument("malformed LAT input: " +
+    throw std::invalid_argument("malformed MAP input: " +
                                 std::string(error.what()));
   }
 }

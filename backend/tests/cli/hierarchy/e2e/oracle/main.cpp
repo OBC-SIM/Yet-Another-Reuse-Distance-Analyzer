@@ -8,7 +8,7 @@ std::array<std::string, 6> yarda::test::e2e::input_paths;
 /**
  * @brief Verify one completed CLI run against source expectations and oracles.
  * @param argc Argument count: program and six input paths, plus GTest options.
- * @param argv Borrowed non-null arguments: LAT, ELF, YAML, RESULT, EVENTS, golden.
+ * @param argv Borrowed non-null arguments: MAP, ELF, YAML, RESULT, EVENTS, golden.
  * @return Google Test status, or 2 for invalid arguments.
  */
 int main(int argc, char ** argv)
@@ -17,7 +17,7 @@ int main(int argc, char ** argv)
   testing::InitGoogleTest(&argc, argv);
   if (argc != 7)
   {
-    std::cerr << "expected LAT ELF CACHE RESULT EVENTS GOLDEN\n";
+    std::cerr << "expected MAP ELF CACHE RESULT EVENTS GOLDEN\n";
     return 2;
   }
   for (std::size_t i = 0; i < 6; ++i)

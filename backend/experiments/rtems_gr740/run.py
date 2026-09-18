@@ -66,7 +66,7 @@ def main():
     if args.repeats < 1:
         parser.error("repeats must be positive")
     build, output = args.build.resolve(), args.output.resolve()
-    binaries = dict(cli=build / "backend/yarda_cpp", region=build / "frontend/yarda_region_lat",
+    binaries = dict(cli=build / "backend/yarda_cpp", region=build / "frontend/yarda_region_map",
                     evaluator=build / "backend/experiments/yarda_hierarchy_evaluate",
                     verify=build / "backend/experiments/rtems_gr740/yarda_rtems_gr740_verify")
     for path in binaries.values():
@@ -114,11 +114,11 @@ def main():
             raise AssertionError(f"source changed during measurement: {path}")
     for case in prepared:
         row = read_json(case)
-        for kind in ("lat", "elf", "cache"):
+        for kind in ("map", "elf", "cache"):
             if sha(row[f"{kind}_path"]) != row[f"{kind}_sha256"]:
                 raise AssertionError(f"input changed during measurement: {case}")
     write_json(output / "completion.json", dict(status="success", cases=len(prepared),
-        measured_results_identical=len(samples), rebuilt_elf_and_lat_identical=len(prepared),
+        measured_results_identical=len(samples), rebuilt_elf_and_map_identical=len(prepared),
         target_runtime=read_json(output / "target-runtime.json")["status"]))
     print(f"completed: {output} ({len(samples)} identical measured RESULTS)", flush=True)
 

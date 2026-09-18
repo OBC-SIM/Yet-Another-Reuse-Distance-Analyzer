@@ -36,7 +36,7 @@ foreach(limit 0 1 8 9)
     assert_json("4" source_accesses_emitted)
     assert_json("8" line_references_emitted)
     assert_json("4" loop_iterations_expanded)
-    foreach(stage parse_lat parse_cache parse_elf resolve_and_stream
+    foreach(stage parse_map parse_cache parse_elf resolve_and_stream
                   hierarchy_analysis serialize_result)
         string(JSON duration GET "${payload}" stage_time_ns ${stage})
         if(duration LESS 0)

@@ -27,7 +27,7 @@ function(assert_absent)
 endfunction()
 
 function(check_input_identity)
-    foreach(kind lat elf cache)
+    foreach(kind map elf cache)
         if(kind STREQUAL "cache")
             set(path "${YARDA_CACHE}")
             set(field cache_config_sha256)
@@ -44,7 +44,7 @@ function(check_input_identity)
         "{\"address_basis\":\"linked_absolute\",\"analysis_core_id\":0,"
         "\"analysis_mode\":\"hierarchy-rd\",\"cache_config_sha256\":\"${cache_config_sha256}\","
         "\"csrd_mode\":\"full-exact\",\"elf_sha256\":\"${elf_sha256}\","
-        "\"lat_sha256\":\"${lat_sha256}\",\"model_id\":\"exact-two-level-lru-demand-v1\","
+        "\"map_sha256\":\"${map_sha256}\",\"model_id\":\"exact-two-level-lru-demand-v1\","
         "\"schema_version\":2,\"semantic_analysis_options\":{},\"tool_version\":\"${version}\"}")
     string(SHA256 expected_id "${preimage}")
     assert_json("${expected_id}" analysis_id)

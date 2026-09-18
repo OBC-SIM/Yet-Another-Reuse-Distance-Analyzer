@@ -88,7 +88,7 @@ TEST(ArtifactIdentityTest, ToolVersionAndEachRawHashChangeAnalysisId)
 {
   for (auto field :
        {&AnalysisIdentityInput::tool_version,
-        &AnalysisIdentityInput::lat_sha256, &AnalysisIdentityInput::elf_sha256,
+        &AnalysisIdentityInput::map_sha256, &AnalysisIdentityInput::elf_sha256,
         &AnalysisIdentityInput::cache_config_sha256})
   {
     auto value = identity();
@@ -122,7 +122,7 @@ TEST(ArtifactIdentityTest, RejectsNoncanonicalHashSyntax)
                             std::string(64, 'A'), std::string(64, 'g')})
   {
     auto value = identity();
-    value.lat_sha256 = hash;
+    value.map_sha256 = hash;
     EXPECT_THROW(hierarchy_analysis_id(value), std::invalid_argument);
   }
 }

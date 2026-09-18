@@ -21,7 +21,7 @@ struct ObjectAddress
   std::uint64_t size = 0;
 };
 
-/** @brief Canonical LAT object IDs mapped into one linked address space. */
+/** @brief Canonical MAP object IDs mapped into one linked address space. */
 struct ObjectAddressModel
 {
   AddressBasis basis = AddressBasis::Absolute;

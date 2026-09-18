@@ -45,7 +45,7 @@ inline void record_stage(AnalysisTelemetryCollector & collector,
 inline void record_external_stages(AnalysisTelemetryCollector & collector)
 {
   for (const auto stage :
-       {AnalysisStage::ParseLat, AnalysisStage::ParseCache,
+       {AnalysisStage::ParseMap, AnalysisStage::ParseCache,
         AnalysisStage::ParseElf, AnalysisStage::SerializeResult})
     record_stage(collector, stage);
 }

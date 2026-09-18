@@ -54,14 +54,14 @@ endfunction()
 
 function(verify_cli case_file directory)
     file(READ "${case_file}" row)
-    foreach(key lat_path elf_path cache_path)
+    foreach(key map_path elf_path cache_path)
         string(JSON ${key} GET "${row}" "${key}")
     endforeach()
     foreach(key single_loop cumulative_loop source_accesses line_references)
         string(JSON ${key} GET "${row}" effective_work_limits "${key}")
     endforeach()
     execute_process(COMMAND sh "${YARDA_EXPERIMENTS}/helpers/limit_memory.sh"
-        "${YARDA_MEMORY_KIB}" "${YARDA_CPP}" "${lat_path}" --analysis hierarchy-rd
+        "${YARDA_MEMORY_KIB}" "${YARDA_CPP}" "${map_path}" --analysis hierarchy-rd
         --elf "${elf_path}" --cache "${cache_path}" --export "${directory}/cli-result.json"
         --max-single-loop-iterations "${single_loop}"
         --max-cumulative-loop-iterations "${cumulative_loop}"
@@ -69,7 +69,7 @@ function(verify_cli case_file directory)
         RESULT_VARIABLE status OUTPUT_FILE "${directory}/cli.stdout"
         ERROR_FILE "${directory}/cli.stderr" TIMEOUT "${YARDA_TIMEOUT}")
     file(WRITE "${directory}/cli-command.log"
-        "${YARDA_CPP};${lat_path};--analysis;hierarchy-rd;--elf;${elf_path};--cache;${cache_path};--export;${directory}/cli-result.json;--max-single-loop-iterations;${single_loop};--max-cumulative-loop-iterations;${cumulative_loop};--max-source-accesses;${source_accesses};--max-line-references;${line_references}\nexit=${status}\n")
+        "${YARDA_CPP};${map_path};--analysis;hierarchy-rd;--elf;${elf_path};--cache;${cache_path};--export;${directory}/cli-result.json;--max-single-loop-iterations;${single_loop};--max-cumulative-loop-iterations;${cumulative_loop};--max-source-accesses;${source_accesses};--max-line-references;${line_references}\nexit=${status}\n")
     if(NOT status STREQUAL "0")
         message(FATAL_ERROR "actual CLI failed: ${case_file}")
     endif()

@@ -49,7 +49,7 @@ TEST_P(StreamCallbackFailureTest, PropagatesConsumerExceptionAndStopsCallbacks)
 }
 
 TEST_P(StreamCallbackFailureTest,
-       DoesNotRelabelConsumerJsonExceptionAsMalformedLat)
+       DoesNotRelabelConsumerJsonExceptionAsMalformedMap)
 {
   const auto raw = module(Json::array({
     function("first", Json::array({access()})),
@@ -203,7 +203,7 @@ TEST(TaskAccessStreamFailureTest, ConvertsMalformedLoopJsonToInputError)
   }
   catch (const std::invalid_argument & error)
   {
-    EXPECT_NE(std::string(error.what()).find("malformed LAT input"),
+    EXPECT_NE(std::string(error.what()).find("malformed MAP input"),
               std::string::npos);
   }
   EXPECT_EQ(collector.notifications, (std::vector<std::string>{"begin:"

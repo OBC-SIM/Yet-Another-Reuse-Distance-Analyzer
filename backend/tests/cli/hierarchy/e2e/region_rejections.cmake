@@ -17,21 +17,21 @@ foreach(entry
     list(GET fields 0 kind)
     list(GET fields 1 reason)
     prepare_case("${kind}")
-    expect_frontend_failure("yarda_region_lat: ${reason}(\n|$)"
-        "${YARDA_REGION}" "${source}" "${lat}"
+    expect_frontend_failure("yarda_region_map: ${reason}(\n|$)"
+        "${YARDA_REGION}" "${source}" "${map}"
         -- -I "${YARDA_INCLUDE_DIR}" "-D${kind}")
 endforeach()
 prepare_case(pipeline)
 expect_frontend_failure("unsupported region compiler option"
-    "${YARDA_REGION}" "${source}" "${lat}" -- -O2)
+    "${YARDA_REGION}" "${source}" "${map}" -- -O2)
 
 generate_region(opaque_region "${source}" -DOPAQUE_REGION)
 expect_analysis_failure("error: hierarchy task has opaque-call exclusions:"
     ${base} ${diagnostics})
 generate_region(scope "${CMAKE_CURRENT_LIST_DIR}/fixtures/regions.c")
 expect_analysis_failure("legacy module expansion rejects analysis_scope"
-    "${lat}" --mode unroll --export "${result_file}")
-file(READ "${lat}" raw)
+    "${map}" --mode unroll --export "${result_file}")
+file(READ "${map}" raw)
 string(JSON count LENGTH "${raw}" functions)
 math(EXPR last "${count}-1")
 set(found OFF)
@@ -44,9 +44,9 @@ foreach(index RANGE 0 ${last})
     endif()
 endforeach()
 if(NOT found)
-    message(FATAL_ERROR "selected function missing from region LAT")
+    message(FATAL_ERROR "selected function missing from region MAP")
 endif()
-file(WRITE "${lat}" "${invalid}")
+file(WRITE "${map}" "${invalid}")
 expect_analysis_failure("error: invalid analysis_scope: expected APE_ANALYZE region(\n|$)"
     ${base} ${diagnostics})
 generate_region(opaque_function

@@ -80,7 +80,7 @@ public:
   /**
    * @brief Return the rejected access's canonical object identity.
    *
-   * @return Borrowed object ID, empty when the LAT access has none.
+   * @return Borrowed object ID, empty when the MAP access has none.
    */
   [[nodiscard]] const std::string & object_id() const noexcept
   {

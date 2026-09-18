@@ -127,7 +127,7 @@ add_test(NAME yarda_cpp_generated_task_mapping_e2e
     COMMAND ${CMAKE_COMMAND}
         "-DYARDA_CLANG=${YARDA_CLANG_EXECUTABLE}"
         "-DYARDA_OPT=${YARDA_OPT_EXECUTABLE}"
-        "-DYARDA_PLUGIN=$<TARGET_FILE:LoopAnnotatedTrace>"
+        "-DYARDA_PLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
         "-DYARDA_CPP=$<TARGET_FILE:yarda_cpp>"
         "-DYARDA_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/task_mapping_e2e.c"
         "-DYARDA_INCLUDE_DIR=${YARDA_FRONTEND_INCLUDE_DIR}"
@@ -139,7 +139,7 @@ add_test(NAME yarda_cpp_generated_task_mapping_rejections
     COMMAND ${CMAKE_COMMAND}
         "-DYARDA_CLANG=${YARDA_CLANG_EXECUTABLE}"
         "-DYARDA_OPT=${YARDA_OPT_EXECUTABLE}"
-        "-DYARDA_PLUGIN=$<TARGET_FILE:LoopAnnotatedTrace>"
+        "-DYARDA_PLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
         "-DYARDA_CPP=$<TARGET_FILE:yarda_cpp>"
         "-DYARDA_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/task_mapping_unsupported_e2e.c"
         "-DYARDA_INCLUDE_DIR=${YARDA_FRONTEND_INCLUDE_DIR}"
@@ -152,7 +152,7 @@ add_test(NAME yarda_cpp_generated_task_expansion_budget
     COMMAND ${CMAKE_COMMAND}
         "-DYARDA_CLANG=${YARDA_CLANG_EXECUTABLE}"
         "-DYARDA_OPT=${YARDA_OPT_EXECUTABLE}"
-        "-DYARDA_PLUGIN=$<TARGET_FILE:LoopAnnotatedTrace>"
+        "-DYARDA_PLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
         "-DYARDA_CPP=$<TARGET_FILE:yarda_cpp>"
         "-DYARDA_SOURCE=${CMAKE_CURRENT_SOURCE_DIR}/task_expansion_budget_e2e.c"
         "-DYARDA_INCLUDE_DIR=${YARDA_FRONTEND_INCLUDE_DIR}"
@@ -186,7 +186,7 @@ function(add_task_unroll_semantics_test test_name source case_name granularity)
         COMMAND ${CMAKE_COMMAND}
             "-DYARDA_CLANG=${YARDA_CLANG_EXECUTABLE}"
             "-DYARDA_OPT=${YARDA_OPT_EXECUTABLE}"
-            "-DYARDA_PLUGIN=$<TARGET_FILE:LoopAnnotatedTrace>"
+            "-DYARDA_PLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
             "-DYARDA_CPP=$<TARGET_FILE:yarda_cpp>"
             "-DYARDA_SOURCE=${YARDA_TASK_SOURCE_DIR}/${source}"
             "-DYARDA_INCLUDE_DIR=${YARDA_TASK_SOURCE_DIR}"

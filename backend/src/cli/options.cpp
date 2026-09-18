@@ -32,7 +32,7 @@ std::string artifact_path(std::string path, const std::string & flag)
 
 void print_usage()
 {
-  std::cout << "Usage: yarda_cpp LAT.json [--mode unroll]"
+  std::cout << "Usage: yarda_cpp MAP.json [--mode unroll]"
             << " [--granularity element|cache-line]"
             << " [--cache FILE] [--elf FILE] [--export PATH]\n"
             << "  --analysis mapping|hierarchy-rd (omitted: legacy dispatch)\n"
@@ -157,12 +157,12 @@ Options parse_options(int argc, char ** argv)
     }
     else
     {
-      throw std::invalid_argument("only one LAT input is supported");
+      throw std::invalid_argument("only one MAP input is supported");
     }
   }
   if (options.input.empty())
   {
-    throw std::invalid_argument("LAT input path is required");
+    throw std::invalid_argument("MAP input path is required");
   }
   if (options.analysis_mode != AnalysisMode::HierarchyRd && hierarchy_options)
     throw std::invalid_argument(

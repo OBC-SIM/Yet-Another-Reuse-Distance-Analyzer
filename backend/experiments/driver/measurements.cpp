@@ -52,7 +52,7 @@ int measure_case(const std::string & case_file, const std::string & mode,
     measurement["binary_sha256"] = sha256_file_bytes("/proc/self/exe");
     auto options = work_options(row);
     const auto inputs = read_inputs(row);
-    for (const auto * key : {"lat_path", "elf_path", "cache_path"})
+    for (const auto * key : {"map_path", "elf_path", "cache_path"})
       input_paths.push_back(row.at(key).get<std::string>());
     const auto parsed = provider.now_ns();
     measurement["input_time_ns"] = parsed - start;

@@ -75,7 +75,7 @@ TEST(PreparedTraceFailureTest, LaterMalformedLoopWaitsForEarlierAccess)
   }
   catch (const std::invalid_argument & error)
   {
-    EXPECT_EQ(std::string(error.what()).find("malformed LAT input: "), 0U);
+    EXPECT_EQ(std::string(error.what()).find("malformed MAP input: "), 0U);
   }
   EXPECT_EQ(collector.notifications,
             (std::vector<std::string>{"begin:kernel", "access:kernel:0"}));
@@ -98,7 +98,7 @@ TEST(PreparedTraceFailureTest, MalformedIndexTypePrecedesSourceCharging)
   }
   catch (const std::invalid_argument & error)
   {
-    EXPECT_EQ(std::string(error.what()).find("malformed LAT input: "), 0U);
+    EXPECT_EQ(std::string(error.what()).find("malformed MAP input: "), 0U);
   }
   EXPECT_EQ(collector.notifications, (std::vector<std::string>{"begin:"
                                                                "kernel"}));

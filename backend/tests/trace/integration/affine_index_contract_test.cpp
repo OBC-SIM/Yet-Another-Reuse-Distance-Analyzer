@@ -31,7 +31,7 @@ protected:
 
 TEST_P(AffineIndexContract, MatchesSourceElementOrderAndLinkedByteAddresses)
 {
-  // Independent source-level sequences; none are obtained from the LAT.
+  // Independent source-level sequences; none are obtained from the MAP.
   const std::map<std::string, std::vector<uint64_t>> elements{
     {"offset", {1, 2, 3}},
     {"stride", {2, 4, 6}},

@@ -1,7 +1,7 @@
 # Analysis regions v1 — input contract
 
 Accepted on 2026-09-09. R1's boundary experiment and R2's optional production
-frontend/task integration are implemented. Tests connect selected LAT and
+frontend/task integration are implemented. Tests connect selected MAP and
 ET_EXEC addresses to B8, including a small fixed-size static ATAX input.
 Large-dataset and full-suite PolyBench evaluation remain later work.
 Build and driver usage are documented in the
@@ -25,7 +25,7 @@ name is `APE_ANALYZE`.
 | Function declarations | Selected task |
 | --- | --- |
 | `APE_ANALYZE`, no region | Existing whole-function task |
-| Valid region, no annotation | One region task; frontend adds `ape.analyze` to LAT |
+| Valid region, no annotation | One region task; frontend adds `ape.analyze` to MAP |
 | `APE_ANALYZE` and valid region | One region task; no whole-function duplicate |
 | `APE_INLINE`, no region | Existing inline helper; not an independent root |
 | `APE_INLINE` and any region | Reject, including the combination with `APE_ANALYZE` |
@@ -35,7 +35,7 @@ Region selection is automatic from the pair in the region-enabled frontend. No
 backend region-selection flag, custom pragma spelling or public marker macro is
 introduced. Whole-function annotations in the same module remain selectable.
 
-In `yarda_region_lat`, the strict supported source domain applies to every
+In `yarda_region_map`, the strict supported source domain applies to every
 exported whole-function root and inline helper, even when no region exists.
 The table preserves selection and task identity; it does not promise acceptance
 of unsupported control flow or unresolved accesses accepted by the legacy plugin.
@@ -43,8 +43,8 @@ When no role or region exists, all emitted function definitions remain export
 candidates and undergo the same validation, without gaining an analysis role.
 Unsupported bodies excluded from export, including unused functions not emitted
 by Clang, do not invalidate the selection. Region boundary validation still applies
-to every source region. Source validation and LAT export use the same final set
-of emitted functions before LAT output is opened.
+to every source region. Source validation and MAP export use the same final set
+of emitted functions before MAP output is opened.
 
 The initial source domain is C11, main-file directives, straight-line accesses
 and complete finite `for` loops, including complete nested loops. Empty regions
@@ -78,13 +78,13 @@ C11 + preprocessing flags
   -> fresh LLVM IR in the same frontend invocation
   -> validate each expected pair, record access/loop selection, erase markers
   -> function(mem2reg),loop-simplify
-  -> validate selected complete loop/access structure and export APE/LAT
+  -> validate selected complete loop/access structure and export APE/MAP
 ```
 
 Use `__builtin_annotation(0, "yarda.region.begin.v1")` and the corresponding
 `yarda.region.end.v1` only as private transport inserted by the pragma handler.
 Capture these `llvm.annotation` calls **before optimization**, and erase them
-before normalizing or building LAT. They are not source accesses or opaque calls.
+before normalizing or building MAP. They are not source accesses or opaque calls.
 Reject direct user use of the reserved transport names. Preserve a function-level
 selection descriptor independently of memory instructions so empty selections
 remain identifiable. The R1 prototype uses `yarda.region` metadata/attributes;
@@ -97,13 +97,13 @@ untagged induction `phi`; loop normalization can introduce control-flow
 instructions. Missing tags on these new scalar/control instructions do not by
 themselves mean that a selected loop or access was lost.
 
-R2 must record selected complete-loop headers and expected LAT memory/call sites
+R2 must record selected complete-loop headers and expected MAP memory/call sites
 before removing markers, alongside the source manifest and empty-region
 descriptor. After normalization, resolve those headers in the rebuilt `LoopInfo`
 and construct loop bounds/indices from the whole function, including untagged
 `phi` nodes and outside value definitions. Do not require every instruction or
 operand of a selected loop to carry a region tag. Reject missing or inconsistent
-header identities and lost, additional or misclassified LAT memory/call sites;
+header identities and lost, additional or misclassified MAP memory/call sites;
 ordinary local-scalar promotion and new scalar/control instructions are permitted.
 An additional memory/call site inside a selected loop is selected by loop
 membership and rejected even without a tag. Untagged accesses outside selected
@@ -114,8 +114,8 @@ R1's assertion that the new phi has no tag records that experiment's behavior.
 It is not an R2 semantic requirement: R2 may propagate tags, and its tests must
 validate selected loop/access semantics without requiring tag absence.
 
-R2 must provide a C++ frontend executable, `yarda_region_lat`, using a Clang
-`EmitLLVMOnlyAction` and the shared LLVM LAT builder. It owns compilation, capture,
+R2 must provide a C++ frontend executable, `yarda_region_map`, using a Clang
+`EmitLLVMOnlyAction` and the shared LLVM MAP builder. It owns compilation, capture,
 the fixed normalization sequence and export. Region IR is consumed in memory;
 arbitrary `.ll` input and user-defined optimization pipelines are not accepted by
 this entry point. The existing LLVM plugin remains the legacy function frontend
@@ -126,7 +126,7 @@ runs LLVM's registered cleanup so incomplete IR output is removed.
 
 The source-side manifest must match the generated region functions and pairs,
 including empty scopes. Any missing, extra or inconsistent boundary fails before
-LAT output. Validate all source/IR scopes before opening the output file. Merely
+MAP output. Validate all source/IR scopes before opening the output file. Merely
 counting surviving marker calls is insufficient when every call can be lost.
 
 Reject input `-O1`, `-O2`, `-O3`, size/fast optimization variants, LTO, compiler/pass
@@ -137,7 +137,7 @@ accepts only known optimization test options: `-O0`, `-O1`, `-O2`, `-O3`, `-Os`,
 `-Oz`, `-Ofast`, `-flto`, `-flto=full`, `-flto=thin`. Only `-O0` succeeds; the
 others exercise the compiler's optimization/LTO guard. Every other optional
 argument is rejected before entering Clang.
-The supported evaluation uses the same canonical C-to-LAT path;
+The supported evaluation uses the same canonical C-to-MAP path;
 an **O2 build of the analyzer itself is permitted** and recorded separately.
 Compile the ET_EXEC ELF from the same original C, target/data layout, preprocessing
 flags and object definitions, without analysis markers. The model uses that ELF's
@@ -163,9 +163,9 @@ Evidence in the [standalone R1 experiment](../frontend/experiments/analysis_regi
 These observations establish a feasible restricted pipeline, not preservation
 under arbitrary compiler transformations or completion of R2's AST validator.
 
-## 3. LAT and task identity
+## 3. MAP and task identity
 
-Retain APE/LAT `schema_version: 2`. A region root has the existing function entry
+Retain APE/MAP `schema_version: 2`. A region root has the existing function entry
 plus exactly this optional extension:
 
 ```json
@@ -191,7 +191,7 @@ Region roots cannot be inline helpers. Non-inline calls retain existing opaque
 call behavior and fail hierarchy analysis if they occur in a selected task.
 Every retained direct call, including an opaque call, has one `arg_objects`
 entry per positional `args` entry and preserves canonical storage IDs where known.
-Legacy whole-module expansion/unroll must explicitly reject region LAT rather
+Legacy whole-module expansion/unroll must explicitly reject region MAP rather
 than expanding a selected body as the complete callee body.
 
 Derive the result/event task ID after preserving the original function binding:
@@ -210,7 +210,7 @@ No public `TaskAccessSink` or B8 cache API change is needed: emit the derived ta
 ID through the existing callbacks. Task-local source ordinals restart at zero,
 and line-span ordinals and all address/operation provenance are preserved.
 
-The LAT already records selection in `analysis_scope` and the selected body.
+The MAP already records selection in `analysis_scope` and the selected body.
 Its raw hash and the task ID identify the selection in B9; no additional region
 hash, repeated RESULT scope object or separate selection option is required.
 
@@ -231,9 +231,9 @@ constant folding or permitted local-scalar promotion produce no references.
 Source availability of a global initializer or its ELF address is not proof of
 the global's value when the function runs. The initial version adds no runtime
 global-value propagation. R2 must reject runtime-loaded loop bounds and unresolved
-indices before LAT output; it must not omit their loads, flatten an unknown loop
+indices before MAP output; it must not omit their loads, flatten an unknown loop
 or report zero-count success to force an otherwise unsupported input through.
-Runtime-loaded pointer bases also fail before LAT output. The frontend preserves
+Runtime-loaded pointer bases also fail before MAP output. The frontend preserves
 formal pointer parameters and local/global object identities for existing binding
 and inline expansion; the hierarchy address model still requires supported global
 storage after binding.
@@ -251,7 +251,7 @@ For `fixtures/boundary.c`, the independent selected source sequence is:
 
 Each access has width 4 on the recorded x86-64 fixture target. The outside stores
 to `before[0]` and `after[0]` are excluded. R1 verifies IR membership and the
-unchanged whole-function LAT's loop `start=0`, `bound=3`, `step=1`, `index=i+1`.
+unchanged whole-function MAP's loop `start=0`, `bound=3`, `step=1`, `index=i+1`.
 R2's integration tests verify this selected dynamic sequence through the task
 producer and ELF resolver, plus batch/streaming and independent cache oracles.
 
@@ -273,13 +273,13 @@ For `k = 0, 1, 2`, the selected sequence is exactly:
 
 All nine accesses have width 4 on the recorded target. The outside read and
 `before`/`after` stores are excluded. R1 verifies membership, operation order,
-bound/index and whole-function LAT parity; R2's integration tests verify the nine
+bound/index and whole-function MAP parity; R2's integration tests verify the nine
 dynamic events through the selected-task producer and ELF resolver.
 
 `fixtures/dynamic_bound.c` instead reads an unresolved global loop bound. R1 only
 observes that this load is inside the region and emits experimental IR. It does
-not export LAT for this fixture. R2 must use it as a negative fixture and reject
-the whole analysis before LAT output, even though boundary capture succeeds.
+not export MAP for this fixture. R2 must use it as a negative fixture and reject
+the whole analysis before MAP output, even though boundary capture succeeds.
 
 The region feature does not lift emission/loop limits, add stack/heap/TLS support,
 resolve dynamic bounds, change full-exact CSRD, or validate PolyBench-scale time

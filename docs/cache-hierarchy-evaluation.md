@@ -22,7 +22,7 @@ The archive is intentionally Git-ignored and is not included in a fresh clone.
 - 11 successful cases × 3 paths × 10 = **330 successful samples**.
   Three source-budget failures and one frontend rejection are separate records.
 - All 33 successful groups have ten samples. Binary hashes, 160 captured source
-  hashes and generated LAT/ELF/cache hashes were rechecked after measurement.
+  hashes and generated MAP/ELF/cache hashes were rechecked after measurement.
 
 ## Runtime and process memory
 

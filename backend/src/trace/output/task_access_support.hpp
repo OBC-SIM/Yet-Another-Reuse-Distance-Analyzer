@@ -10,7 +10,7 @@
 namespace yarda::detail
 {
 
-/** @brief Separate consumer failures from malformed LAT JSON exceptions. */
+/** @brief Separate consumer failures from malformed MAP JSON exceptions. */
 struct TaskSinkFailure
 {
   std::exception_ptr exception;

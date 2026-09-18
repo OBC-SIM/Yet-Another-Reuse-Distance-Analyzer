@@ -7,7 +7,7 @@ namespace yarda
 {
 
 /**
- * @brief Convert ELF object symbols to canonical global LAT object IDs.
+ * @brief Convert ELF object symbols to canonical global MAP object IDs.
  *
  * Identical symbol-table duplicates are collapsed. A name that resolves to
  * different storage is ambiguous and rejected.

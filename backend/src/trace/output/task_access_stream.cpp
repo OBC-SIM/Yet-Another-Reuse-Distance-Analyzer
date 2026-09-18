@@ -67,7 +67,7 @@ TaskAccessStreamResult stream_resolved_task_accesses(
   }
   catch (const nlohmann::json::exception & error)
   {
-    throw std::invalid_argument("malformed LAT input: " +
+    throw std::invalid_argument("malformed MAP input: " +
                                 std::string(error.what()));
   }
 }

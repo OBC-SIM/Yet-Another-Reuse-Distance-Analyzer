@@ -65,7 +65,7 @@ std::string hierarchy_analysis_id(const AnalysisIdentityInput & input)
   if (input.tool_version.empty() || input.analysis_core_id != 0)
     throw std::invalid_argument(
         "hierarchy identity requires version and core 0");
-  detail::require_sha256(input.lat_sha256);
+  detail::require_sha256(input.map_sha256);
   detail::require_sha256(input.elf_sha256);
   detail::require_sha256(input.cache_config_sha256);
   if (!input.semantic_analysis_options.is_object())
@@ -79,7 +79,7 @@ std::string hierarchy_analysis_id(const AnalysisIdentityInput & input)
       {"address_basis", detail::kAddressBasis},
       {"tool_version", input.tool_version},
       {"analysis_core_id", input.analysis_core_id},
-      {"lat_sha256", input.lat_sha256},
+      {"map_sha256", input.map_sha256},
       {"elf_sha256", input.elf_sha256},
       {"cache_config_sha256", input.cache_config_sha256},
       {"semantic_analysis_options", input.semantic_analysis_options},

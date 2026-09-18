@@ -8,7 +8,7 @@ void unselected(void) { data[0] = 1; }
 #elif defined(OPAQUE)
 /** @brief A known task is not an inline helper. @return Nothing. */
 APE_ANALYZE void opaque(void) { data[0] = 1; }
-/** @brief Preserve a forbidden task-to-task call in strict LAT. @return Nothing. */
+/** @brief Preserve a forbidden task-to-task call in strict MAP. @return Nothing. */
 APE_ANALYZE void selected(void) { opaque(); }
 #elif defined(LATER_FAILURE)
 /** @brief Emit earlier valid work before the later failure. @return Nothing. */

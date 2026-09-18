@@ -36,7 +36,7 @@ def run_quiet(command: list[str], timeout: int = 300) -> None:
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def python_command(lat: Path) -> list[str]:
+def python_command(map: Path) -> list[str]:
     """Return Python YARDA's exact cache-line analysis command."""
     source = (
         "import json,sys;"
@@ -49,12 +49,12 @@ def python_command(lat: Path) -> list[str]:
         "block_trace_results(raw,'cache-line',32)];"
         "LRUProfiler.calculate(trace)"
     )
-    return [sys.executable, "-c", source, str(lat)]
+    return [sys.executable, "-c", source, str(map)]
 
 
-def cpp_command(lat: Path) -> list[str]:
+def cpp_command(map: Path) -> list[str]:
     """Return C++ YARDA's exact cache-line analysis command."""
-    return [str(CPP_BACKEND), str(lat), "--mode", "unroll",
+    return [str(CPP_BACKEND), str(map), "--mode", "unroll",
             "--granularity", "cache-line", "--cache", str(CACHE_CONFIG)]
 
 
@@ -77,13 +77,13 @@ def measure(command: list[str], repetitions: int) -> list[float]:
     return samples
 
 
-def python_profile(lat: Path) -> tuple[dict[int, int], int, int]:
+def python_profile(map: Path) -> tuple[dict[int, int], int, int]:
     """Calculate Python's reference histogram, cold count, and trace length."""
     sys.path.insert(0, str(ROOT / "backend"))
     from block_trace import block_trace_results
     from lru_sim import LRUProfiler
 
-    raw = json.loads(lat.read_text())
+    raw = json.loads(map.read_text())
     trace = []
     for _, _, block in block_trace_results(raw, "cache-line", 32):
         trace.extend(block)
@@ -93,9 +93,9 @@ def python_profile(lat: Path) -> tuple[dict[int, int], int, int]:
 
 def verify_parity(artifact: PreparedWorkload) -> tuple[int, int]:
     """Reject a workload unless C++ matches Python's exact profile."""
-    histogram, cold, accesses = python_profile(artifact.lat)
-    export = artifact.lat.with_name(f"{artifact.workload.name}_cpp.json")
-    run_quiet([*cpp_command(artifact.lat), "--export", str(export)])
+    histogram, cold, accesses = python_profile(artifact.map)
+    export = artifact.map.with_name(f"{artifact.workload.name}_cpp.json")
+    run_quiet([*cpp_command(artifact.map), "--export", str(export)])
     program = json.loads(export.read_text())["program"]
     cpp_histogram = {int(key): value for key, value in program["histogram"].items()}
     if cpp_histogram != histogram or program["cold_misses"] != cold:
@@ -133,8 +133,8 @@ def benchmark(
             accesses, cold = verify_parity(artifact)
             commands = {
                 "Cachegrind": cachegrind_command(artifact),
-                "YARDA (Python)": python_command(artifact.lat),
-                "YARDA (C++)": cpp_command(artifact.lat),
+                "YARDA (Python)": python_command(artifact.map),
+                "YARDA (C++)": cpp_command(artifact.map),
             }
             for tool in TOOLS:
                 samples = measure(commands[tool], repetitions)

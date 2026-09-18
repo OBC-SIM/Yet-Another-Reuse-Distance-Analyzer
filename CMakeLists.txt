@@ -12,12 +12,12 @@ find_package(nlohmann_json 3.10.5 REQUIRED)
 
 add_subdirectory(frontend)
 
-set_target_properties(LoopAnnotatedTrace PROPERTIES
+set_target_properties(MemoryAccessPatterns PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
-if(TARGET LoopAnnotatedTraceTests)
-    set_target_properties(LoopAnnotatedTraceTests PROPERTIES
+if(TARGET MemoryAccessPatternsTests)
+    set_target_properties(MemoryAccessPatternsTests PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
 endif()

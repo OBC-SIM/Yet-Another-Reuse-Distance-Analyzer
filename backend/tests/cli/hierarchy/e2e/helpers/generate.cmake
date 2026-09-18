@@ -4,7 +4,7 @@ macro(select_outputs)
     set(result_file "${case_dir}/result.json")
     set(events_file "${case_dir}/events.json")
     set(telemetry_file "${case_dir}/telemetry.json")
-    set(base "${lat}" --analysis hierarchy-rd --elf "${elf}"
+    set(base "${map}" --analysis hierarchy-rd --elf "${elf}"
         --cache "${YARDA_CACHE}" --export "${result_file}")
     set(diagnostics --export-events "${events_file}" --event-limit 100000
         --telemetry "${telemetry_file}")
@@ -14,7 +14,7 @@ macro(prepare_case name)
     set(case_dir "${YARDA_WORK_DIR}/${name}")
     file(MAKE_DIRECTORY "${case_dir}")
     set(ir "${case_dir}/input.ll")
-    set(lat "${case_dir}/input_ape.json")
+    set(map "${case_dir}/input_ape.json")
     set(elf "${case_dir}/input.elf")
     file(WRITE "${case_dir}/commands.log" "")
     select_outputs()
@@ -29,7 +29,7 @@ macro(generate_legacy name source)
     run_checked("C to IR" "${YARDA_CLANG}" -std=c11 -O0
         -Xclang -disable-O0-optnone "${debug_flag}"
         -I "${YARDA_INCLUDE_DIR}" ${ARGN} -emit-llvm -S "${source}" -o "${ir}")
-    run_checked("IR to LAT" "${YARDA_OPT}"
+    run_checked("IR to MAP" "${YARDA_OPT}"
         -load-pass-plugin "${YARDA_PLUGIN}"
         "-passes=function(mem2reg),loop-simplify,loop-annotated-trace"
         "${ir}" -o /dev/null)
@@ -41,7 +41,7 @@ endmacro()
 
 macro(generate_region name source)
     prepare_case("${name}")
-    run_checked("C to selected LAT" "${YARDA_REGION}" "${source}" "${lat}"
+    run_checked("C to selected MAP" "${YARDA_REGION}" "${source}" "${map}"
         -- -I "${YARDA_INCLUDE_DIR}" ${ARGN})
     run_checked("region C to ET_EXEC" "${YARDA_CLANG}" -std=c11 -O0 -g
         -fno-pie -no-pie -Wno-unknown-pragmas -I "${YARDA_INCLUDE_DIR}"
@@ -51,6 +51,6 @@ endmacro()
 
 function(check_with_oracles golden)
     run_checked("generated artifact GTest" "${YARDA_VERIFY}"
-        "${lat}" "${elf}" "${YARDA_CACHE}" "${result_file}"
+        "${map}" "${elf}" "${YARDA_CACHE}" "${result_file}"
         "${events_file}" "${golden}")
 endfunction()

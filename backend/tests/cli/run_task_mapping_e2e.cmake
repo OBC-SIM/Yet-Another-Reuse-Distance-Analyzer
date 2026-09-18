@@ -83,7 +83,7 @@ file(REMOVE_RECURSE "${YARDA_WORK_DIR}")
 file(MAKE_DIRECTORY "${YARDA_WORK_DIR}")
 
 set(ir "${YARDA_WORK_DIR}/task_mapping_e2e.ll")
-set(lat "${YARDA_WORK_DIR}/task_mapping_e2e_ape.json")
+set(map "${YARDA_WORK_DIR}/task_mapping_e2e_ape.json")
 set(elf "${YARDA_WORK_DIR}/task_mapping_e2e.elf")
 set(first_result "${YARDA_WORK_DIR}/task_mapping_first.json")
 set(second_result "${YARDA_WORK_DIR}/task_mapping_second.json")
@@ -91,7 +91,7 @@ set(second_result "${YARDA_WORK_DIR}/task_mapping_second.json")
 run_checked("C to LLVM IR" "${YARDA_WORK_DIR}"
     "${YARDA_CLANG}" -O0 -Xclang -disable-O0-optnone -g
     -I "${YARDA_INCLUDE_DIR}" -emit-llvm -S "${YARDA_SOURCE}" -o "${ir}")
-run_checked("LLVM IR to LAT" "${YARDA_WORK_DIR}"
+run_checked("LLVM IR to MAP" "${YARDA_WORK_DIR}"
     "${YARDA_OPT}" -load-pass-plugin "${YARDA_PLUGIN}"
     "-passes=function(mem2reg),loop-simplify,loop-annotated-trace"
     "${ir}" -o /dev/null)
@@ -104,10 +104,10 @@ run_checked("C to ET_EXEC" "${YARDA_WORK_DIR}"
     -o "${elf}")
 
 run_checked("first task mapping" "${YARDA_WORK_DIR}"
-    "${YARDA_CPP}" "${lat}" --elf "${elf}" --cache "${YARDA_CACHE}"
+    "${YARDA_CPP}" "${map}" --elf "${elf}" --cache "${YARDA_CACHE}"
     --export "${first_result}")
 run_checked("second task mapping" "${YARDA_WORK_DIR}"
-    "${YARDA_CPP}" "${lat}" --elf "${elf}" --cache "${YARDA_CACHE}"
+    "${YARDA_CPP}" "${map}" --elf "${elf}" --cache "${YARDA_CACHE}"
     --export "${second_result}")
 
 file(READ "${first_result}" payload)

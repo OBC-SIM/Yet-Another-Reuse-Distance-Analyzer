@@ -10,7 +10,7 @@ namespace yarda::test::work
 
 using namespace ::yarda::test::stream;
 
-/** @brief Build one analyzed loop without duplicating LAT fixture boilerplate.
+/** @brief Build one analyzed loop without duplicating MAP fixture boilerplate.
  */
 inline Json loop_module(std::int64_t bound, Json body, std::int64_t start = 0,
                         std::int64_t step = 1)
