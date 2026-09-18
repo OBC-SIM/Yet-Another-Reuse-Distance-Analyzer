@@ -17,8 +17,8 @@ namespace yarda
 /** @brief Input identities and geometry attached to one task-mapping report. */
 struct TaskMappingReportMetadata
 {
-  /** @brief LAT path supplied to the analyzer. */
-  std::string lat_path;
+  /** @brief MAP path supplied to the analyzer. */
+  std::string map_path;
   /** @brief ELF path supplied to the analyzer. */
   std::string elf_path;
   /** @brief Cache-configuration path supplied to the analyzer. */

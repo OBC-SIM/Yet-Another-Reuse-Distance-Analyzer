@@ -15,12 +15,12 @@ foreach(mode debug nodebug)
         COMMAND "${YARDA_AFFINE_CLANG}" -O0 -Xclang -disable-O0-optnone
             "${debug_flag}" -emit-llvm -S "${affine_source}" -o "${stem}.ll"
         COMMAND "${YARDA_AFFINE_OPT}"
-            "-load-pass-plugin=$<TARGET_FILE:LoopAnnotatedTrace>"
+            "-load-pass-plugin=$<TARGET_FILE:MemoryAccessPatterns>"
             "-passes=function(mem2reg),loop-simplify,loop-annotated-trace"
             "${stem}.ll" -o /dev/null
         COMMAND "${YARDA_AFFINE_CLANG}" -O0 "${debug_flag}" -fno-pie -no-pie
             "${affine_source}" -o "${stem}.elf"
-        DEPENDS LoopAnnotatedTrace "${affine_source}"
+        DEPENDS MemoryAccessPatterns "${affine_source}"
         WORKING_DIRECTORY "${affine_dir}" VERBATIM)
     list(APPEND affine_outputs "${stem}_ape.json" "${stem}.elf")
 endforeach()

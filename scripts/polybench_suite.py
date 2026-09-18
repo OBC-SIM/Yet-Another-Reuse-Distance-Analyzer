@@ -40,11 +40,11 @@ class Workload:
 
 @dataclass(frozen=True)
 class PreparedWorkload:
-    """Native and LAT artifacts prepared outside the timed region."""
+    """Native and MAP artifacts prepared outside the timed region."""
 
     workload: Workload
     binary: Path
-    lat: Path
+    map: Path
     kernel: str
 
 
@@ -147,7 +147,7 @@ def prepare_workload(
     output: Path,
     dataset: str = "MINI",
 ) -> PreparedWorkload:
-    """Build one dataset's native binary and canonical kernel-only LAT."""
+    """Build one dataset's native binary and canonical kernel-only MAP."""
     if not workload.supported:
         raise ValueError(f"{workload.name} is excluded: {workload.reason}")
     output = output.resolve()
@@ -209,11 +209,11 @@ def prepare_workload(
         cwd=output,
     )
 
-    raw_lat = output / f"{clean_ir.stem}_ape.json"
-    lat = output / f"{workload.name}_ape.json"
-    module = json.loads(raw_lat.read_text())
+    raw_map = output / f"{clean_ir.stem}_ape.json"
+    map = output / f"{workload.name}_ape.json"
+    module = json.loads(raw_map.read_text())
     canonicalize_array_names(module)
-    lat.write_text(json.dumps(module, indent=2) + "\n")
+    map.write_text(json.dumps(module, indent=2) + "\n")
 
     run(
         [
@@ -228,4 +228,4 @@ def prepare_workload(
         ],
         cwd=output,
     )
-    return PreparedWorkload(workload, binary, lat, kernel)
+    return PreparedWorkload(workload, binary, map, kernel)

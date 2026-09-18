@@ -8,7 +8,7 @@ namespace yarda
 /**
  * @brief Expand known direct calls and retain legacy report roots.
  *
- * @param raw Legacy or APE v2 LAT module.
+ * @param raw Legacy or APE v2 MAP module.
  * @return Normalized function entries without Call nodes.
  * @throws std::invalid_argument for empty or duplicate function identities,
  * unknown callees, recursion, argument count mismatches, more than 100,000
@@ -25,7 +25,7 @@ nlohmann::json expand_calls(const nlohmann::json & raw);
  * function must carry `ape.analyze` or `yard.analyze`; this API has no legacy
  * all-functions fallback.
  *
- * @param raw APE v2 LAT module.
+ * @param raw APE v2 MAP module.
  * @return Analyzed root functions with eligible direct calls expanded. Opaque
  * `Call` markers remain, including inside `Loop` bodies, and must be removed
  * before trace unrolling.

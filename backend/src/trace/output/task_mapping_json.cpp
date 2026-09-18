@@ -136,7 +136,7 @@ void validate_inputs(const TaskMappingReportMetadata & metadata,
                      const MappedTaskTraceResult & mapped)
 {
   static_cast<void>(cache_set_count(metadata.geometry));
-  if (metadata.lat_path.empty() || metadata.elf_path.empty() ||
+  if (metadata.map_path.empty() || metadata.elf_path.empty() ||
       metadata.cache_path.empty() || metadata.cache_name.empty() ||
       !metadata.elf_image_type.has_value() || metadata.elf_address_size == 0)
   {
@@ -236,7 +236,7 @@ nlohmann::json task_mapping_json(const TaskMappingReportMetadata & metadata,
     {"schema_version", 1},
     {"mode", "elf-task-mapping"},
     {"inputs",
-     {{"lat", metadata.lat_path},
+     {{"map", metadata.map_path},
       {"elf", metadata.elf_path},
       {"cache", metadata.cache_path}}},
     {"elf",

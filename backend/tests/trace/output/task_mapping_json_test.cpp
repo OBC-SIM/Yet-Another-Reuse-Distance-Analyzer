@@ -25,7 +25,7 @@ yarda::ResolvedTaskTraceResult resolved_fixture()
 yarda::TaskMappingReportMetadata report_metadata()
 {
   yarda::TaskMappingReportMetadata metadata;
-  metadata.lat_path = "fixture.json";
+  metadata.map_path = "fixture.json";
   metadata.elf_path = "fixture.elf";
   metadata.cache_path = "cache.yaml";
   metadata.elf_image_type = yarda::ElfImageType::Executable;
@@ -47,7 +47,7 @@ TEST(TaskMappingJsonTest, SerializesResolvedAndMappedProvenance)
 
   EXPECT_EQ(payload["schema_version"], 1);
   EXPECT_EQ(payload["mode"], "elf-task-mapping");
-  EXPECT_EQ(payload["inputs"]["lat"], "fixture.json");
+  EXPECT_EQ(payload["inputs"]["map"], "fixture.json");
   EXPECT_EQ(payload["inputs"]["elf"], "fixture.elf");
   EXPECT_EQ(payload["elf"]["type"], "ET_EXEC");
   EXPECT_EQ(payload["elf"]["machine"], 62);

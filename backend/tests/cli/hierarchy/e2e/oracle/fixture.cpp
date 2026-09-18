@@ -34,7 +34,7 @@ void GeneratedArtifacts::SetUp()
                        sha256_file_bytes(input_paths[0]),
                        sha256_file_bytes(input_paths[1]),
                        sha256_file_bytes(input_paths[2])};
-  metadata.lat_schema_version = raw.at("schema_version");
+  metadata.map_schema_version = raw.at("schema_version");
   metadata.cache_schema_version = 1;
   metadata.elf_address_size = image.address_size;
   metadata.elf_machine = image.machine;

@@ -87,18 +87,18 @@ def negative_cases(case, binaries, output):
         '#include "../workload.h"', "extern volatile int runtime_n;")
     dynamic = directory / "dynamic-bound.c"
     dynamic.write_text(source.replace("j < N", "j < runtime_n"))
-    destination = directory / "dynamic-lat.json"
+    destination = directory / "dynamic-map.json"
     status = run([binaries["region"], dynamic, destination, "--", "--target=sparc-unknown-rtems6",
                   "-DM=2", "-DN=3"], directory / "dynamic-bound")
     error = (directory / "dynamic-bound.stderr").read_text()
     if status["exit_code"] != 1 or "loop bound" not in error or destination.exists():
         raise AssertionError("runtime-bound frontend rejection was not observed")
     records.append(dict(case="dynamic-bound", status="expected_unsupported"))
-    mutated = read_json(row["lat_path"])
+    mutated = read_json(row["map_path"])
     mutated["functions"][0]["body"][0]["body"][0]["op"] = "load"
-    mutated_lat = directory / "mutated-lat.json"
-    write_json(mutated_lat, mutated)
-    mutated_row = dict(row, lat_path=str(mutated_lat))
+    mutated_map = directory / "mutated-map.json"
+    write_json(mutated_map, mutated)
+    mutated_row = dict(row, map_path=str(mutated_map))
     mutated_case = directory / "mutated-case.json"
     write_json(mutated_case, mutated_row)
     destination = directory / "mutated-result.json"

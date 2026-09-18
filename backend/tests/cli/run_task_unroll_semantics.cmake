@@ -57,30 +57,30 @@ file(REMOVE_RECURSE "${YARDA_WORK_DIR}")
 file(MAKE_DIRECTORY "${YARDA_WORK_DIR}")
 
 set(ir "${YARDA_WORK_DIR}/${YARDA_CASE}.ll")
-set(lat "${YARDA_WORK_DIR}/${YARDA_CASE}_ape.json")
+set(map "${YARDA_WORK_DIR}/${YARDA_CASE}_ape.json")
 set(first_result "${YARDA_WORK_DIR}/${YARDA_CASE}_first.json")
 set(second_result "${YARDA_WORK_DIR}/${YARDA_CASE}_second.json")
 
 run_checked("C to LLVM IR" "${YARDA_WORK_DIR}"
     "${YARDA_CLANG}" -O0 -Xclang -disable-O0-optnone -g
     -I "${YARDA_INCLUDE_DIR}" -emit-llvm -S "${YARDA_SOURCE}" -o "${ir}")
-run_checked("LLVM IR to APE/LAT" "${YARDA_WORK_DIR}"
+run_checked("LLVM IR to APE/MAP" "${YARDA_WORK_DIR}"
     "${YARDA_OPT}" -load-pass-plugin "${YARDA_PLUGIN}"
     "-passes=function(mem2reg),loop-simplify,loop-annotated-trace"
     "${ir}" -o /dev/null)
 
-file(READ "${lat}" lat_payload)
-string(FIND "${lat_payload}" "\"ape.analyze\"" analyze_position)
+file(READ "${map}" map_payload)
+string(FIND "${map_payload}" "\"ape.analyze\"" analyze_position)
 if(analyze_position EQUAL -1)
-    message(FATAL_ERROR "generated LAT has no ape.analyze root")
+    message(FATAL_ERROR "generated MAP has no ape.analyze root")
 endif()
-string(FIND "${lat_payload}" "\"yard." yard_position)
+string(FIND "${map_payload}" "\"yard." yard_position)
 if(NOT yard_position EQUAL -1)
-    message(FATAL_ERROR "generated LAT unexpectedly contains yard annotation")
+    message(FATAL_ERROR "generated MAP unexpectedly contains yard annotation")
 endif()
 
 set(cli_arguments
-    "${lat}" --mode unroll --granularity "${YARDA_GRANULARITY}")
+    "${map}" --mode unroll --granularity "${YARDA_GRANULARITY}")
 if(YARDA_GRANULARITY STREQUAL "cache-line")
     list(APPEND cli_arguments --cache "${YARDA_CACHE}")
 endif()

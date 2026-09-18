@@ -16,7 +16,7 @@ namespace yarda
 /** @brief Stable measured intervals; hierarchy is a subset of streaming. */
 enum class AnalysisStage
 {
-  ParseLat,
+  ParseMap,
   ParseCache,
   ParseElf,
   ResolveAndStream,

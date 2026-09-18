@@ -34,13 +34,13 @@ def run(command: list[str], *, cwd: Path = ROOT) -> None:
 
 
 def prepare(plugin: Path, workload: str) -> tuple[Path, Path]:
-    """Build one native executable and matching LAT outside timed regions."""
+    """Build one native executable and matching MAP outside timed regions."""
     generated = RESULTS / "generated"
     generated.mkdir(parents=True, exist_ok=True)
     source = TASKS / f"{workload}.c"
     binary = generated / workload
     llvm_ir = generated / f"{workload}_g.ll"
-    lat = generated / f"{workload}_g_ape.json"
+    map = generated / f"{workload}_g_ape.json"
     run(["clang-14", "-O0", "-g", "-I", str(TASKS), str(source), "-lm",
          "-o", str(binary)])
     run(["clang-14", "-O0", "-Xclang", "-disable-O0-optnone", "-g",
@@ -48,12 +48,12 @@ def prepare(plugin: Path, workload: str) -> tuple[Path, Path]:
     run(["opt-14", f"-load-pass-plugin={plugin}",
          "-passes=function(mem2reg),loop-simplify,loop-annotated-trace",
          str(llvm_ir), "-o", "/dev/null"], cwd=generated)
-    if not lat.is_file():
-        raise FileNotFoundError(f"LAT was not created: {lat}")
-    return binary, lat
+    if not map.is_file():
+        raise FileNotFoundError(f"MAP was not created: {map}")
+    return binary, map
 
 
-def python_command(lat: Path) -> list[str]:
+def python_command(map: Path) -> list[str]:
     """Return Python YARDA's exact 32-byte cache-line unroll command."""
     source = (
         "import json,sys;"
@@ -66,12 +66,12 @@ def python_command(lat: Path) -> list[str]:
         "block_trace_results(raw,'cache-line',32)];"
         "LRUProfiler.calculate(trace)"
     )
-    return [sys.executable, "-c", source, str(lat)]
+    return [sys.executable, "-c", source, str(map)]
 
 
-def cpp_command(lat: Path) -> list[str]:
+def cpp_command(map: Path) -> list[str]:
     """Return C++ YARDA's exact 32-byte cache-line unroll command."""
-    return [str(CPP_BACKEND), str(lat), "--mode", "unroll",
+    return [str(CPP_BACKEND), str(map), "--mode", "unroll",
             "--granularity", "cache-line", "--cache", str(CACHE_CONFIG)]
 
 
@@ -98,11 +98,11 @@ def benchmark(plugin: Path, repetitions: int) -> list[dict[str, str]]:
     """Measure all tools and return one row per timed repetition."""
     rows = []
     for workload in WORKLOADS:
-        binary, lat = prepare(plugin, workload)
+        binary, map = prepare(plugin, workload)
         commands = {
             "Cachegrind": cachegrind_command(binary, workload),
-            "YARDA (Python)": python_command(lat),
-            "YARDA (C++)": cpp_command(lat),
+            "YARDA (Python)": python_command(map),
+            "YARDA (C++)": cpp_command(map),
         }
         for tool in TOOLS:
             samples = measure(commands[tool], repetitions)

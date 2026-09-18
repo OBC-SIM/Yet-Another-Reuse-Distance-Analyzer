@@ -17,7 +17,7 @@ struct AffineExpression
 };
 
 /**
- * @brief Parse the restricted LAT affine grammar without observing a failure.
+ * @brief Parse the restricted MAP affine grammar without observing a failure.
  * @param text Borrowed sum of constants, identifiers and integer*identifier.
  * @return Normalized expression, or nullopt for invalid syntax/int64 overflow.
  */
@@ -26,7 +26,7 @@ std::optional<AffineExpression> parse_affine_expression(std::string_view text);
 /**
  * @brief Serialize a normalized expression with its constant last.
  * @param expression Borrowed normalized terms without zero coefficients.
- * @return Canonical LAT string, including "0" for the zero expression.
+ * @return Canonical MAP string, including "0" for the zero expression.
  */
 std::string format_affine_expression(const AffineExpression & expression);
 

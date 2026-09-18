@@ -7,7 +7,7 @@ namespace yarda::test::artifact
 {
 
 inline constexpr const char * kAnalysisId =
-    "42a9b555b42ac468fa6a0158825378cb56394848549dc20c686e5e2deb3c1a7b";
+    "548307e44c56ce4afc12e55b8d102b1602286d6f5a80b3e295add7d19afdfcd5";
 
 inline AnalysisIdentityInput identity()
 {

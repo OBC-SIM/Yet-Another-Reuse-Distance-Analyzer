@@ -77,7 +77,7 @@ void validate_hierarchy_result(const HierarchyResultMetadata & metadata,
                                const StreamingHierarchyResult & result)
 {
   const auto & hierarchy = metadata.hierarchy;
-  if (metadata.lat_schema_version != 2 || metadata.cache_schema_version != 1 ||
+  if (metadata.map_schema_version != 2 || metadata.cache_schema_version != 1 ||
       (metadata.elf_address_size != 4 && metadata.elf_address_size != 8) ||
       metadata.elf_machine == 0)
     throw std::invalid_argument(

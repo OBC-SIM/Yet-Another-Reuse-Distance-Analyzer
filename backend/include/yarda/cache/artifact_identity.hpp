@@ -18,7 +18,7 @@ namespace yarda
 struct AnalysisIdentityInput
 {
   std::string tool_version;
-  std::string lat_sha256;
+  std::string map_sha256;
   std::string elf_sha256;
   std::string cache_config_sha256;
   std::uint32_t analysis_core_id = 0;

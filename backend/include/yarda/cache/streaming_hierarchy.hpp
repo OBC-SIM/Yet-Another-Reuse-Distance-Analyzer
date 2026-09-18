@@ -99,7 +99,7 @@ struct StreamingHierarchyResult
 };
 
 /**
- * @brief Run streaming Hierarchy-Aware Reuse Analyzer (HARA) for LAT tasks.
+ * @brief Run streaming Hierarchy-Aware Reuse Analyzer (HARA) for MAP tasks.
  *
  * Preserves full exact Cache-Set Reuse Distance (CSRD), independent cold-task
  * semantics, task order and empty tasks. Miss-Stream Propagation forwards only
@@ -111,7 +111,7 @@ struct StreamingHierarchyResult
  * expanded calls, completed summaries and full distinct-line history still
  * occupy memory. Event limits affect diagnostics only.
  *
- * @param raw Borrowed APE v2 LAT, unchanged throughout analysis.
+ * @param raw Borrowed APE v2 MAP, unchanged throughout analysis.
  * @param objects Borrowed absolute linked object model, unchanged throughout.
  * @param hierarchy Borrowed selected model snapshot, unchanged throughout.
  * @param options Borrowed limits and optional sink, unchanged throughout.

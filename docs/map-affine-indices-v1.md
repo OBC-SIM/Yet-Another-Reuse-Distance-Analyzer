@@ -1,7 +1,7 @@
-# LAT affine index contract
+# MAP affine index contract
 
 H2-B extends the legacy LLVM producer and the C++ reader with mathematical
-integer affine expressions. The JSON structure remains LAT schema version 2.
+integer affine expressions. The JSON structure remains MAP schema version 2.
 R2 strict region extraction retains its existing supported index domain.
 
 ## Representation
@@ -41,7 +41,7 @@ pointer-to-integer SCEVs are rejected with an unsupported-index diagnostic.
 
 ## Evaluation and failures
 
-Exact lexical variable names retain priority over parsing for legacy LAT,
+Exact lexical variable names retain priority over parsing for legacy MAP,
 including unusual names such as `i+1`. Legacy integer spelling and single-IV
 offset parsing retain their existing behavior. New expressions bind every
 nonzero variable term to the nearest lexical slot at the first reached access.
@@ -54,7 +54,7 @@ in a skipped body. Producer-generated names keep this failure unresolved at
 the eventual access.
 
 The producer separates loop names across inline functions. The reader does
-not rename external LAT variables to prevent capture. Arbitrary legacy exact
+not rename external MAP variables to prevent capture. Arbitrary legacy exact
 names can collide with unmapped identifiers or deferred failure text such as
 `(2*x+1)`; capture prevention does not cover those external inputs.
 
@@ -73,14 +73,14 @@ offset, address, work-budget and callback contracts remain applicable.
 | Input | H2-A C++ reader | H2-B C++ reader |
 | --- | --- | --- |
 | Legacy function arrays / versionless object roots | Existing behavior | Preserved |
-| LAT v2 constants and IV offsets | Supported | Preserved |
-| LAT v2 affine strings | Symbolic fallback in string traces; linked addresses rejected | Evaluated |
+| MAP v2 constants and IV offsets | Supported | Preserved |
+| MAP v2 affine strings | Symbolic fallback in string traces; linked addresses rejected | Evaluated |
 | Explicit unknown or malformed schema version | Version ignored | Rejected at normalization |
 
 The old reader was tested with `i+1`, `2*i`, `4*i`, and `8*i+j` using both
 version 2 and version 3 roots. Incrementing the version does not make that
-reader reject symbolic string traces. New affine LAT therefore requires an
+reader reject symbolic string traces. New affine MAP therefore requires an
 H2-B-capable reader; old string/profile output is not a valid evaluation of
 these expressions. The frontend and backend must be upgraded together for
-new inputs. LAT generated before H2-A may have already lost coefficients and
+new inputs. MAP generated before H2-A may have already lost coefficients and
 must be regenerated from the original C/IR; a reader cannot reconstruct them.

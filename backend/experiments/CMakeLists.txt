@@ -1,4 +1,4 @@
-if(NOT TARGET yarda_region_lat)
+if(NOT TARGET yarda_region_map)
     message(FATAL_ERROR "Hierarchy experiments require YARDA_BUILD_REGION_FRONTEND=ON")
 endif()
 
@@ -24,7 +24,7 @@ set(YARDA_EVALUATION_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${YARDA_EVALUAT
 file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/environment.cmake" CONTENT
 "set(YARDA_EVALUATOR [==[$<TARGET_FILE:yarda_hierarchy_evaluate>]==])
 set(YARDA_CPP [==[$<TARGET_FILE:yarda_cpp>]==])
-set(YARDA_REGION [==[$<TARGET_FILE:yarda_region_lat>]==])
+set(YARDA_REGION [==[$<TARGET_FILE:yarda_region_map>]==])
 set(YARDA_CLANG [==[${YARDA_EVALUATION_CLANG}]==])
 set(YARDA_ROOT [==[${CMAKE_SOURCE_DIR}]==])
 set(YARDA_COMPILER [==[${CMAKE_CXX_COMPILER}]==])

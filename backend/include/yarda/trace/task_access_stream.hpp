@@ -50,13 +50,13 @@ struct TaskAccessStreamResult
  * hierarchy consumer to reject them at begin_task. Input DOM and structurally
  * expanded calls remain in memory; concrete loop traces are emitted one by one.
  *
- * @param raw Borrowed APE v2 LAT module, unchanged throughout the call.
+ * @param raw Borrowed APE v2 MAP module, unchanged throughout the call.
  * @param objects Borrowed linked object model, unchanged throughout the call.
  * @param sink Borrowed required callbacks, configured before streaming.
  * @param budget Borrowed module budget, also usable by a budgeted line sink.
  * @param loop_limits Borrowed inclusive limits, copied for this invocation.
  * @return Aggregate source coverage and exclusions only on complete success.
- * @throws std::invalid_argument for invalid callbacks, malformed LAT, rejected
+ * @throws std::invalid_argument for invalid callbacks, malformed MAP, rejected
  * call expansion or exhausted structural, loop or emission limits.
  * @throws ResolutionError for unsupported or unresolved source accesses.
  * @note Any sink exception propagates unchanged. No callbacks follow failure;
@@ -69,7 +69,7 @@ TaskAccessStreamResult stream_resolved_task_accesses(
 
 /**
  * @brief Stream sources with default single and cumulative loop allowances.
- * @param raw Borrowed APE v2 LAT module, unchanged throughout the call.
+ * @param raw Borrowed APE v2 MAP module, unchanged throughout the call.
  * @param objects Borrowed linked object model, unchanged throughout the call.
  * @param sink Borrowed required callbacks with the same lifetime contract.
  * @param budget Borrowed module emission budget, also shared with line mapping.
@@ -86,7 +86,7 @@ TaskAccessStreamResult stream_resolved_task_accesses(
 
 /**
  * @brief Stream sources with a fresh default emission budget.
- * @param raw Borrowed APE v2 LAT module.
+ * @param raw Borrowed APE v2 MAP module.
  * @param objects Borrowed linked object model.
  * @param sink Borrowed required callbacks with the same lifetime contract.
  * @return Aggregate source coverage and exclusions on complete success.

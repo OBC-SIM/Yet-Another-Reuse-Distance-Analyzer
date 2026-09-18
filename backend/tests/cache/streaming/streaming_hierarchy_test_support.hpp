@@ -18,7 +18,7 @@ using stream::Json;
 using stream::loop;
 using support::make_batch_hierarchy;
 
-/** @brief Build byte-array LAT fixtures with literal index/address identity. */
+/** @brief Build byte-array MAP fixtures with literal index/address identity. */
 inline Json byte_module(Json functions)
 {
   auto raw = stream::module(std::move(functions), 1);
@@ -123,7 +123,7 @@ inline void expect_event(const HierarchyAccessEvent & actual,
   EXPECT_EQ(actual.first_service, expected.first_service);
 }
 
-/** @brief Compare whole LAT-to-summary execution with batch and both oracles.
+/** @brief Compare whole MAP-to-summary execution with batch and both oracles.
  */
 inline void expect_stream_parity(const Json & raw,
                                  const ObjectAddressModel & objects,

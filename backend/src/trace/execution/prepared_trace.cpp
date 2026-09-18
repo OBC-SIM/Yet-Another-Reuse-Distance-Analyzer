@@ -48,7 +48,7 @@ void prepare_node(PreparedNode & node, const LoopScope * scope,
     node.payload = std::move(loop);
     return;
   }
-  throw std::invalid_argument("Unknown LAT node type: " + type);
+  throw std::invalid_argument("Unknown MAP node type: " + type);
 }
 
 void prepare_body(PreparedLoop & loop, const Json & raw)

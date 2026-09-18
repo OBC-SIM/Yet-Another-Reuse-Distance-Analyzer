@@ -18,7 +18,7 @@ function(add_hierarchy_e2e case)
             "-DYARDA_VERIFY=$<TARGET_FILE:yarda_hierarchy_e2e_tests>"
             "-DYARDA_CLANG=${YARDA_CLANG_EXECUTABLE}"
             "-DYARDA_OPT=${YARDA_OPT_EXECUTABLE}"
-            "-DYARDA_PLUGIN=$<TARGET_FILE:LoopAnnotatedTrace>"
+            "-DYARDA_PLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
             "-DYARDA_INCLUDE_DIR=${YARDA_FRONTEND_INCLUDE_DIR}"
             "-DYARDA_REPOSITORY=${CMAKE_SOURCE_DIR}"
             "-DYARDA_CACHE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/cache.yaml"
@@ -34,7 +34,7 @@ add_hierarchy_e2e(limits)
 add_hierarchy_e2e(diagnostics)
 add_hierarchy_e2e(rejections)
 add_hierarchy_e2e(tasks)
-if(TARGET yarda_region_lat)
-    add_hierarchy_e2e(regions "-DYARDA_REGION=$<TARGET_FILE:yarda_region_lat>")
-    add_hierarchy_e2e(region_rejections "-DYARDA_REGION=$<TARGET_FILE:yarda_region_lat>")
+if(TARGET yarda_region_map)
+    add_hierarchy_e2e(regions "-DYARDA_REGION=$<TARGET_FILE:yarda_region_map>")
+    add_hierarchy_e2e(region_rejections "-DYARDA_REGION=$<TARGET_FILE:yarda_region_map>")
 endif()

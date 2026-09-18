@@ -49,7 +49,7 @@ struct NamedResolvedTrace
   std::vector<ResolvedAccess> accesses;
 };
 
-/** @brief Geometry-independent resolved traces from one LAT module. */
+/** @brief Geometry-independent resolved traces from one MAP module. */
 struct ResolvedTraceResult
 {
   /** @brief Named resolved traces in deterministic module order. */
@@ -61,7 +61,7 @@ struct ResolvedTraceResult
 /** @brief Geometry-independent accesses belonging to one analyzed task. */
 using ResolvedTaskTrace = TaskTrace<ResolvedAccess>;
 
-/** @brief Task-isolated resolved traces from one LAT module. */
+/** @brief Task-isolated resolved traces from one MAP module. */
 struct ResolvedTaskTraceResult
 {
   /** @brief Analyzed tasks in deterministic module order. */
@@ -73,17 +73,17 @@ struct ResolvedTaskTraceResult
 };
 
 /**
- * @brief Expand LAT accesses and resolve them to linked byte addresses.
+ * @brief Expand MAP accesses and resolve them to linked byte addresses.
  *
  * The result retains source access size, operation, and deterministic emission
  * ordinal without applying cache geometry. Ordinals are module-wide for this
  * API. Every visited access must resolve; unsupported or unresolved accesses
  * fail the operation instead of being omitted.
  *
- * @param raw APE v2 LAT module with canonical object metadata.
+ * @param raw APE v2 MAP module with canonical object metadata.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Named geometry-independent access traces in deterministic order.
- * @throws std::invalid_argument for malformed LAT input, invalid call
+ * @throws std::invalid_argument for malformed MAP input, invalid call
  * expansion, or an expansion resource limit violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
  */
@@ -105,11 +105,11 @@ ResolvedTraceResult resolved_block_traces(const nlohmann::json & raw,
  * This collecting compatibility API retains its structural expansion limits;
  * stream_resolved_task_accesses adds separately configurable emission limits.
  *
- * @param raw APE v2 LAT module with canonical object metadata.
+ * @param raw APE v2 MAP module with canonical object metadata.
  * @param objects Linked global object addresses (borrowed, ownership retained).
  * @return Task-isolated resolved traces in deterministic module order.
  * @throws std::invalid_argument if no explicitly analyzed root exists, or for
- * malformed LAT input, ambiguous or overlapping function roles, unknown call
+ * malformed MAP input, ambiguous or overlapping function roles, unknown call
  * targets, invalid inline-call expansion, or an expansion resource limit
  * violation.
  * @throws ResolutionError for unsupported storage or unresolved byte ranges.
@@ -123,7 +123,7 @@ ResolvedTaskTraceResult resolved_task_traces(
  * Preserves the task selection, resolution and structural-limit contract of
  * the default overload. Task boundaries do not reset cumulative loop work.
  *
- * @param raw Borrowed APE v2 LAT module with canonical object metadata.
+ * @param raw Borrowed APE v2 MAP module with canonical object metadata.
  * @param objects Borrowed linked global object addresses, ownership retained.
  * @param loop_limits Borrowed inclusive allowances, copied for this invocation.
  * @return Task-isolated resolved traces in deterministic module order.

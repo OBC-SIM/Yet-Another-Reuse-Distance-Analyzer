@@ -15,7 +15,7 @@ TEST(AnalysisTelemetryTest, SerializesExactMeasuredSchema)
   EXPECT_EQ(
       payload.dump(),
       std::string("{\"schema_version\":1,\"analysis_id\":\"") + kAnalysisId +
-          "\",\"total_time_ns\":20,\"stage_time_ns\":{\"parse_lat\":1,\"parse_"
+          "\",\"total_time_ns\":20,\"stage_time_ns\":{\"parse_map\":1,\"parse_"
           "cache\":1,"
           "\"parse_elf\":1,\"resolve_and_stream\":1,\"hierarchy_analysis\":1,"
           "\"serialize_result\":1},\"peak_rss_bytes\":4096,\"source_accesses_"
@@ -31,7 +31,7 @@ TEST(AnalysisTelemetryTest, CollectsInjectedClockRssHostAndExecutionCounts)
   FakeMeasurements fake;
   AnalysisTelemetryCollector collector(fake.manual_providers());
   fake.clock += 11; // Input preparation before the first named interval.
-  advance_stage(collector, fake, AnalysisStage::ParseLat, 2);
+  advance_stage(collector, fake, AnalysisStage::ParseMap, 2);
   advance_stage(collector, fake, AnalysisStage::ParseCache, 3);
   advance_stage(collector, fake, AnalysisStage::ParseElf, 5);
   const auto stream_start = collector.now_ns();
@@ -164,7 +164,7 @@ TEST(AnalysisTelemetryTest, RejectsBackwardClockAndInvalidStage)
   AnalysisTelemetryCollector collector(fake.providers());
   const auto start = collector.now_ns();
   fake.clock = start - 1;
-  EXPECT_THROW(collector.finish_stage(AnalysisStage::ParseLat, start),
+  EXPECT_THROW(collector.finish_stage(AnalysisStage::ParseMap, start),
                std::invalid_argument);
   EXPECT_THROW(collector.finish_stage(AnalysisStage::Count, start),
                std::invalid_argument);

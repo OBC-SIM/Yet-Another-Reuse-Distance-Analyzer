@@ -76,8 +76,8 @@ def write_csv(path: Path, rows: list[dict[str, str]], fields: tuple[str, ...]) -
         writer.writerows(rows)
 
 
-def prepare_casa_lat(label: str) -> Path:
-    """Copy YARDA's LAT and mark its sole extracted kernel as CASA's root."""
+def prepare_casa_map(label: str) -> Path:
+    """Copy YARDA's MAP and mark its sole extracted kernel as CASA's root."""
     source = RESULTS / "generated" / label / f"{SOURCE_NAMES[label]}_ape.json"
     module = json.loads(source.read_text())
     for function in module["functions"]:
@@ -91,9 +91,9 @@ def prepare_casa_lat(label: str) -> Path:
 
 
 def casa_samples(label: str, cache: Path) -> list[dict[str, str]]:
-    """Measure CASA process startup, LAT/YAML loading, and Pipeline::run."""
-    lat = prepare_casa_lat(label)
-    base = [str(CASA_BENCHMARK), str(lat), "--cache", str(cache)]
+    """Measure CASA process startup, MAP/YAML loading, and Pipeline::run."""
+    map = prepare_casa_map(label)
+    base = [str(CASA_BENCHMARK), str(map), "--cache", str(cache)]
     subprocess.run(
         [*base, "--warmup", "1", "--repetitions", "1"], check=True,
         text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=CASA_ROOT,
@@ -153,7 +153,7 @@ def plot(summary: list[dict[str, str]], values: dict[tuple[str, str], float]) ->
                   frameon=False, bbox_to_anchor=(0.5, 0.995))
     figure.suptitle(
         "Cachegrind D1: 32 KiB, 8-way, 64 B  ·  YARDA: 64 B line unroll  ·  "
-        "CASA: LAT/YAML load + Pipeline::run (report I/O excluded)",
+        "CASA: MAP/YAML load + Pipeline::run (report I/O excluded)",
         y=0.91, fontsize=14,
     )
     figure.tight_layout(rect=(0, 0, 1, 0.86))

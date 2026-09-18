@@ -28,7 +28,7 @@ struct PreparedLoop
 };
 
 /**
- * @brief Borrow an immutable LAT node until its first execution prepares it.
+ * @brief Borrow an immutable MAP node until its first execution prepares it.
  *
  * A pending child holds no parsed fields, so a previous callback can stop
  * traversal before malformed child fields are observed. The input subtree
@@ -41,7 +41,7 @@ struct PreparedNode
 
   /**
    * @brief Defer inspection of a borrowed node until it is reached.
-   * @param node Non-null immutable LAT reference; ownership stays with caller.
+   * @param node Non-null immutable MAP reference; ownership stays with caller.
    */
   explicit PreparedNode(const nlohmann::json & node) : source(&node) {}
 };

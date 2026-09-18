@@ -27,7 +27,7 @@ from polybench_suite import (
 
 ROOT = Path(__file__).resolve().parent.parent
 SUITE = Path("/workspace/PolyBenchC-4.2.1")
-FRONTEND = Path("/workspace/Yet-Another-Reuse-Distance-Analyzer/build/libLoopAnnotatedTrace.so")
+FRONTEND = Path("/workspace/Yet-Another-Reuse-Distance-Analyzer/build/libMemoryAccessPatterns.so")
 CASA_BENCHMARK = Path("/workspace/CASA/build/casa_benchmark")
 RESULTS = ROOT / "benchmark-results" / "cbana-polybench-e2e"
 TOOLS = ("Cachegrind", "YARDA (Python)", "YARDA (C++)", "CASA")
@@ -78,12 +78,12 @@ def command_time(command: list[str]) -> tuple[float, str]:
 
 
 def frontend_time(workload, dataset: str, output: Path) -> tuple[float, float, Path]:
-    """Measure compilation and YARDA's LLVM-IR-to-LAT work separately."""
+    """Measure compilation and YARDA's LLVM-IR-to-MAP work separately."""
     output.mkdir(parents=True, exist_ok=True)
     full_ir = output / "full.ll"
     kernel_ir = output / "kernel.ll"
     clean_ir = output / "kernel_clean.ll"
-    lat = output / "kernel_ape.json"
+    map = output / "kernel_ape.json"
     common = compile_flags(SUITE, workload, dataset)
     started = time.perf_counter()
     run([
@@ -107,14 +107,14 @@ def frontend_time(workload, dataset: str, output: Path) -> tuple[float, float, P
         annotations = function.setdefault("annotations", [])
         if "yard.analyze" not in annotations:
             annotations.append("yard.analyze")
-    lat.write_text(json.dumps(module, indent=2) + "\n")
-    return compilation, time.perf_counter() - started, lat
+    map.write_text(json.dumps(module, indent=2) + "\n")
+    return compilation, time.perf_counter() - started, map
 
 
-def casa_time(lat: Path, cache: Path) -> float:
-    """Measure CASA process startup, LAT/YAML loading, and Pipeline::run."""
+def casa_time(map: Path, cache: Path) -> float:
+    """Measure CASA process startup, MAP/YAML loading, and Pipeline::run."""
     seconds, stdout = command_time([
-        str(CASA_BENCHMARK), str(lat), "--cache", str(cache),
+        str(CASA_BENCHMARK), str(map), "--cache", str(cache),
         "--warmup", "0", "--repetitions", "1",
     ])
     sample = next(csv.DictReader(stdout.splitlines()))
@@ -144,25 +144,25 @@ def cachegrind_time(binary: Path, output: Path) -> float:
     return seconds
 
 
-def backend_times(lat: Path, cache: Path, binary: Path, cachegrind: Path) -> dict[str, float]:
+def backend_times(map: Path, cache: Path, binary: Path, cachegrind: Path) -> dict[str, float]:
     """Measure Cachegrind and all static backends for one workload sample."""
-    python_seconds, _ = command_time(python_command(lat))
+    python_seconds, _ = command_time(python_command(map))
     cpp_seconds, _ = command_time([
-        str(CPP_BACKEND), str(lat), "--mode", "unroll", "--granularity",
+        str(CPP_BACKEND), str(map), "--mode", "unroll", "--granularity",
         "cache-line", "--cache", str(cache),
     ])
     return {
         "Cachegrind": cachegrind_time(binary, cachegrind),
         "YARDA (Python)": python_seconds,
         "YARDA (C++)": cpp_seconds,
-        "CASA": casa_time(lat, cache),
+        "CASA": casa_time(map, cache),
     }
 
 
 def warmup(workload, dataset: str, cache: Path, label: str, binary: Path) -> None:
     """Exercise frontend and all backends before recording measured samples."""
-    _, _, lat = frontend_time(workload, dataset, RESULTS / "generated" / label / "warmup")
-    backend_times(lat, cache, binary, RESULTS / "cachegrind" / label / "warmup")
+    _, _, map = frontend_time(workload, dataset, RESULTS / "generated" / label / "warmup")
+    backend_times(map, cache, binary, RESULTS / "cachegrind" / label / "warmup")
 
 
 def write_csv(path: Path, rows: list[dict], fields: tuple[str, ...]) -> None:
@@ -181,14 +181,14 @@ def summarize(rows: list[dict]) -> list[dict]:
     result = []
     for (workload, tool), samples in grouped.items():
         compilation = statistics.median(float(row["compilation_seconds"]) for row in samples)
-        lat_generation = statistics.median(float(row["lat_generation_seconds"]) for row in samples)
-        frontend = compilation + lat_generation
+        map_generation = statistics.median(float(row["map_generation_seconds"]) for row in samples)
+        frontend = compilation + map_generation
         backend = statistics.median(float(row["backend_seconds"]) for row in samples)
         total = frontend + backend
         result.append({
             "workload": workload, "tool": tool,
             "compilation_seconds": f"{compilation:.9f}",
-            "lat_generation_seconds": f"{lat_generation:.9f}",
+            "map_generation_seconds": f"{map_generation:.9f}",
             "frontend_seconds": f"{frontend:.9f}",
             "backend_seconds": f"{backend:.9f}",
             "total_seconds": f"{total:.9f}",
@@ -198,7 +198,7 @@ def summarize(rows: list[dict]) -> list[dict]:
 
 
 def plot(summary: list[dict]) -> None:
-    """Draw compilation, LLVM-to-LAT, and backend portions of each runtime."""
+    """Draw compilation, LLVM-to-MAP, and backend portions of each runtime."""
     labels = [case.label for case in CASES]
     values = {(row["workload"], row["tool"]): row for row in summary}
     x = np.arange(len(labels))
@@ -207,14 +207,14 @@ def plot(summary: list[dict]) -> None:
     figure, axis = plt.subplots(figsize=(18, 8))
     for offset, tool, color in zip((-1.5 * width, -0.5 * width, 0.5 * width, 1.5 * width), TOOLS, COLORS):
         compilation = [float(values[(label, tool)]["compilation_seconds"]) for label in labels]
-        lat_generation = [float(values[(label, tool)]["lat_generation_seconds"]) for label in labels]
+        map_generation = [float(values[(label, tool)]["map_generation_seconds"]) for label in labels]
         backend = [float(values[(label, tool)]["backend_seconds"]) for label in labels]
         totals = [float(values[(label, tool)]["total_seconds"]) for label in labels]
         axis.bar(x + offset, compilation, width, color="#d9d9d9", hatch="///",
                  edgecolor="black", linewidth=1.0)
-        axis.bar(x + offset, lat_generation, width, bottom=compilation, color="#a8a8a8",
+        axis.bar(x + offset, map_generation, width, bottom=compilation, color="#a8a8a8",
                  hatch="...", edgecolor="black", linewidth=1.0)
-        frontend = np.add(compilation, lat_generation)
+        frontend = np.add(compilation, map_generation)
         axis.bar(x + offset, backend, width, bottom=frontend, color=color,
                  edgecolor="black", linewidth=1.0, label=tool)
         for index, total in enumerate(totals):
@@ -227,14 +227,14 @@ def plot(summary: list[dict]) -> None:
     axis.set_axisbelow(True)
     handles = [
         Patch(facecolor="#d9d9d9", edgecolor="black", hatch="///", label="Shared C → LLVM IR compilation"),
-        Patch(facecolor="#a8a8a8", edgecolor="black", hatch="...", label="Shared LLVM IR → LAT (YARDA additions)"),
+        Patch(facecolor="#a8a8a8", edgecolor="black", hatch="...", label="Shared LLVM IR → MAP (YARDA additions)"),
     ]
     handles += [Patch(facecolor=color, edgecolor="black", label=tool) for tool, color in zip(TOOLS, COLORS)]
     figure.legend(handles=handles, loc="upper center", ncol=3, frameon=False,
                   bbox_to_anchor=(0.5, 0.995))
     figure.suptitle(
-        "Shared frontend: clang compile + kernel extraction/DCE/LoopAnnotatedTrace/LAT serialization  ·  "
-        "Cachegrind: native binary (no LLVM LAT frontend)  ·  "
+        "Shared frontend: clang compile + kernel extraction/DCE/MemoryAccessPatterns/MAP serialization  ·  "
+        "Cachegrind: native binary (no LLVM MAP frontend)  ·  "
         "YARDA/CASA: backend analysis after shared frontend",
         y=0.91, fontsize=14,
     )
@@ -259,34 +259,34 @@ def main() -> None:
         binary = native_binary(workload, case.dataset, RESULTS / "native" / case.label)
         warmup(workload, case.dataset, cache, case.label, binary)
         for repetition in range(1, REPETITIONS + 1):
-            compilation, lat_generation, lat = frontend_time(
+            compilation, map_generation, map = frontend_time(
                 workload, case.dataset,
                 RESULTS / "generated" / case.label / f"repetition-{repetition}",
             )
             backends = backend_times(
-                lat, cache, binary,
+                map, cache, binary,
                 RESULTS / "cachegrind" / case.label / f"repetition-{repetition}",
             )
             for tool, backend in backends.items():
                 compilation_component = 0.0 if tool == "Cachegrind" else compilation
-                lat_component = 0.0 if tool == "Cachegrind" else lat_generation
-                frontend_component = compilation_component + lat_component
+                map_component = 0.0 if tool == "Cachegrind" else map_generation
+                frontend_component = compilation_component + map_component
                 rows.append({
                     "workload": case.label, "tool": tool, "repetition": repetition,
                     "compilation_seconds": f"{compilation_component:.9f}",
-                    "lat_generation_seconds": f"{lat_component:.9f}",
+                    "map_generation_seconds": f"{map_component:.9f}",
                     "frontend_seconds": f"{frontend_component:.9f}",
                     "backend_seconds": f"{backend:.9f}",
                     "total_seconds": f"{frontend_component + backend:.9f}",
                 })
             print(f"{case.label}: repetition {repetition}/{REPETITIONS}", flush=True)
     write_csv(RESULTS / "runtime_breakdown.csv", rows, (
-        "workload", "tool", "repetition", "compilation_seconds", "lat_generation_seconds", "frontend_seconds",
+        "workload", "tool", "repetition", "compilation_seconds", "map_generation_seconds", "frontend_seconds",
         "backend_seconds", "total_seconds",
     ))
     summary = summarize(rows)
     write_csv(RESULTS / "summary_breakdown.csv", summary, (
-        "workload", "tool", "compilation_seconds", "lat_generation_seconds", "frontend_seconds", "backend_seconds",
+        "workload", "tool", "compilation_seconds", "map_generation_seconds", "frontend_seconds", "backend_seconds",
         "total_seconds", "frontend_percent",
     ))
     plot(summary)

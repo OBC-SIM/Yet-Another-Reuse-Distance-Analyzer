@@ -49,7 +49,7 @@ nlohmann::json normalize_module(const nlohmann::json & raw)
   {
     const auto & version = raw.at("schema_version");
     if (!version.is_number_integer() || version != 2)
-      throw std::invalid_argument("unsupported LAT schema_version: " +
+      throw std::invalid_argument("unsupported MAP schema_version: " +
                                   version.dump());
   }
   Json functions;

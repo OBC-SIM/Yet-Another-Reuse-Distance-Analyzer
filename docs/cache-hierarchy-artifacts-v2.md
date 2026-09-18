@@ -20,7 +20,7 @@ RESULT schema version 2. The EVENTS and TELEMETRY schemas retain the
 [v1 field contracts](cache-hierarchy-artifacts-v1.md#4-events); their own schema
 versions do not select the analysis identity preimage.
 
-LAT schema 2, cache configuration schema 1, and the independent experiment
+MAP schema 2, cache configuration schema 1, and the independent experiment
 manifest/measurement schemas are unchanged. The model remains
 `exact-two-level-lru-demand-v1`, `full-exact`, `linked_absolute`: these identify
 analysis semantics, which this terminology migration does not change.
@@ -87,7 +87,7 @@ csrd_mode = full-exact
 address_basis = linked_absolute
 tool_version
 analysis_core_id = 0
-lat_sha256
+map_sha256
 elf_sha256
 cache_config_sha256
 semantic_analysis_options

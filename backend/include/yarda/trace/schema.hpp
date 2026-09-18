@@ -8,7 +8,7 @@ namespace yarda
 /**
  * @brief Normalize legacy and APE v2 module roots to enriched function entries.
  *
- * @param raw Parsed LAT JSON root.
+ * @param raw Parsed MAP JSON root.
  * @return Function array with object metadata copied into array nodes.
  * @throws std::invalid_argument if the root schema is unsupported.
  */

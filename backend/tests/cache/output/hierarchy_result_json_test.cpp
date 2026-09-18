@@ -68,7 +68,7 @@ TEST(HierarchyResultJsonTest, CountsCrossLineStoreAsOneSourceAndTwoReferences)
   EXPECT_EQ(task["coverage"]["complete"], true);
 }
 
-TEST(HierarchyResultJsonTest, RetainsEmptyTasksInLatOrderWithNullRatios)
+TEST(HierarchyResultJsonTest, RetainsEmptyTasksInMapOrderWithNullRatios)
 {
   auto region = stream::function("scope", stream::Json::array());
   region["analysis_scope"] = {{"kind", "region"}, {"name", "APE_ANALYZE"}};

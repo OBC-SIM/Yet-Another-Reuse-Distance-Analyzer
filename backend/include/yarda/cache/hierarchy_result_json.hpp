@@ -12,14 +12,14 @@ namespace yarda
  * @brief Own provenance and a selected model snapshot for a complete result.
  *
  * The caller must bind these values to the same raw inputs used by successful
- * ET_EXEC/absolute-address analysis. Schema versions must be LAT 2 and cache 1;
+ * ET_EXEC/absolute-address analysis. Schema versions must be MAP 2 and cache 1;
  * ELF address size is in bytes. Paths and runtime observations are excluded.
  */
 struct HierarchyResultMetadata
 {
   AnalysisIdentityInput identity;
   AnalysisHierarchy hierarchy;
-  std::uint32_t lat_schema_version = 0;
+  std::uint32_t map_schema_version = 0;
   std::uint32_t cache_schema_version = 0;
   std::uint8_t elf_address_size = 0;
   std::uint16_t elf_machine = 0;

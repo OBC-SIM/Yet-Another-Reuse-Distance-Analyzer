@@ -28,9 +28,9 @@ struct NamedTrace
 };
 
 /**
- * @brief Expand one LAT node using its actual loop bounds.
+ * @brief Expand one MAP node using its actual loop bounds.
  *
- * @param node LAT node after call expansion.
+ * @param node MAP node after call expansion.
  * @param granularity Element or cache-line reference identity.
  * @param cache_line_size Cache-line size in bytes.
  * @return Ordered reference keys.
@@ -48,7 +48,7 @@ std::vector<std::string> unroll_node_actual(
 /**
  * @brief Generate ordered block traces for every analyzed function.
  *
- * @param raw Legacy or APE v2 LAT module.
+ * @param raw Legacy or APE v2 MAP module.
  * @param granularity Element or cache-line reference identity.
  * @param cache_line_size Cache-line size in bytes.
  * @return Named loop and flat traces in module order.
@@ -70,7 +70,7 @@ std::vector<NamedTrace> block_traces(
  * Uses the same layout, call-expansion and ordering contract as block_traces
  * with default limits. All functions share one cumulative loop budget.
  *
- * @param raw Borrowed legacy or APE v2 LAT module, unchanged by traversal.
+ * @param raw Borrowed legacy or APE v2 MAP module, unchanged by traversal.
  * @param granularity Element or cache-line reference identity.
  * @param cache_line_size Cache-line size in bytes.
  * @param loop_limits Borrowed inclusive allowances, copied for this invocation.

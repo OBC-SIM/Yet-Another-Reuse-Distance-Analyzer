@@ -71,7 +71,7 @@ TEST(HierarchyArtifactBoundaryTest, CombinedDiagnosticsPreserveResultBytes)
 TEST(HierarchyArtifactBoundaryTest, RuntimeProvidersProduceCompleteTelemetry)
 {
   AnalysisTelemetryCollector collector;
-  for (const auto stage : {AnalysisStage::ParseLat, AnalysisStage::ParseCache,
+  for (const auto stage : {AnalysisStage::ParseMap, AnalysisStage::ParseCache,
                            AnalysisStage::ParseElf})
     record_stage(collector, stage);
   StreamingHierarchyOptions options;

@@ -81,7 +81,7 @@ void map_elf_tasks(const Options & options, const Json & raw,
     yarda::resolved_task_traces(raw, objects, options.loop_limits);
   const auto mapped = yarda::map_resolved_task_traces(resolved, geometry);
   yarda::TaskMappingReportMetadata metadata;
-  metadata.lat_path = options.input;
+  metadata.map_path = options.input;
   metadata.elf_path = options.elf_path;
   metadata.cache_path = options.cache_path;
   metadata.elf_image_type = image.image_type;
@@ -109,7 +109,7 @@ int main(int argc, char ** argv)
     std::ifstream input(options.input);
     if (!input)
     {
-      throw std::runtime_error("cannot open LAT input: " + options.input);
+      throw std::runtime_error("cannot open MAP input: " + options.input);
     }
     Json raw;
     input >> raw;

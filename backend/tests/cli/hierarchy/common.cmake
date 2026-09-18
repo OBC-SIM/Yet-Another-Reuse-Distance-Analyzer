@@ -5,11 +5,11 @@ foreach(required YARDA_CPP YARDA_ELF YARDA_CACHE YARDA_WORK_DIR)
 endforeach()
 
 file(MAKE_DIRECTORY "${YARDA_WORK_DIR}")
-set(lat "${YARDA_WORK_DIR}/input.json")
+set(map "${YARDA_WORK_DIR}/input.json")
 set(result_file "${YARDA_WORK_DIR}/result.json")
 set(events_file "${YARDA_WORK_DIR}/events.json")
 set(telemetry_file "${YARDA_WORK_DIR}/telemetry.json")
-file(WRITE "${lat}" [=[{
+file(WRITE "${map}" [=[{
   "schema_version": 2,
   "metadata": {"objects": {"global::yarda_mapped_value": {
     "kind": "array", "shape": [1], "elem_size": 8
@@ -29,7 +29,7 @@ file(WRITE "${lat}" [=[{
   ]
 }
 ]=])
-set(base "${lat}" --analysis hierarchy-rd --elf "${YARDA_ELF}"
+set(base "${map}" --analysis hierarchy-rd --elf "${YARDA_ELF}"
     --cache "${YARDA_CACHE}" --export "${result_file}")
 
 function(run_ok)

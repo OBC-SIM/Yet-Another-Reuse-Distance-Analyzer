@@ -6,7 +6,7 @@ foreach(required YARDA_CPP YARDA_ELF YARDA_CACHE YARDA_MODE YARDA_WORK_DIR)
     endif()
 endforeach()
 file(MAKE_DIRECTORY "${YARDA_WORK_DIR}")
-set(lat "${YARDA_WORK_DIR}/input.json")
+set(map "${YARDA_WORK_DIR}/input.json")
 set(result_file "${YARDA_WORK_DIR}/result.json")
 set(raw [=[{
   "schema_version": 2,
@@ -34,7 +34,7 @@ set(raw [=[{
     ]}
   ]
 }]=])
-file(WRITE "${lat}" "${raw}")
+file(WRITE "${map}" "${raw}")
 
 set(mode_options --mode unroll)
 if(YARDA_MODE STREQUAL "cache-line")
@@ -47,7 +47,7 @@ elseif(YARDA_MODE STREQUAL "implicit-mapping" OR YARDA_MODE STREQUAL "mapping")
 endif()
 
 function(run_ok)
-    execute_process(COMMAND "${YARDA_CPP}" "${lat}" ${mode_options}
+    execute_process(COMMAND "${YARDA_CPP}" "${map}" ${mode_options}
         --export "${result_file}" ${ARGN}
         RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)
     if(NOT status STREQUAL "0")
@@ -57,7 +57,7 @@ endfunction()
 
 function(run_error expected)
     file(READ "${result_file}" before)
-    execute_process(COMMAND "${YARDA_CPP}" "${lat}" ${mode_options}
+    execute_process(COMMAND "${YARDA_CPP}" "${map}" ${mode_options}
         --export "${result_file}" ${ARGN}
         RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)
     if(NOT status STREQUAL "1" OR NOT error MATCHES "${expected}")
@@ -94,7 +94,7 @@ string(JSON wide SET "${raw}" functions [=[[
      "step": 1, "body": []}
   ]}
 ]]=])
-file(WRITE "${lat}" "${wide}")
+file(WRITE "${map}" "${wide}")
 run_error("loop iteration count exceeds 1000000")
 run_ok(--max-single-loop-iterations 1000001
     --max-cumulative-loop-iterations 1000001)

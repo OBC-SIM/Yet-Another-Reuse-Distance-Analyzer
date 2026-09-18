@@ -1,6 +1,6 @@
 # YARDA C++ Backend
 
-This backend consumes legacy or APE v2 Loop Annotated Trace JSON and computes
+This backend consumes legacy or APE v2 Memory Access Patterns JSON and computes
 reuse-distance histograms without Python. It supports exact element/cache-line
 unrolling.
 
@@ -18,12 +18,12 @@ ctest --test-dir build --output-on-failure
 
 CTest runs the frontend and backend test suites together.
 
-Region LAT is accepted by the task mapping and streaming hierarchy APIs. Its
+Region MAP is accepted by the task mapping and streaming hierarchy APIs. Its
 `analysis_scope` is validated before task delivery, and result/event IDs use
 `region:<UTF-8 byte length>:<original function>:APE_ANALYZE`. Original function
 and object bindings remain unchanged; legacy whole-module unroll rejects region
-LAT. Enable the optional source frontend with `YARDA_BUILD_REGION_FRONTEND=ON`
-to also build the C-to-LAT/ET_EXEC integration fixtures. See the
+MAP. Enable the optional source frontend with `YARDA_BUILD_REGION_FRONTEND=ON`
+to also build the C-to-MAP/ET_EXEC integration fixtures. See the
 [region contract](../docs/analysis-regions-v1.md) for selection semantics.
 
 ## Run
@@ -36,7 +36,7 @@ to also build the C-to-LAT/ET_EXEC integration fixtures. See the
   --export atax_rdh.json
 ```
 
-The unroll path implements LAT v1/v2 normalization, annotated direct-call
+The unroll path implements MAP v1/v2 normalization, annotated direct-call
 expansion, block profiles, and Python-compatible JSON export. Exact unrolling
 uses a Fenwick tree for O(N log N) reuse-distance profiling. `--mode unroll`
 remains accepted for command-line compatibility; `--mode predict` is not
@@ -62,7 +62,7 @@ maps them with core 0's L1 geometry. The versioned JSON preserves task-local
 source ordinals, load/store operations, cross-line provenance, complete
 resolution coverage, and known non-inline static call-site exclusions. The
 `known_non_inline_static_call_sites` count includes only known non-inline
-`Call` nodes present in the input LAT after inline expansion; it is not a census
+`Call` nodes present in the input MAP after inline expansion; it is not a census
 of every call in the original C source and does not multiply sites by loop
 iterations. Calls to another analyzed root are caller-local opaque sites while
 the callee remains a separate task. This mode intrinsically maps cache lines:
@@ -70,12 +70,12 @@ omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
 `linked_absolute` addresses are linked virtual addresses, not automatically
 physical addresses. Without `--export`, the JSON is written to stdout.
 
-Every LAT expansion path, including streaming hierarchy analysis, is limited to
+Every MAP expansion path, including streaming hierarchy analysis, is limited to
 100,000 call-expansion node visits and an inline call depth of 256. All CLI
 analysis modes default to 1,000,000 iterations per loop and 1,000,000 cumulative
 loop iterations. Override them with `--max-single-loop-iterations` and
 `--max-cumulative-loop-iterations`, including for `--mode unroll` and ELF
-mapping. The cumulative budget covers the entire LAT module, not each function
+mapping. The cumulative budget covers the entire MAP module, not each function
 separately. For example, a module requiring 2,949,120 cumulative iterations can
 be analyzed with:
 
@@ -102,11 +102,11 @@ fails the complete invocation instead of returning a partial trace.
   --telemetry telemetry.json
 ```
 
-The LAT must explicitly declare `schema_version: 2`; ELF, cache, and RESULT
+The MAP must explicitly declare `schema_version: 2`; ELF, cache, and RESULT
 paths are required. Inputs must remain unchanged throughout the invocation.
 The selected model is core 0, private L1 -> shared LLC -> Memory, equal line
 sizes, LRU, allocation on demand misses, and independent cold tasks. Only L1
-misses reach LLC. Region selection comes from the LAT; there is no backend
+misses reach LLC. Region selection comes from the MAP; there is no backend
 region or core selector. See the [model](../docs/cache-hierarchy-rd-model-v1.md)
 and [artifact contract](../docs/cache-hierarchy-artifacts-v2.md).
 
@@ -165,17 +165,17 @@ existing source/line emission allowances:
 yarda::StreamingHierarchyOptions options;
 options.loop_limits = {2'000'000, 20'000'000};
 options.emission_limits = {10'000'000, 20'000'000};
-auto result = yarda::analyze_streaming_hierarchy(lat, objects, hierarchy, options);
+auto result = yarda::analyze_streaming_hierarchy(map, objects, hierarchy, options);
 ```
 
 Producer callers use
-`stream_resolved_task_accesses(lat, objects, sink, emission_budget, loop_limits)`.
+`stream_resolved_task_accesses(map, objects, sink, emission_budget, loop_limits)`.
 The existing three- and four-argument overloads retain default loop limits.
 Hierarchy emission defaults remain 1,000,000 sources and 10,000,000 source-to-L1
 line references. The hierarchy CLI exposes the same settings through the four
 flags above; legacy CLI and batch defaults are unchanged.
-Collecting callers can use `block_traces(lat, granularity, line_size, loop_limits)`
-or `resolved_task_traces(lat, objects, loop_limits)`. Existing overloads retain
+Collecting callers can use `block_traces(map, granularity, line_size, loop_limits)`
+or `resolved_task_traces(map, objects, loop_limits)`. Existing overloads retain
 their default loop limits.
 
 All limits are inclusive. Zero permits no iterations or emissions for that
@@ -196,7 +196,7 @@ failure. Event truncation alone still permits complete analysis.
 
 ## Prepared loop execution
 
-Task and legacy unrolling prepare each reached static LAT node once per subtree
+Task and legacy unrolling prepare each reached static MAP node once per subtree
 traversal. Repeated execution reuses the loop body and integer variable slots,
 including lexical shadowing, instead of copying JSON bodies and variable maps.
 Supported index expressions keep their existing spelling and rejection rules;

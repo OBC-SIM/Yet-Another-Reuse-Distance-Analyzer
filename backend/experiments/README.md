@@ -1,7 +1,7 @@
 # Cache hierarchy evaluation (B12)
 
 This optional C++ runner compares the materialized batch core with streaming
-summaries on identical LAT, ET_EXEC and cache bytes. It uses the existing
+summaries on identical MAP, ET_EXEC and cache bytes. It uses the existing
 `exact-two-level-lru-demand-v1`, `full-exact`, `linked_absolute` model, core 0,
 and independently cold tasks. Scripts orchestrate compilation and processes;
 they do not implement CSRD, residency or First-Hit Count calculations.
@@ -62,7 +62,7 @@ Reference-source SHA-256 (not a runtime dependency):
 - `atax.c`: `b3925adb41b5efb545ee1c9278ee2776e4970fdec64e72398494a336d59facbb`
 - `atax.h`: `b896f0a5fab49f4d52b1fb2ea7bcd7c4afabecb20bfee0deea271ec05b033761`
 
-All LAT uses `clang14-o0-region-v1`. Companion ELF uses Clang 14 `-O0 -g
+All MAP uses `clang14-o0-region-v1`. Companion ELF uses Clang 14 `-O0 -g
 -fno-pie -no-pie` and recorded section addresses. Analyzer `-O2` is separate
 from input `-O0`. Prepared case files contain paths, hashes, dimensions, scope,
 compiler flags and all four effective work limits. Compiler preparation wall

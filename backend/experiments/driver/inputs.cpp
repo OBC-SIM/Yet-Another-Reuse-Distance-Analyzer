@@ -36,20 +36,20 @@ StreamingHierarchyOptions work_options(const nlohmann::json & row)
 Inputs read_inputs(const nlohmann::json & row)
 {
   Inputs result;
-  const auto lat = row.at("lat_path").get<std::string>();
+  const auto map = row.at("map_path").get<std::string>();
   const auto elf = row.at("elf_path").get<std::string>();
   const auto cache = row.at("cache_path").get<std::string>();
   auto & metadata = result.metadata;
   metadata.identity.tool_version = cli::kToolVersion;
-  metadata.identity.lat_sha256 = sha256_file_bytes(lat);
+  metadata.identity.map_sha256 = sha256_file_bytes(map);
   metadata.identity.elf_sha256 = sha256_file_bytes(elf);
   metadata.identity.cache_config_sha256 = sha256_file_bytes(cache);
-  result.raw = read_json(lat);
+  result.raw = read_json(map);
   if (!result.raw.is_object() || !result.raw.contains("schema_version") ||
       !result.raw["schema_version"].is_number_integer() ||
       result.raw["schema_version"] != 2)
-    throw std::invalid_argument("hierarchy-rd requires LAT schema_version 2");
-  metadata.lat_schema_version = 2;
+    throw std::invalid_argument("hierarchy-rd requires MAP schema_version 2");
+  metadata.map_schema_version = 2;
   const auto config = parse_cache_config(cache);
   metadata.cache_schema_version = config.schema_version;
   metadata.hierarchy = select_analysis_hierarchy(config);

@@ -60,7 +60,7 @@ def checked(command, prefix, **kwargs):
 
 def cli_command(binary, row, destination):
     """Build the actual public CLI command with the case's exact allowances."""
-    command = [binary, row["lat_path"], "--analysis", "hierarchy-rd", "--elf",
+    command = [binary, row["map_path"], "--analysis", "hierarchy-rd", "--elf",
                row["elf_path"], "--cache", row["cache_path"], "--export", destination]
     for key, flag in (("single_loop", "single-loop-iterations"),
                       ("cumulative_loop", "cumulative-loop-iterations"),

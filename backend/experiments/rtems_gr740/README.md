@@ -63,7 +63,7 @@ output validation, RTEMS calls, stacks and compiler spills lie outside the selec
 source region. Names `y_1/y_2` become `y1/y2` in MVT. The PolyBench license is
 included in `POLYBENCH-LICENSE.txt`. This does not cover the full PolyBench suite.
 
-Every case is rebuilt twice; both ELF and LAT must be byte-identical. GNU `nm`
+Every case is rebuilt twice; both ELF and MAP must be byte-identical. GNU `nm`
 supplies independently parsed symbol bases and sizes. C-derived nested-loop
 expectations verify every source's object, offset, width, operation and order.
 All sizes compare every first-hit event with the existing explicit resident-LRU
@@ -75,7 +75,7 @@ Repeat/diagnostic runs and all measured results must have identical RESULT bytes
 All four budgets are checked at their inclusive success boundary and one below;
 failed evaluators publish no RESULT and failed CLI runs preserve existing output.
 Additional gates cover missing SPARC ELF symbols, dynamic loop bounds, rejection
-of physical no-write-allocation, and a deliberately mutated LAT operation that
+of physical no-write-allocation, and a deliberately mutated MAP operation that
 must fail the independent source oracle even though the CLI accepts it.
 
 Artifacts include prepared inputs, rebuilds, ELF headers/maps/disassembly, GNU nm

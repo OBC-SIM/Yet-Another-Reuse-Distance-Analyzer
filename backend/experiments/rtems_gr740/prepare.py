@@ -14,7 +14,7 @@ RTEMS = Path("/opt/rtems/6")
 
 
 def prepare(row, output, binaries):
-    """Build twice from the same C source and require identical ELF/LAT bytes."""
+    """Build twice from the same C source and require identical ELF/MAP bytes."""
     directory = output / "inputs" / row["case_id"]
     directory.mkdir(parents=True)
     defines = [f"-D{k.upper()}={row[k]}" for k in ("m", "n", "domain", "repeats")]
@@ -23,11 +23,11 @@ def prepare(row, output, binaries):
     source = HERE / "kernels" / f"{row['kernel']}.c"
     frontend = [binaries["region"], source, directory / "input.json", "--",
                 "--target=sparc-unknown-rtems6", *defines]
-    timing_lat = checked(frontend, directory / "frontend")
+    timing_map = checked(frontend, directory / "frontend")
     checked(make + [f"OUT={directory / 'rebuild'}", "all"], directory / "rebuild")
-    rebuilt_lat = frontend.copy()
-    rebuilt_lat[2] = directory / "rebuild" / "input.json"
-    checked(rebuilt_lat, directory / "frontend-rebuild")
+    rebuilt_map = frontend.copy()
+    rebuilt_map[2] = directory / "rebuild" / "input.json"
+    checked(rebuilt_map, directory / "frontend-rebuild")
     for name in ("input.json", "input.elf"):
         if sha(directory / name) != sha(directory / "rebuild" / name):
             raise AssertionError(f"non-reproducible rebuild: {row['case_id']}/{name}")
@@ -54,9 +54,9 @@ def prepare(row, output, binaries):
                compiler_pipeline="clang14-o0-region-v1/target=sparc-unknown-rtems6",
                gcc_pipeline="sparc-rtems6-gcc/GR740/-O0/-mcpu=leon3/-mfpu/-mhard-float",
                source_path=str(source), source_sha256=sha(source),
-               preparation_wall_ns=timing["wall_time_ns"] + timing_lat["wall_time_ns"],
-               defines=defines, rebuild_elf_identical=True, rebuild_lat_identical=True)
-    for kind, path in (("lat", directory / "input.json"), ("elf", elf),
+               preparation_wall_ns=timing["wall_time_ns"] + timing_map["wall_time_ns"],
+               defines=defines, rebuild_elf_identical=True, rebuild_map_identical=True)
+    for kind, path in (("map", directory / "input.json"), ("elf", elf),
                        ("cache", output / "cache-model.yaml")):
         row[f"{kind}_path"], row[f"{kind}_sha256"] = str(path), sha(path)
     write_json(directory / "case.json", row)

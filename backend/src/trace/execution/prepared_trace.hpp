@@ -23,7 +23,7 @@ using PreparedAccessSink =
   std::function<void(const nlohmann::json &, const std::vector<std::string> &)>;
 
 /**
- * @brief Prepare reached LAT nodes once and emit accesses in execution order.
+ * @brief Prepare reached MAP nodes once and emit accesses in execution order.
  *
  * Preparation and loop slots live only for this traversal. Body preparation
  * follows loop reservation and never visits a zero-trip body. Source charging

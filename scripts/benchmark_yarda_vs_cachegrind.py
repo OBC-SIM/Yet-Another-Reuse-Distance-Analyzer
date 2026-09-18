@@ -2,7 +2,7 @@
 """Benchmark YARDA cache-line unrolling against Cachegrind.
 
 Prepared artifacts are intentionally outside the timed region: Cachegrind
-receives a native binary and YARDA receives a Loop Annotated Trace (LAT).
+receives a native binary and YARDA receives a Memory Access Patterns (MAP).
 This measures each tool's analysis cost rather than compilation cost.
 """
 
@@ -22,7 +22,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "tasks"
-PLUGIN = ROOT / "build" / "libLoopAnnotatedTrace.so"
+PLUGIN = ROOT / "build" / "libMemoryAccessPatterns.so"
 RESULTS = ROOT / "benchmark-results"
 WORKLOADS = ("polybench_2mm", "polybench_atax", "polybench_correlation",
              "polybench_gemm", "polybench_jacobi")
@@ -36,10 +36,10 @@ def run(command: list[str], *, cwd: Path = ROOT) -> None:
 
 
 def prepare(workload: str, binary_dir: Path) -> Path:
-    """Create the matching native binary and LAT before timed repetitions."""
+    """Create the matching native binary and MAP before timed repetitions."""
     source = TASKS / f"{workload}.c"
     ll_path = TASKS / f"{workload}_g.ll"
-    lat_path = TASKS / f"{workload}_g_ape.json"
+    map_path = TASKS / f"{workload}_g_ape.json"
     binary = binary_dir / workload
     run(["clang-14", "-O0", "-g", "-I", str(TASKS), str(source), "-lm",
          "-o", str(binary)])
@@ -48,12 +48,12 @@ def prepare(workload: str, binary_dir: Path) -> Path:
     run(["opt-14", f"-load-pass-plugin={PLUGIN}",
          "-passes=function(mem2reg),loop-simplify,loop-annotated-trace",
          str(ll_path), "-o", "/dev/null"], cwd=TASKS)
-    if not lat_path.is_file():
-        raise FileNotFoundError(f"YARDA LAT was not created: {lat_path}")
+    if not map_path.is_file():
+        raise FileNotFoundError(f"YARDA MAP was not created: {map_path}")
     return binary
 
 
-def yarda_command(lat_path: Path) -> list[str]:
+def yarda_command(map_path: Path) -> list[str]:
     """Return a command that runs YARDA's cache-line actual-unroll analysis."""
     source = (
         "import json,sys;"
@@ -65,7 +65,7 @@ def yarda_command(lat_path: Path) -> list[str]:
         "[trace.extend(part[2]) for part in block_trace_results(raw,'cache-line',32)];"
         "LRUProfiler.calculate(trace)"
     )
-    return [sys.executable, "-c", source, str(lat_path)]
+    return [sys.executable, "-c", source, str(map_path)]
 
 
 def measure(command: list[str], repetitions: int, *, cwd: Path = ROOT) -> list[float]:
@@ -88,9 +88,9 @@ def benchmark(repetitions: int) -> list[dict[str, str]]:
     rows = []
     for workload in WORKLOADS:
         binary = prepare(workload, binary_dir)
-        lat_path = TASKS / f"{workload}_g_ape.json"
+        map_path = TASKS / f"{workload}_g_ape.json"
         commands = {
-            "YARDA cache-line unroll": yarda_command(lat_path),
+            "YARDA cache-line unroll": yarda_command(map_path),
             "Cachegrind": ["valgrind", "--tool=cachegrind", *CACHE,
                             f"--cachegrind-out-file={raw_dir / workload}", str(binary)],
         }

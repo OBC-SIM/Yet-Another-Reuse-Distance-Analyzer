@@ -33,7 +33,7 @@ model as though their counters had the same meaning.
 
 One analysis consumes:
 
-1. an APE/LAT schema-v2 JSON module;
+1. an APE/MAP schema-v2 JSON module;
 2. an ET_EXEC ELF image that supplies absolute linked object addresses; and
 3. a cache-hierarchy schema-v1 YAML configuration.
 
@@ -207,11 +207,11 @@ dependencies are preserved through compilation.
 Retained canonical-IR loads inside a region count even when their global objects
 are defined outside it. Reusing an outside-loaded value does not count that load
 again; constant-folded values add no references. Runtime-loaded loop bounds and
-unresolved indices are rejected before region LAT output. Normalization-created
+unresolved indices are rejected before region MAP output. Normalization-created
 scalar/control instructions need not carry region tags: R2 validates selected
 access sites and complete-loop descriptors separately using the whole function.
 
-APE/LAT v2 retains the original `function`, parameters and object identities,
+APE/MAP v2 retains the original `function`, parameters and object identities,
 adds `analysis_scope: {"kind":"region","name":"APE_ANALYZE"}`, and contains only the
 selected body. Function task IDs stay unchanged. A region task ID is
 `region:<UTF-8-byte-length>:<function>:APE_ANALYZE`; collisions fail the complete module.

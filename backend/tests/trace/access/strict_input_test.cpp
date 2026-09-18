@@ -57,12 +57,12 @@ std::optional<yarda::ResolutionError> capture_resolution_error(Action action)
 }
 
 template <typename Action>
-void expect_normalized_malformed_lat(Action action)
+void expect_normalized_malformed_map(Action action)
 {
   try
   {
     action();
-    FAIL() << "expected malformed LAT rejection";
+    FAIL() << "expected malformed MAP rejection";
   }
   catch (const nlohmann::json::exception & error)
   {
@@ -70,7 +70,7 @@ void expect_normalized_malformed_lat(Action action)
   }
   catch (const std::invalid_argument & error)
   {
-    EXPECT_NE(std::string(error.what()).find("malformed LAT input:"),
+    EXPECT_NE(std::string(error.what()).find("malformed MAP input:"),
               std::string::npos);
   }
 }
@@ -194,25 +194,25 @@ TEST(StrictInputTest, ClassifiesJsonLayoutFailureAsUnresolved)
   EXPECT_EQ(error->category(), yarda::ResolutionCategory::Unresolved);
 }
 
-TEST(StrictInputTest, NormalizesMalformedResolvedLatException)
+TEST(StrictInputTest, NormalizesMalformedResolvedMapException)
 {
   const Json malformed = {
     {"functions", Json::array({{{"body", Json::array()}}})},
   };
 
-  expect_normalized_malformed_lat([&]() {
+  expect_normalized_malformed_map([&]() {
     static_cast<void>(
       yarda::resolved_block_traces(malformed, yarda::ObjectAddressModel{}));
   });
 }
 
-TEST(StrictInputTest, NormalizesMalformedMappedLatException)
+TEST(StrictInputTest, NormalizesMalformedMappedMapException)
 {
   const Json malformed = {
     {"functions", Json::array({{{"body", Json::array()}}})},
   };
 
-  expect_normalized_malformed_lat([&]() {
+  expect_normalized_malformed_map([&]() {
     static_cast<void>(yarda::mapped_block_traces(
       malformed, yarda::CacheGeometry{64, 8, 2}, yarda::ObjectAddressModel{}));
   });

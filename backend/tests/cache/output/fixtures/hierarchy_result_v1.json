@@ -7,10 +7,10 @@
   "tool_version": "test-build",
   "analysis_id": "62f65847e39d1c10f02be86acad6ec5a67166cb03e69c20c8ab6abc528ddd4b4",
   "inputs": {
-    "lat_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "map_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "elf_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
     "cache_config_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-    "lat_schema_version": 2,
+    "map_schema_version": 2,
     "cache_schema_version": 1,
     "elf_class": "ELF64",
     "elf_machine": 62

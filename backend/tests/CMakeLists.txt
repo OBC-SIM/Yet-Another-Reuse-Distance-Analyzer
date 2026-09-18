@@ -8,7 +8,7 @@ set(YARDA_ELF_RELOCATABLE_FIXTURE ${YARDA_BACKEND_BINARY_DIR}/yarda_elf_fixture.
 set(YARDA_ELF_SECTIONLESS_FIXTURE
     ${YARDA_BACKEND_BINARY_DIR}/yarda_elf_fixture_sectionless)
 
-if(TARGET yarda_region_lat)
+if(TARGET yarda_region_map)
     add_subdirectory(regions)
 endif()
 

@@ -12,7 +12,7 @@ namespace yarda::detail
 
 struct PreparedLayout;
 
-/** @brief Exact byte range selected by one LAT access node. */
+/** @brief Exact byte range selected by one MAP access node. */
 struct ByteAccess
 {
   std::int64_t offset;
@@ -23,7 +23,7 @@ bool has_field_path(const nlohmann::json & node);
 
 std::optional<std::int64_t> parse_exact_integer(const std::string & value);
 
-/** @brief Resolve ordered LAT access paths against ABI layout metadata. */
+/** @brief Resolve ordered MAP access paths against ABI layout metadata. */
 class AccessLayoutResolver
 {
 public:

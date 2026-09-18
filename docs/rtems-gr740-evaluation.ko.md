@@ -4,6 +4,7 @@
 
 **실제 GR740 BSP로 링크한 16개 SPARC RTEMS 입력에서 정적 e2e 검증을
 통과했고, 480개 측정 RESULT가 모두 기준 결과와 바이트 단위로 일치했다.**
+
 각 입력을 두 번 생성한 ELF와 LAT도 각각 동일했다. 이 결과는 호스트에서
 수행하는 YARDA 분석의 재현성이다.
 
@@ -22,9 +23,9 @@ target 실행 증거는 [target archive](../benchmark-results/rtems-gr740-target
 같은 커널 C 파일을 두 경로에 전달했다.
 
 ```text
-kernel C -> Clang 14 strict region, SPARC target -> LAT v2
+kernel C -> Clang 14 strict region, SPARC target -> MAP v2
          -> sparc-rtems6-gcc + RTEMS 6 GR740 BSP -> SPARC ELF32 ET_EXEC
-LAT + ELF의 실제 링크 주소 + cache-model.yaml
+MAP + ELF의 실제 링크 주소 + cache-model.yaml
          -> 실제 yarda_cpp / batch / streaming / instrumented -> RESULT v2
 ```
 
@@ -54,7 +55,7 @@ allocation, L1 miss만 LLC로 전달, task별 cold start가 전제다.
 test로 확인했다. 아래 FHC/AMC/CSRD는 이 모델의 결과이고 GR740 하드웨어 counter가
 아니다. GCC 명령어 순서·스택 spill·RTEMS 트래픽·instruction fetch·멀티코어 간섭은
 분석하지 않았다. 주소는 GCC ELF에서 가져오지만 선택 구간의 접근 순서는 Clang의
-LAT 계약에 따른다.
+MAP 계약에 따른다.
 
 ## 2. 워크로드와 검증
 
@@ -78,7 +79,7 @@ MVT는 전치 방향 접근도 포함한다. 낮은 연산 집약도와 메모�
 | --- | --- |
 | Release build / 전체 CTest | 921/921 통과 |
 | 기존 Python pytest | 100/100 통과 |
-| SPARC ELF와 LAT를 각각 두 번 빌드 | 16/16 case에서 각각 bytes 동일 |
+| SPARC ELF와 MAP를 각각 두 번 빌드 | 16/16 case에서 각각 bytes 동일 |
 | 독립 C 식 기반 모든 source 접근 대조 | 16/16 통과; object/offset/width/operation/order/address |
 | 독립 resident-LRU oracle의 모든 first-hit event | 16/16 통과 |
 | batch/streaming 전체 event 및 CSRD 대조 | 16/16 통과 |
@@ -89,8 +90,8 @@ MVT는 전치 방향 접근도 포함한다. 낮은 연산 집약도와 메모�
 | 정상 정식 측정 RESULT | 480/480 bytes 동일 |
 | 네 예산을 정확한 한도에서 성공 / 하나 낮춰 실패 | 16개 정상 입력의 경계 성공; ATAX micro의 4×3 mode 실패 확인 |
 | 실패 시 기존 CLI RESULT 보존 | 네 예산 각각 통과 |
-| no-write-allocate, missing SPARC symbol, dynamic bound | 기대한 거부, 정상 RESULT/LAT 없음 |
-| LAT store를 load로 변조 | CLI는 분석 성공; 독립 source oracle은 기대대로 실패 |
+| no-write-allocate, missing SPARC symbol, dynamic bound | 기대한 거부, 정상 RESULT/MAP 없음 |
+| MAP store를 load로 변조 | CLI는 분석 성공; 독립 source oracle은 기대대로 실패 |
 | Valgrind: micro verifier, MVT SMALL CLI, budget failure | 세 경로 모두 memory errors 0, definite/indirect/possible lost 0 |
 
 Valgrind의 LLVM command-line registry는 기존과 같은 still-reachable

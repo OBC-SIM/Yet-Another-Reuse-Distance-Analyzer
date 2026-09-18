@@ -177,7 +177,7 @@ Json expand_module(const nlohmann::json & raw, bool analyzed_tasks,
   }
   if (analyzed_tasks && result.empty())
   {
-    throw std::invalid_argument("LAT module contains no analyzed task root");
+    throw std::invalid_argument("MAP module contains no analyzed task root");
   }
   return result;
 }

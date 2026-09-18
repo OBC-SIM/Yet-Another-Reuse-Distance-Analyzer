@@ -18,7 +18,7 @@ struct Inputs
 
 /**
  * @brief Read immutable raw inputs and bind their identity to this binary.
- * @param row Prepared manifest case with absolute LAT/ELF/cache paths.
+ * @param row Prepared manifest case with absolute MAP/ELF/cache paths.
  * @return Validated inputs; throws on schema or address-model errors.
  */
 Inputs read_inputs(const nlohmann::json & row);
@@ -32,7 +32,7 @@ StreamingHierarchyOptions work_options(const nlohmann::json & row);
 
 /**
  * @brief Collect budgeted sources, then invoke the existing batch core.
- * @param raw Borrowed immutable LAT.
+ * @param raw Borrowed immutable MAP.
  * @param objects Borrowed absolute object addresses.
  * @param hierarchy Borrowed selected hierarchy.
  * @param options Borrowed loop and emission limits; diagnostic fields ignored.
