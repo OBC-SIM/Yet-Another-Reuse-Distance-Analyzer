@@ -45,9 +45,11 @@ std::vector<Named> build_block_traces(const nlohmann::json & raw,
       if (node.value("type", "") == "Loop")
       {
         flush_flat();
+        const auto bound = node.value("bound", nlohmann::json(0));
         const auto name =
           function_name + "  " + node.value("var", "") +
-          "-loop (bound=" + std::to_string(node.value("bound", 0)) + ")";
+          "-loop (bound=" +
+          (bound.is_string() ? bound.get<std::string>() : bound.dump()) + ")";
         if (empty_loop_policy == EmptyLoopPolicy::Include || !accesses.empty())
         {
           result.push_back({name, std::move(accesses)});

@@ -62,7 +62,7 @@ TEST(PreparedTraceFailureTest, ConsumerJsonExceptionPrecedesMalformedSibling)
 TEST(PreparedTraceFailureTest, LaterMalformedLoopWaitsForEarlierAccess)
 {
   auto bad_loop = loop(1, Json::array());
-  bad_loop["bound"] = "runtime";
+  bad_loop["bound"] = Json::array();
   const auto raw = module(Json::array(
     {function("kernel", Json::array({
                           loop(2, Json::array({access(), bad_loop})),

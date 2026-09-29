@@ -62,7 +62,10 @@ TEST_P(AffineIndexContract, MatchesSourceElementOrderAndLinkedByteAddresses)
     {"triangle_strict", {1, 2, 3, 6, 7, 11}},
     {"triangle_descending", {0, 5, 10, 8, 15, 13}},
     {"triangle_scaled", {1, 3, 7}},
-    {"triangle_nested", {1, 2, 3, 6, 7, 11, 6, 7, 11, 11}}};
+    {"triangle_nested", {1, 2, 3, 6, 7, 11, 6, 7, 11, 11}},
+    {"triangle_syrk", {0, 4, 5, 8, 9, 10, 12, 13, 14, 15}},
+    {"triangle_nussinov", {6, 1, 1, 2}},
+    {"triangle_end_descending", {3, 1, 7, 5, 11, 15}}};
   std::vector<std::string> tasks;
   std::map<std::string, std::vector<ResolvedAccess>> accesses;
   const auto result = stream_resolved_task_accesses(
@@ -108,7 +111,10 @@ TEST_P(AffineIndexContract, MatchesSourceElementOrderAndLinkedByteAddresses)
                                              "triangle_strict",
                                              "triangle_descending",
                                              "triangle_scaled",
-                                             "triangle_nested"}));
+                                             "triangle_nested",
+                                             "triangle_syrk",
+                                             "triangle_nussinov",
+                                             "triangle_end_descending"}));
   uint64_t count = 0;
   for (const auto & [task, expected] : elements)
   {

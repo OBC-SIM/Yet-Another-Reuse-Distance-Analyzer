@@ -190,6 +190,32 @@
       ["global::triangle_matrix",28,4,"store"],
       ["global::triangle_matrix",44,4,"store"],
       ["global::triangle_matrix",44,4,"store"]
+    ]},
+    {"id": "triangle_syrk", "sources": [
+      ["global::triangle_matrix",0,4,"store"],
+      ["global::triangle_matrix",16,4,"store"],
+      ["global::triangle_matrix",20,4,"store"],
+      ["global::triangle_matrix",32,4,"store"],
+      ["global::triangle_matrix",36,4,"store"],
+      ["global::triangle_matrix",40,4,"store"],
+      ["global::triangle_matrix",48,4,"store"],
+      ["global::triangle_matrix",52,4,"store"],
+      ["global::triangle_matrix",56,4,"store"],
+      ["global::triangle_matrix",60,4,"store"]
+    ]},
+    {"id": "triangle_nussinov", "sources": [
+      ["global::triangle_matrix",24,4,"store"],
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",8,4,"store"]
+    ]},
+    {"id": "triangle_end_descending", "sources": [
+      ["global::triangle_matrix",12,4,"store"],
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",28,4,"store"],
+      ["global::triangle_matrix",20,4,"store"],
+      ["global::triangle_matrix",44,4,"store"],
+      ["global::triangle_matrix",60,4,"store"]
     ]}
   ]
 }

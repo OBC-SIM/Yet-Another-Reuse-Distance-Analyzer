@@ -44,9 +44,13 @@ void prepare_node(PreparedNode & node, const LoopScope * scope,
       loop.start_expression.emplace(start->get<std::string>(), scope);
     else
       loop.start = raw.value("start", 0LL);
-    loop.bound = raw.at("bound").get<std::int64_t>();
+    const auto & bound = raw.at("bound");
+    if (bound.is_string())
+      loop.bound_expression.emplace(bound.get<std::string>(), scope);
+    else
+      loop.bound = bound.get<std::int64_t>();
     loop.step = raw.value("step", 1LL);
-    if (!loop.start_expression)
+    if (!loop.start_expression && !loop.bound_expression)
       loop.count = loop_iteration_count(loop.start, loop.bound, loop.step);
     loop.slot = values.size();
     values.push_back(0);
@@ -81,6 +85,7 @@ void execute_node(PreparedNode & node, const LoopScope * scope,
 
   auto & loop = std::get<PreparedLoop>(node.payload);
   auto value = loop.start;
+  auto bound = loop.bound;
   auto count = loop.count;
   if (loop.start_expression)
   {
@@ -88,8 +93,16 @@ void execute_node(PreparedNode & node, const LoopScope * scope,
     if (!start)
       throw std::invalid_argument("unresolved or overflowing loop start");
     value = *start;
-    count = loop_iteration_count(value, loop.bound, loop.step);
   }
+  if (loop.bound_expression)
+  {
+    const auto end = loop.bound_expression->evaluate_numeric(values);
+    if (!end)
+      throw std::invalid_argument("unresolved or overflowing loop bound");
+    bound = *end;
+  }
+  if (loop.start_expression || loop.bound_expression)
+    count = loop_iteration_count(value, bound, loop.step);
   budget.consume_loop_iterations(count);
   if (count == 0) return;
   prepare_body(loop, *node.source);

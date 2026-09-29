@@ -49,6 +49,7 @@ add_executable(yarda_backend_tests
     trace/access/prepared_access_failure_test.cpp
     trace/layout/prepared_layout_failure_test.cpp
     trace/execution/prepared_trace_test.cpp
+    trace/execution/prepared_trace_bound_test.cpp
     trace/execution/prepared_trace_stream_test.cpp
     trace/execution/prepared_trace_failure_test.cpp
     trace/output/resolved_mapping_stream_test.cpp

@@ -190,7 +190,7 @@ TEST(TaskAccessStreamFailureTest, PreservesTaskLocalFailureAndModuleCoverage)
 TEST(TaskAccessStreamFailureTest, ConvertsMalformedLoopJsonToInputError)
 {
   auto invalid_loop = loop(1, Json::array({access()}));
-  invalid_loop["bound"] = "unknown";
+  invalid_loop["bound"] = Json::array();
   const auto raw = module(Json::array({
     function("kernel", Json::array({invalid_loop, access()})),
   }));

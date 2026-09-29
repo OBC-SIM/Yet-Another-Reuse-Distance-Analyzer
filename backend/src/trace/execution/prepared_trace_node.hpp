@@ -23,6 +23,7 @@ struct PreparedLoop
   std::int64_t start = 0;
   std::optional<PreparedIndex> start_expression;
   std::int64_t bound = 0;
+  std::optional<PreparedIndex> bound_expression;
   std::int64_t step = 1;
   std::uint64_t count = 0;
   std::size_t slot = 0;
