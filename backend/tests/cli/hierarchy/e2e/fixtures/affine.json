@@ -145,6 +145,51 @@
       ["global::affine_data",1020,4,"store"],
       ["global::affine_data",1028,4,"store"],
       ["global::affine_data",2044,4,"store"]
+    ]},
+    {"id": "triangle", "sources": [
+      ["global::triangle_matrix",0,4,"store"],
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",8,4,"store"],
+      ["global::triangle_matrix",12,4,"store"],
+      ["global::triangle_matrix",20,4,"store"],
+      ["global::triangle_matrix",24,4,"store"],
+      ["global::triangle_matrix",28,4,"store"],
+      ["global::triangle_matrix",40,4,"store"],
+      ["global::triangle_matrix",44,4,"store"],
+      ["global::triangle_matrix",60,4,"store"]
+    ]},
+    {"id": "triangle_strict", "sources": [
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",8,4,"store"],
+      ["global::triangle_matrix",12,4,"store"],
+      ["global::triangle_matrix",24,4,"store"],
+      ["global::triangle_matrix",28,4,"store"],
+      ["global::triangle_matrix",44,4,"store"]
+    ]},
+    {"id": "triangle_descending", "sources": [
+      ["global::triangle_matrix",0,4,"store"],
+      ["global::triangle_matrix",20,4,"store"],
+      ["global::triangle_matrix",40,4,"store"],
+      ["global::triangle_matrix",32,4,"store"],
+      ["global::triangle_matrix",60,4,"store"],
+      ["global::triangle_matrix",52,4,"store"]
+    ]},
+    {"id": "triangle_scaled", "sources": [
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",12,4,"store"],
+      ["global::triangle_matrix",28,4,"store"]
+    ]},
+    {"id": "triangle_nested", "sources": [
+      ["global::triangle_matrix",4,4,"store"],
+      ["global::triangle_matrix",8,4,"store"],
+      ["global::triangle_matrix",12,4,"store"],
+      ["global::triangle_matrix",24,4,"store"],
+      ["global::triangle_matrix",28,4,"store"],
+      ["global::triangle_matrix",44,4,"store"],
+      ["global::triangle_matrix",24,4,"store"],
+      ["global::triangle_matrix",28,4,"store"],
+      ["global::triangle_matrix",44,4,"store"],
+      ["global::triangle_matrix",44,4,"store"]
     ]}
   ]
 }

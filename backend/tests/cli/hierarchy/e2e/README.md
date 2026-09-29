@@ -17,7 +17,7 @@ Negative cases separately verify absent outputs and preservation of old files.
 | Test | Evidence |
 | --- | --- |
 | `positive` | Fixed addresses, hand CSRD/FSL/counts, cross-line source provenance, independent cold/empty tasks |
-| `affine` | Existing H2-B fixture: 25 tasks / 95 sources in both debug-information modes |
+| `affine` | Existing H2-B fixture: 30 tasks / 130 sources in both debug-information modes |
 | `affine_rejections` | Unsupported source expressions fail before MAP publication |
 | `diagnostics` | RESULT byte determinism, independent input hashes/ID, bounded EVENTS, separate TELEMETRY |
 | `limits` | Exact/higher allowances, each lower allowance, cumulative tasks, cross-line charges, empty-loop and structural expansion guards |

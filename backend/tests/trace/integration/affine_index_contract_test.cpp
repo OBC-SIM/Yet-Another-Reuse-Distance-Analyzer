@@ -57,7 +57,12 @@ TEST_P(AffineIndexContract, MatchesSourceElementOrderAndLinkedByteAddresses)
     {"flattened", {0, 1, 2, 8, 9, 10}},
     {"scaled_fields", {0, 2}},
     {"affine_actual", {3, 5, 7}},
-    {"affine_boundary", {255, 257, 511}}};
+    {"affine_boundary", {255, 257, 511}},
+    {"triangle", {0, 1, 2, 3, 5, 6, 7, 10, 11, 15}},
+    {"triangle_strict", {1, 2, 3, 6, 7, 11}},
+    {"triangle_descending", {0, 5, 10, 8, 15, 13}},
+    {"triangle_scaled", {1, 3, 7}},
+    {"triangle_nested", {1, 2, 3, 6, 7, 11, 6, 7, 11, 11}}};
   std::vector<std::string> tasks;
   std::map<std::string, std::vector<ResolvedAccess>> accesses;
   const auto result = stream_resolved_task_accesses(
@@ -98,7 +103,12 @@ TEST_P(AffineIndexContract, MatchesSourceElementOrderAndLinkedByteAddresses)
                                              "flattened",
                                              "scaled_fields",
                                              "affine_actual",
-                                             "affine_boundary"}));
+                                             "affine_boundary",
+                                             "triangle",
+                                             "triangle_strict",
+                                             "triangle_descending",
+                                             "triangle_scaled",
+                                             "triangle_nested"}));
   uint64_t count = 0;
   for (const auto & [task, expected] : elements)
   {
@@ -107,7 +117,8 @@ TEST_P(AffineIndexContract, MatchesSourceElementOrderAndLinkedByteAddresses)
     ASSERT_EQ(actual.size(), expected.size());
     const bool field = task == "fields" || task == "scaled_fields";
     const std::string object =
-      task.rfind("affine_", 0) == 0 ? "global::affine_data"
+      task.rfind("triangle", 0) == 0 ? "global::triangle_matrix"
+      : task.rfind("affine_", 0) == 0 ? "global::affine_data"
       : task == "unsigned_boundary" ? "global::unsigned_"
                                       "matrix"
       : task == "dimensions"        ? "global::matrix"

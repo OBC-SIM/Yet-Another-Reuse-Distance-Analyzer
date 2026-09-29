@@ -9,6 +9,43 @@ namespace
 using namespace yarda;
 using namespace yarda::test::prepared;
 
+TEST(PreparedTraceTest, EvaluatesTriangularStartOnEveryEntry)
+{
+  auto read = access();
+  read["indices"] = Json::array({"i", "j"});
+  auto inner = loop(4, Json::array({read}), "j");
+  inner["start"] = "i";
+  EXPECT_EQ(indices(loop(4, Json::array({inner}))),
+            (IndexRows{{"0", "0"}, {"0", "1"}, {"0", "2"}, {"0", "3"},
+                       {"1", "1"}, {"1", "2"}, {"1", "3"}, {"2", "2"},
+                       {"2", "3"}, {"3", "3"}}));
+  inner["start"] = "i+1";
+  EXPECT_EQ(indices(loop(4, Json::array({inner})), {4, 10}),
+            (IndexRows{{"0", "1"}, {"0", "2"}, {"0", "3"}, {"1", "2"},
+                       {"1", "3"}, {"2", "3"}}));
+  EXPECT_THROW(indices(loop(4, Json::array({inner})), {4, 9}),
+               std::invalid_argument);
+}
+
+TEST(PreparedTraceTest, RejectsUnboundAndOverflowingLoopStarts)
+{
+  auto inner = loop(4, Json::array(), "j");
+  for (const auto * start : {"j", "missing", "i+9223372036854775807"})
+  {
+    inner["start"] = start;
+    EXPECT_THROW(indices(loop(2, Json::array({inner}))), std::invalid_argument);
+  }
+}
+
+TEST(PreparedTraceTest, BindsStartBeforeShadowingTheOuterVariable)
+{
+  auto read = access("global::A", "i");
+  auto inner = loop(4, Json::array({read}));
+  inner["start"] = "i+1";
+  EXPECT_EQ(indices(loop(3, Json::array({inner, read}), "i", 1)),
+            (IndexRows{{"2"}, {"3"}, {"1"}, {"3"}, {"2"}}));
+}
+
 TEST(PreparedTraceTest, RejectsUnknownNodeTypeAtVisit)
 {
   const auto node = loop(1, Json::array({Json{{"type", "Widget"}}}));

@@ -70,6 +70,14 @@ omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
 `linked_absolute` addresses are linked virtual addresses, not automatically
 physical addresses. Without `--export`, the JSON is written to stdout.
 
+Loop `start` accepts an integer or an affine string over enclosing loop variables
+(for example, `"i"`, `"i+1"`, or `"2*i+1"`). The C++ traversal binds that expression
+in the parent scope and reevaluates it on every loop entry. `bound` and `step`
+remain integers. Empty triangular rows emit no accesses, and each entry charges
+its actual iteration count against the loop-work budget. Unbound or overflowing
+start expressions fail at the reached loop. Existing numeric starts are unchanged.
+The legacy Python reader does not support string starts.
+
 Every MAP expansion path, including streaming hierarchy analysis, is limited to
 100,000 call-expansion node visits and an inline call depth of 256. All CLI
 analysis modes default to 1,000,000 iterations per loop and 1,000,000 cumulative

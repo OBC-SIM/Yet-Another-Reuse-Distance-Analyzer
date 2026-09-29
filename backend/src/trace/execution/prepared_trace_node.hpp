@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -20,6 +21,8 @@ struct PreparedLoop
 {
   std::string variable;
   std::int64_t start = 0;
+  std::optional<PreparedIndex> start_expression;
+  std::int64_t bound = 0;
   std::int64_t step = 1;
   std::uint64_t count = 0;
   std::size_t slot = 0;
