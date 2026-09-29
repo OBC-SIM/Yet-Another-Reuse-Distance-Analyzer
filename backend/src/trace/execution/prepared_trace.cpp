@@ -39,10 +39,15 @@ void prepare_node(PreparedNode & node, const LoopScope * scope,
   {
     PreparedLoop loop;
     loop.variable = raw.at("var").get<std::string>();
-    loop.start = raw.value("start", 0LL);
-    const auto bound = raw.at("bound").get<std::int64_t>();
+    const auto start = raw.find("start");
+    if (start != raw.end() && start->is_string())
+      loop.start_expression.emplace(start->get<std::string>(), scope);
+    else
+      loop.start = raw.value("start", 0LL);
+    loop.bound = raw.at("bound").get<std::int64_t>();
     loop.step = raw.value("step", 1LL);
-    loop.count = loop_iteration_count(loop.start, bound, loop.step);
+    if (!loop.start_expression)
+      loop.count = loop_iteration_count(loop.start, loop.bound, loop.step);
     loop.slot = values.size();
     values.push_back(0);
     node.payload = std::move(loop);
@@ -75,18 +80,27 @@ void execute_node(PreparedNode & node, const LoopScope * scope,
   }
 
   auto & loop = std::get<PreparedLoop>(node.payload);
-  budget.consume_loop_iterations(loop.count);
-  if (loop.count == 0) return;
+  auto value = loop.start;
+  auto count = loop.count;
+  if (loop.start_expression)
+  {
+    const auto start = loop.start_expression->evaluate_numeric(values);
+    if (!start)
+      throw std::invalid_argument("unresolved or overflowing loop start");
+    value = *start;
+    count = loop_iteration_count(value, loop.bound, loop.step);
+  }
+  budget.consume_loop_iterations(count);
+  if (count == 0) return;
   prepare_body(loop, *node.source);
   const LoopScope child_scope{loop.variable, loop.slot, scope};
-  auto value = loop.start;
-  for (std::uint64_t iteration = 0; iteration < loop.count; ++iteration)
+  for (std::uint64_t iteration = 0; iteration < count; ++iteration)
   {
     // Descendant preparation can grow values; never keep a slot reference.
     values[loop.slot] = value;
     for (auto & child : loop.body)
       execute_node(child, &child_scope, values, budget, sink);
-    if (iteration + 1 < loop.count &&
+    if (iteration + 1 < count &&
         __builtin_add_overflow(value, loop.step, &value))
       throw std::invalid_argument("loop iteration value overflows");
   }
