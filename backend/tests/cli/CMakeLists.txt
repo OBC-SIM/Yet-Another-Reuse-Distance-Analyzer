@@ -226,3 +226,15 @@ add_test(NAME yarda_cpp_ir_instructions
         "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/ir_instructions"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/instruction_counts.cmake"
 )
+
+add_test(NAME yarda_cpp_ir_inline
+    COMMAND ${CMAKE_COMMAND}
+        "-DCLANG=${YARDA_CLANG_EXECUTABLE}"
+        "-DOPT=${YARDA_OPT_EXECUTABLE}"
+        "-DPLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
+        "-DCLI=$<TARGET_FILE:yarda_cpp>"
+        "-DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/instruction_inline.c"
+        "-DCACHE=${YARDA_CPP_CACHE_32B}"
+        "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/ir_inline"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/instruction_inline.cmake"
+)

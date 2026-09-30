@@ -32,22 +32,29 @@ opt-14 -load-pass-plugin=build/libMemoryAccessPatterns.so \
   --analysis ir-instructions --export instructions.json
 ```
 
-The result contains static and dynamic instruction counts by function, basic
-block, and opcode. Dynamic counts describe **one invocation of each analyzed
-root**, or each non-inline definition if no root is annotated. All IR
-instructions, including PHIs, GEPs, loop conditions, branches, and returns, count
-once per execution; debug and lifetime intrinsics are excluded. Other intrinsics
-and calls count as one `call`; **callee bodies are excluded**, including helpers
-marked `ape.inline`. These are IR counts, not machine instructions or cycles.
-Static counts include unreachable blocks; their dynamic count is zero.
+The version 2 report contains static and dynamic instruction counts by root and
+opcode. Dynamic counts describe **one invocation of each analyzed root**, or each
+non-inline definition if no root is annotated. `ape.inline` / `yard.inline`
+callee bodies are included recursively, multiplied by each call site's execution
+count, matching the cache analysis's inline expansion. The call instruction itself
+also counts. Other callees contribute only their call instruction.
+
+PHIs, debug intrinsics, and lifetime intrinsics are excluded. GEPs, loop conditions,
+branches, returns, and other intrinsics count once per execution. These are IR
+counts, not machine instructions or cycles. Static counts expand each inline call
+site once and include unreachable blocks; their dynamic count is zero. Each root's
+`self` and `blocks` retain its exclusive counts, while `inline_callees` lists each
+immediate call site's invocation count and contribution (including nested callees).
 
 Single-path control flow and natural loops with constant, provable backedge
 counts and one exit are supported, including nested loops, negative steps,
 zero-trip loops, and the final failed pretest. Counts are multiplied without
 unrolling. Data-dependent branches, unresolved trip counts, selected regions,
-and integer overflow are rejected rather than reported as exact counts. Old MAP
-files require regeneration. IR-only analysis needs no ELF/cache configuration
-and is independent of the trace-expansion limits.
+indirect calls, recursive inline calls, and integer overflow are rejected rather
+than reported as exact counts. MAP metadata version 1 remains supported for
+call-free functions, with PHIs filtered out. Functions containing calls require
+regeneration with the current frontend to obtain call targets. IR-only analysis
+needs no ELF/cache configuration and is independent of the trace-expansion limits.
 
 Combine IR counts with linked-address cache analysis by repeating `--analysis`:
 

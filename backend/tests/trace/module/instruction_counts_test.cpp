@@ -39,10 +39,10 @@ Json fixture()
 TEST(InstructionCountTest, AggregatesDynamicCountsIncludingLoopControl)
 {
   const auto result = yarda::count_ir_instructions(fixture());
-  EXPECT_EQ(result["total"]["static_instructions"], 7);
-  EXPECT_EQ(result["total"]["dynamic_instructions"], 20);
+  EXPECT_EQ(result["total"]["static_instructions"], 6);
+  EXPECT_EQ(result["total"]["dynamic_instructions"], 16);
   EXPECT_EQ(result["total"]["opcodes"]["br"]["dynamic"], 8);
-  EXPECT_EQ(result["total"]["opcodes"]["phi"]["dynamic"], 4);
+  EXPECT_FALSE(result["total"]["opcodes"].contains("phi"));
   EXPECT_EQ(result["functions"][0]["blocks"][2]["dynamic_instructions"], 6);
 }
 
@@ -52,8 +52,8 @@ TEST(InstructionCountTest, ZeroExecutionBlockRetainsStaticCount)
   input[0]["ir_instructions"]["blocks"][1]["executions"] = 1;
   input[0]["ir_instructions"]["blocks"][2]["executions"] = 0;
   const auto result = yarda::count_ir_instructions(input);
-  EXPECT_EQ(result["total"]["static_instructions"], 7);
-  EXPECT_EQ(result["total"]["dynamic_instructions"], 5);
+  EXPECT_EQ(result["total"]["static_instructions"], 6);
+  EXPECT_EQ(result["total"]["dynamic_instructions"], 4);
 }
 
 TEST(InstructionCountTest, CountsOnlyAnnotatedRootsOnce)
@@ -66,7 +66,7 @@ TEST(InstructionCountTest, CountsOnlyAnnotatedRootsOnce)
   input.push_back(helper);
   const auto result = yarda::count_ir_instructions(input);
   EXPECT_EQ(result["functions"].size(), 1U);
-  EXPECT_EQ(result["total"]["dynamic_instructions"], 20);
+  EXPECT_EQ(result["total"]["dynamic_instructions"], 16);
 }
 
 TEST(InstructionCountTest, LegacyMapRequiresRegeneration)

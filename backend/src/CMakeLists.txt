@@ -15,6 +15,7 @@ add_library(yarda_backend
     reuse/profile.cpp
     trace/module/schema.cpp
     trace/module/instruction_counts.cpp
+    trace/module/instruction_model.cpp
     trace/execution/trace.cpp
     trace/layout/access_layout.cpp
     trace/layout/access_layout_legacy.cpp

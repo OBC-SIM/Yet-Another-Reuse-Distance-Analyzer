@@ -36,7 +36,7 @@ void print_usage()
             << " [--granularity element|cache-line]"
             << " [--cache FILE] [--elf FILE] [--export PATH]\n"
             << "  --analysis mapping|hierarchy-rd|ir-instructions\n"
-            << "  ir-instructions counts one invocation per root, excluding callees\n"
+            << "  ir-instructions counts one invocation per root, expanding inline callees\n"
             << "  Repeat --analysis to add ir-instructions to mapping or hierarchy-rd\n"
             << "  hierarchy-rd requires --elf, --cache and --export FILE\n"
             << "  Loop-work limits (memory analysis only):\n"
