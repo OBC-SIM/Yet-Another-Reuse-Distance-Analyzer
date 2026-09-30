@@ -1,0 +1,7 @@
+{
+  "bases": {},
+  "tasks": [
+    {"id": "test_empty_loop", "sources": [
+    ]}
+  ]
+}

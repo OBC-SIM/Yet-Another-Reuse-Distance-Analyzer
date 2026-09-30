@@ -1,0 +1,58 @@
+function(record_provenance)
+    set(metadata "{}")
+    if(YARDA_REPETITIONS GREATER_EQUAL 10 AND YARDA_BUILD_TYPE STREQUAL "Release")
+        string(JSON metadata SET "${metadata}" formal_measurement true)
+    else()
+        string(JSON metadata SET "${metadata}" formal_measurement false)
+    endif()
+    foreach(key YARDA_BUILD_DIR YARDA_BUILD_FLAGS YARDA_BUILD_TYPE YARDA_COMPILER
+                YARDA_REPETITIONS YARDA_TIMEOUT YARDA_MEMORY_KIB)
+        set_json_string(metadata "${metadata}" "${key}" "${${key}}")
+    endforeach()
+    foreach(tool YARDA_EVALUATOR YARDA_CPP YARDA_REGION YARDA_CLANG)
+        file(SHA256 "${${tool}}" hash)
+        set_json_string(metadata "${metadata}" "${tool}_sha256" "${hash}")
+        set_json_string(metadata "${metadata}" "${tool}_path" "${${tool}}")
+    endforeach()
+    foreach(tool YARDA_COMPILER YARDA_CLANG)
+        execute_process(COMMAND "${${tool}}" --version OUTPUT_VARIABLE version
+            RESULT_VARIABLE status)
+        if(NOT status STREQUAL "0")
+            message(FATAL_ERROR "cannot identify compiler: ${${tool}}")
+        endif()
+        set_json_string(metadata "${metadata}" "${tool}_version" "${version}")
+    endforeach()
+    foreach(repository "${YARDA_ROOT}" "${YARDA_ROOT}/frontend")
+        execute_process(COMMAND git -C "${repository}" rev-parse HEAD
+            RESULT_VARIABLE status OUTPUT_VARIABLE head OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(status STREQUAL "0")
+            set_json_string(metadata "${metadata}" "${repository}_head" "${head}")
+            execute_process(COMMAND git -C "${repository}" status --porcelain
+                OUTPUT_VARIABLE working_tree)
+            set_json_string(metadata "${metadata}" "${repository}_working_tree" "${working_tree}")
+        endif()
+    endforeach()
+    foreach(path /proc/version /proc/loadavg /proc/meminfo /proc/cpuinfo
+                 /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+                 /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver)
+        if(EXISTS "${path}")
+            file(READ "${path}" content)
+            set_json_string(metadata "${metadata}" "${path}" "${content}")
+        endif()
+    endforeach()
+    file(WRITE "${YARDA_OUTPUT}/provenance.json" "${metadata}\n")
+    foreach(file CMakeCache.txt compile_commands.json)
+        configure_file("${YARDA_BUILD_DIR}/${file}" "${YARDA_OUTPUT}/${file}" COPYONLY)
+    endforeach()
+    file(GLOB_RECURSE sources LIST_DIRECTORIES FALSE
+        "${YARDA_EXPERIMENTS}/*.cpp" "${YARDA_EXPERIMENTS}/*.hpp"
+        "${YARDA_EXPERIMENTS}/*.c" "${YARDA_EXPERIMENTS}/*.cmake"
+        "${YARDA_EXPERIMENTS}/*.sh" "${YARDA_ROOT}/backend/src/*.cpp"
+        "${YARDA_ROOT}/backend/src/*.hpp" "${YARDA_ROOT}/backend/include/*.hpp")
+    set(hashes "{}")
+    foreach(source IN LISTS sources)
+        file(SHA256 "${source}" hash)
+        set_json_string(hashes "${hashes}" "${source}" "${hash}")
+    endforeach()
+    file(WRITE "${YARDA_OUTPUT}/sources.json" "${hashes}\n")
+endfunction()

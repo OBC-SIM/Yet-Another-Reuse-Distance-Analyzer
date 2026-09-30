@@ -1,0 +1,7 @@
+#pragma once
+
+namespace yarda::cli
+{
+/** @brief Build-fixed release/commit identity; never read Git at runtime. */
+inline constexpr char kToolVersion[] = "@YARDA_EFFECTIVE_TOOL_VERSION@";
+} // namespace yarda::cli

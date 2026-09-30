@@ -1,4 +1,4 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 #define M 16
 #define N 256
@@ -7,7 +7,7 @@
 float A[M][K], B[K][N], C[M][N];
 
 // 케이스 3: 행렬 곱셈 — 3중 루프, 다중 배열 접근
-YARD_ANALYZE
+APE_ANALYZE
 void matmul()
 {
   for (int i = 0; i < M; i++)

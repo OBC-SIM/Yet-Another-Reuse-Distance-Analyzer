@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "objects": {
+      "global::yarda_mapped_value": {
+        "kind": "array",
+        "shape": [1],
+        "elem_size": 8
+      }
+    }
+  },
+  "functions": [
+    {
+      "function": "opaque_helper",
+      "body": []
+    },
+    {
+      "function": "mapped_kernel",
+      "annotations": ["ape.analyze"],
+      "body": [
+        {
+          "type": "Call",
+          "callee": "opaque_helper",
+          "args": []
+        },
+        {
+          "type": "Array",
+          "name": "yarda_mapped_value[0]",
+          "object": "global::yarda_mapped_value",
+          "indices": ["0"],
+          "op": "store"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+function(run_checked label)
+    execute_process(COMMAND ${ARGN} WORKING_DIRECTORY "${case_dir}"
+        RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)
+    file(APPEND "${case_dir}/commands.log"
+        "${label}: ${ARGN}\nexit=${status}\n${output}\n${error}\n")
+    if(NOT status STREQUAL "0")
+        message(FATAL_ERROR "${label}: exit=${status}\n${error}\n${output}")
+    endif()
+endfunction()
+
+function(compare_files first second)
+    run_checked("byte comparison" "${CMAKE_COMMAND}" -E compare_files
+        "${first}" "${second}")
+endfunction()
+
+# Each failure is checked with absent outputs and with distinct old contents.
+function(expect_analysis_failure reason)
+    foreach(previous absent existing)
+        foreach(path "${result_file}" "${events_file}" "${telemetry_file}")
+            if(previous STREQUAL "absent")
+                file(REMOVE "${path}")
+            else()
+                file(WRITE "${path}" "previous:${path}\n")
+            endif()
+        endforeach()
+        execute_process(COMMAND ${analysis_prefix} "${YARDA_CPP}" ${ARGN}
+            WORKING_DIRECTORY "${case_dir}" RESULT_VARIABLE status
+            OUTPUT_VARIABLE output ERROR_VARIABLE error)
+        file(APPEND "${case_dir}/commands.log"
+            "rejection (${previous}): ${analysis_prefix};${YARDA_CPP};${ARGN}\nexit=${status}\n${output}\n${error}\n")
+        if(NOT status STREQUAL "1" OR NOT error MATCHES "${reason}")
+            message(FATAL_ERROR "expected ${reason}: exit=${status}\n${error}")
+        endif()
+        foreach(path "${result_file}" "${events_file}" "${telemetry_file}")
+            if(previous STREQUAL "absent")
+                if(EXISTS "${path}")
+                    message(FATAL_ERROR "failed analysis published ${path}")
+                endif()
+            else()
+                file(READ "${path}" retained)
+                if(NOT retained STREQUAL "previous:${path}\n")
+                    message(FATAL_ERROR "failed analysis changed ${path}")
+                endif()
+            endif()
+        endforeach()
+        file(GLOB staging "${case_dir}/.yarda-*")
+        if(staging)
+            message(FATAL_ERROR "failed analysis left staging: ${staging}")
+        endif()
+    endforeach()
+endfunction()

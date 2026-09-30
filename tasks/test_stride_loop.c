@@ -1,10 +1,10 @@
-#include "yard_analyze.h"
+#include "ape_analyze.h"
 
 #define N 128
 
 int A[N];
 
-YARD_ANALYZE
+APE_ANALYZE
 void stride_loop(void)
 {
   for (int i = 0; i < N; i += 32)

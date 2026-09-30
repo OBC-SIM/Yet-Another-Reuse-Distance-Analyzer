@@ -1,13 +1,14 @@
 # YARDA C++ Backend
 
-This backend consumes legacy or APE v2 Loop Annotated Trace JSON and computes
+This backend consumes legacy or APE v2 Memory Access Patterns JSON and computes
 reuse-distance histograms without Python. It supports exact element/cache-line
-unrolling and the element-granularity Dilation predictor.
+unrolling.
 
 ## Build and test
 
-Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json, and
-GTest. The root build configures both the frontend submodule and this backend.
+Requirements: LLVM 14, CMake 3.20+, a C++17 compiler, nlohmann/json 3.10.5+,
+yaml-cpp 0.7+, and GTest. The root build configures both the frontend submodule
+and this backend.
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
@@ -17,24 +18,267 @@ ctest --test-dir build --output-on-failure
 
 CTest runs the frontend and backend test suites together.
 
+## LLVM IR instruction counts
+
+Regenerate MAP with the current frontend to include `ir_instructions` metadata.
+The counter uses the IR at extraction time, so record the compiler options and
+pass pipeline when comparing results. For example:
+
+```bash
+opt-14 -load-pass-plugin=build/libMemoryAccessPatterns.so \
+  -passes='function(mem2reg),loop-simplify,loop-annotated-trace' \
+  kernel.ll -disable-output
+./build/backend/yarda_cpp kernel_ape.json \
+  --analysis ir-instructions --export instructions.json
+```
+
+The version 2 report contains static and dynamic instruction counts by root and
+opcode. Dynamic counts describe **one invocation of each analyzed root**, or each
+non-inline definition if no root is annotated. `ape.inline` / `yard.inline`
+callee bodies are included recursively, multiplied by each call site's execution
+count, matching the cache analysis's inline expansion. The call instruction itself
+also counts. Other callees contribute only their call instruction.
+
+PHIs, debug intrinsics, and lifetime intrinsics are excluded. GEPs, loop conditions,
+branches, returns, and other intrinsics count once per execution. These are IR
+counts, not machine instructions or cycles. Static counts expand each inline call
+site once and include unreachable blocks; their dynamic count is zero. Each root's
+`self` and `blocks` retain its exclusive counts, while `inline_callees` lists each
+immediate call site's invocation count and contribution (including nested callees).
+
+Single-path control flow and natural loops with constant, provable backedge
+counts and one exit are supported, including nested loops, negative steps,
+zero-trip loops, and the final failed pretest. Counts are multiplied without
+unrolling. Data-dependent branches, unresolved trip counts, selected regions,
+indirect calls, recursive inline calls, and integer overflow are rejected rather
+than reported as exact counts. MAP metadata version 1 remains supported for
+call-free functions, with PHIs filtered out. Functions containing calls require
+regeneration with the current frontend to obtain call targets. IR-only analysis
+needs no ELF/cache configuration and is independent of the trace-expansion limits.
+
+Combine IR counts with linked-address cache analysis by repeating `--analysis`:
+
+```bash
+./build/backend/yarda_cpp kernel_ape.json \
+  --analysis hierarchy-rd --analysis ir-instructions \
+  --elf kernel.elf --cache backend/config/cache.32b.yaml \
+  --export combined.json
+```
+
+The order does not matter; repeated `ir-instructions` does not duplicate counts.
+The existing cache result gains an `ir_instructions` field containing the full
+IR report. `mapping` can also be combined with `ir-instructions`; `mapping` and
+`hierarchy-rd` are mutually exclusive. If IR counting fails in combined mode,
+the cache result is still saved and the command succeeds. Its `ir_instructions`
+field contains `status: error` and `reason`, with no instruction totals. Exact IR
+reports have `status: exact`. Check this status before computing miss/instruction
+ratios. Standalone IR failure and cache-analysis failure still fail the command.
+
+Region MAP is accepted by the task mapping and streaming hierarchy APIs. Its
+`analysis_scope` is validated before task delivery, and result/event IDs use
+`region:<UTF-8 byte length>:<original function>:APE_ANALYZE`. Original function
+and object bindings remain unchanged; legacy whole-module unroll rejects region
+MAP. Enable the optional source frontend with `YARDA_BUILD_REGION_FRONTEND=ON`
+to also build the C-to-MAP/ET_EXEC integration fixtures. See the
+[region contract](../docs/analysis-regions-v1.md) for selection semantics.
+
 ## Run
 
 ```bash
 ./build/backend/yarda_cpp tasks/polybench_atax_g_ape.json \
   --mode unroll \
   --granularity cache-line \
-  --cache-line-size 32 \
+  --cache backend/config/cache.32b.yaml \
   --export atax_rdh.json
-
-./build/backend/yarda_cpp tasks/polybench_atax_g_ape.json \
-  --mode predict \
-  --granularity element \
-  --export atax_predicted_rdh.json
 ```
 
-Both modes implement LAT v1/v2 normalization, annotated direct-call expansion,
-block profiles, and Python-compatible JSON export. Exact unrolling uses a
-Fenwick tree for O(N log N) reuse-distance profiling. Predict mode implements
-the 1D/2D/3D Dilation Equation path at element granularity; when a sampled reuse
-family is unstable it preserves correctness by falling back to the exact C++
-profile for that block.
+The unroll path implements MAP v1/v2 normalization, annotated direct-call
+expansion, block profiles, and Python-compatible JSON export. Exact unrolling
+uses a Fenwick tree for O(N log N) reuse-distance profiling. `--mode unroll`
+remains accepted for command-line compatibility; `--mode predict` is not
+supported. Cache-line granularity requires a versioned YAML hierarchy passed
+through `--cache`; core 0's configured L1 line size defines trace grouping.
+APE v2 cache-line references use the canonical object ID, so different index
+expressions for the same storage share one line identity. Legacy accesses
+without an object ID fall back to their reference name. Cache-line profiles
+produced by the earlier name-based behavior must be regenerated.
+
+For task-isolated linked-address mapping, pass a non-PIE executable and cache
+configuration:
+
+```bash
+./build/backend/yarda_cpp task_ape.json \
+  --elf task.elf \
+  --cache backend/config/cache.32b.yaml \
+  --export task_mapping.json
+```
+
+This path accepts only `ET_EXEC`, resolves canonical global objects once, and
+maps them with core 0's L1 geometry. The versioned JSON preserves task-local
+source ordinals, load/store operations, cross-line provenance, complete
+resolution coverage, and known non-inline static call-site exclusions. The
+`known_non_inline_static_call_sites` count includes only known non-inline
+`Call` nodes present in the input MAP after inline expansion; it is not a census
+of every call in the original C source and does not multiply sites by loop
+iterations. Calls to another analyzed root are caller-local opaque sites while
+the callee remains a separate task. This mode intrinsically maps cache lines:
+omit `--granularity` or pass `cache-line`; explicit `element` is rejected. Its
+`linked_absolute` addresses are linked virtual addresses, not automatically
+physical addresses. Without `--export`, the JSON is written to stdout.
+
+Loop `start` and `bound` accept integers or affine strings over enclosing loop variables
+(for example, `"i"`, `"i+1"`, or `"2*i+1"`). The C++ traversal binds that expression
+in the parent scope and reevaluates it on every loop entry. `bound` is exclusive:
+SYRK's `j <= i` uses `"i+1"`, and Nussinov's `k < j` uses `"j"`. `step`
+remains an integer. Empty triangular rows emit no accesses, and each entry charges
+its actual iteration count against the loop-work budget. Unbound or overflowing
+endpoint expressions fail at the reached loop. Existing numeric endpoints are unchanged.
+The legacy Python reader does not support string endpoints.
+
+Every MAP expansion path, including streaming hierarchy analysis, is limited to
+100,000 call-expansion node visits and an inline call depth of 256. All CLI
+analysis modes default to 1,000,000 iterations per loop and 1,000,000 cumulative
+loop iterations. Override them with `--max-single-loop-iterations` and
+`--max-cumulative-loop-iterations`, including for `--mode unroll` and ELF
+mapping. The cumulative budget covers the entire MAP module, not each function
+separately. For example, a module requiring 2,949,120 cumulative iterations can
+be analyzed with:
+
+```bash
+./build/backend/yarda_cpp exp2_workload_g_ape.json --mode unroll \
+  --max-cumulative-loop-iterations 2949120 --export exp2_rdh.json
+```
+
+The legacy paths do not cap source access count, and raising loop limits does
+not change their trace materialization or memory usage per access.
+The `--elf` report materializes every resolved access and mapped line reference,
+so large traces can exhaust host memory. Exceeding a structural expansion limit
+fails the complete invocation instead of returning a partial trace.
+
+## Hierarchy analysis CLI
+
+```bash
+./build/backend/yarda_cpp task_ape.json \
+  --analysis hierarchy-rd \
+  --elf task.elf \
+  --cache backend/config/cache.32b.yaml \
+  --export result.json \
+  --export-events events.json --event-limit 1000 \
+  --telemetry telemetry.json
+```
+
+The MAP must explicitly declare `schema_version: 2`; ELF, cache, and RESULT
+paths are required. Inputs must remain unchanged throughout the invocation.
+The selected model is core 0, private L1 -> shared LLC -> Memory, equal line
+sizes, LRU, allocation on demand misses, and independent cold tasks. Only L1
+misses reach LLC. Region selection comes from the MAP; there is no backend
+region or core selector. See the [model](../docs/cache-hierarchy-rd-model-v1.md)
+and [artifact contract](../docs/cache-hierarchy-artifacts-v2.md).
+
+RESULT uses `schema_version: 2` and glossary metric keys:
+`modeled_accesses`, `l1_first_hit_count`, `llc_first_hit_count`,
+`all_cache_miss_count`, `l1_first_hit_ratio`, `llc_first_hit_ratio`, and
+`all_cache_miss_ratio`. Ratios use L1 line references as their denominator;
+`source_accesses` remains separate. EVENTS and TELEMETRY retain schema 1 and
+share the RESULT v2 analysis ID. See the contract for migration from v1 keys.
+
+`--analysis mapping` explicitly selects the existing ELF mapping path and
+requires ELF/cache. Omitting `--analysis` preserves the existing dispatch,
+including unroll/profile output and mapping to stdout without `--export`.
+`--mode unroll` remains accepted. With ELF, explicit `--granularity element`
+is rejected; omitted or `cache-line` granularity is accepted.
+
+Work limits are unsigned decimal `uint64_t` values:
+
+| Option | Default | Available modes |
+| --- | ---: | --- |
+| `--max-single-loop-iterations` | 1,000,000 | All |
+| `--max-cumulative-loop-iterations` | 1,000,000 | All |
+| `--max-source-accesses` | 1,000,000 | `hierarchy-rd` |
+| `--max-line-references` | 10,000,000 | `hierarchy-rd` |
+
+Source/line emission limits and the diagnostic options require `hierarchy-rd`.
+Successful results are independent of work allowances, event limits and
+telemetry. `--event-limit` requires `--export-events`, even when the limit is
+zero. Its default is zero: an enabled event export then contains an empty
+prefix and indicates truncation if any line was analyzed. Set a positive limit
+to retain events. Events are bounded across the entire invocation; truncation
+does not stop analysis. Omitting each diagnostic option creates no corresponding
+artifact. Valid repeated options retain their last value.
+
+Hierarchy outputs require distinct ordinary file paths; `-`, symlinks, special
+files and aliases of inputs are rejected. All JSON is dumped before output I/O.
+Staged files are closed before publication, with RESULT published last.
+Handled write/rename failures restore old files and remove newly published
+files. Errors exit with status 1 and identify the affected path. The detailed
+rollback and cleanup boundaries are specified in the artifact contract.
+
+Each build embeds a `tool_version`. By default it uses the project version plus
+the source Git commit and a dirty suffix when appropriate; source archives use
+the project version. Set `-DYARDA_TOOL_VERSION=RELEASE_ID` to override it.
+The header is refreshed on every build, without rewriting unchanged content.
+The executable never queries Git or the wall clock for RESULT identity.
+
+## Streaming hierarchy work limits
+
+The C++ streaming APIs expose independent single-loop and cumulative-loop
+allowances through `LoopWorkLimits` in `yarda/trace/work_limits.hpp`. Both
+default to 1,000,000 iterations. Hierarchy callers set them alongside the
+existing source/line emission allowances:
+
+```cpp
+yarda::StreamingHierarchyOptions options;
+options.loop_limits = {2'000'000, 20'000'000};
+options.emission_limits = {10'000'000, 20'000'000};
+auto result = yarda::analyze_streaming_hierarchy(map, objects, hierarchy, options);
+```
+
+Producer callers use
+`stream_resolved_task_accesses(map, objects, sink, emission_budget, loop_limits)`.
+The existing three- and four-argument overloads retain default loop limits.
+Hierarchy emission defaults remain 1,000,000 sources and 10,000,000 source-to-L1
+line references. The hierarchy CLI exposes the same settings through the four
+flags above; legacy CLI and batch defaults are unchanged.
+Collecting callers can use `block_traces(map, granularity, line_size, loop_limits)`
+or `resolved_task_traces(map, objects, loop_limits)`. Existing overloads retain
+their default loop limits.
+
+All limits are inclusive. Zero permits no iterations or emissions for that
+specific budget; it is never an unlimited sentinel. Zero-trip loops and flat
+accesses do not consume loop work, while loops with empty bodies still do.
+At each dynamic loop entry, the single-loop allowance is checked and the entire
+trip count is reserved from one module budget before the body executes. For
+example, a two-iteration outer loop with a three-iteration inner loop consumes
+`2 + 2 * 3 = 8` cumulative iterations. Task boundaries reset cache state and
+source ordinals, but do not reset cumulative loop/source/line allowances.
+
+Raising source/line limits alone does not raise loop limits. Cross-line accesses
+consume one line allowance per source-to-L1 reference; LLC forwarding is not
+charged again. Node/depth guards, checked arithmetic and address validation
+remain active. Any exhaustion fails the whole invocation, stops callbacks and
+returns no partial result. Discard any previously collected sink events on
+failure. Event truncation alone still permits complete analysis.
+
+## Prepared loop execution
+
+Task and legacy unrolling prepare each reached static MAP node once per subtree
+traversal. Repeated execution reuses the loop body and integer variable slots,
+including lexical shadowing, instead of copying JSON bodies and variable maps.
+Supported index expressions keep their existing spelling and rejection rules;
+address layout and ELF extent checks still run through the existing resolver.
+
+Preparation follows execution order. Zero-trip bodies are not prepared, loop
+work is reserved at every dynamic entry, and later malformed nodes cannot
+preempt an earlier consumer exception. All preparation occurs inside the
+analysis call. Prepared nodes borrow the immutable expanded input and are
+released when traversal returns or fails. Their storage follows static nodes,
+indices and loop slots, with no per-access history or cache shared between
+analyses. Full-exact cache history remains a separate distinct-line cost.
+
+## Hierarchy evaluation
+
+Enable `YARDA_BUILD_HIERARCHY_EXPERIMENTS=ON` together with the region frontend
+to build the optional C++ batch/streaming comparison tools. The
+[evaluation README](experiments/README.md) describes input preparation,
+independent source checks, work limits, timing/RSS boundaries and reproduction.
+Long measurements are explicit runs; CTest adds only short correctness checks.

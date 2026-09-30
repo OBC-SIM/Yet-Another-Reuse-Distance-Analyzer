@@ -1,33 +1,15 @@
-add_library(yarda_backend
-    src/calls.cpp
-    src/dilation.cpp
-    src/merger.cpp
-    src/predictor.cpp
-    src/predictor_3d.cpp
-    src/profile.cpp
-    src/schema.cpp
-    src/trace.cpp
-)
+set(YARDA_BACKEND_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(YARDA_BACKEND_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-target_include_directories(yarda_backend PUBLIC include)
-target_link_libraries(yarda_backend PUBLIC nlohmann_json::nlohmann_json)
-target_compile_options(yarda_backend PRIVATE -Wall -Wextra -Wpedantic)
+find_package(LLVM 14 REQUIRED CONFIG)
 
-add_executable(yarda_cpp src/main.cpp)
-target_link_libraries(yarda_cpp PRIVATE yarda_backend)
+add_subdirectory(src)
 
 if(BUILD_TESTING)
-    find_package(GTest REQUIRED)
-    add_executable(yarda_backend_tests
-        tests/calls_test.cpp
-        tests/dilation_test.cpp
-        tests/merger_test.cpp
-        tests/predictor_test.cpp
-        tests/profile_test.cpp
-        tests/schema_test.cpp
-        tests/trace_test.cpp
-    )
-    target_link_libraries(yarda_backend_tests PRIVATE yarda_backend GTest::gtest_main)
-    include(GoogleTest)
-    gtest_discover_tests(yarda_backend_tests)
+    add_subdirectory(tests)
+endif()
+
+option(YARDA_BUILD_HIERARCHY_EXPERIMENTS "Build hierarchy evaluation tools" OFF)
+if(YARDA_BUILD_HIERARCHY_EXPERIMENTS)
+    add_subdirectory(experiments)
 endif()

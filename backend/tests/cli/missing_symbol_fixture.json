@@ -1,0 +1,25 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "objects": {
+      "global::missing_from_elf": {
+        "kind": "scalar",
+        "elem_size": 4
+      }
+    }
+  },
+  "functions": [
+    {
+      "function": "missing_symbol_kernel",
+      "annotations": ["ape.analyze"],
+      "body": [
+        {
+          "type": "Scalar",
+          "name": "missing_from_elf",
+          "object": "global::missing_from_elf",
+          "op": "load"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+atax-micro exit=0 complete=1 valid1=11 valid0=0 cycles=49653558 instr=33029929 cpi=1.50 simtime=198.61 ms wall=1.2s
+bicg-micro exit=0 complete=1 valid1=11 valid0=0 cycles=49652805 instr=33030040 cpi=1.50 simtime=198.61 ms wall=1.1s
+mvt-micro exit=0 complete=1 valid1=11 valid0=0 cycles=49653533 instr=33030901 cpi=1.50 simtime=198.61 ms wall=1.2s
+atax-mini exit=0 complete=1 valid1=11 valid0=0 cycles=53175237 instr=35368218 cpi=1.50 simtime=212.70 ms wall=1.2s
+bicg-mini exit=0 complete=1 valid1=11 valid0=0 cycles=52968471 instr=35239781 cpi=1.50 simtime=211.87 ms wall=1.2s
+mvt-mini exit=0 complete=1 valid1=11 valid0=0 cycles=53315709 instr=35525492 cpi=1.50 simtime=213.26 ms wall=1.3s
+atax-small exit=0 complete=1 valid1=11 valid0=0 cycles=76322861 instr=51015735 cpi=1.50 simtime=305.29 ms wall=1.7s
+bicg-small exit=0 complete=1 valid1=11 valid0=0 cycles=73103535 instr=48462315 cpi=1.51 simtime=292.41 ms wall=1.7s
+mvt-small exit=0 complete=1 valid1=11 valid0=0 cycles=76816753 instr=51015803 cpi=1.51 simtime=307.27 ms wall=1.8s
+atax-medium exit=0 complete=1 valid1=11 valid0=0 cycles=312318037 instr=205415782 cpi=1.52 simtime=1.25 s wall=7.0s
+bicg-medium exit=0 complete=1 valid1=11 valid0=0 cycles=292678084 instr=193009259 cpi=1.52 simtime=1.17 s wall=6.6s
+mvt-medium exit=0 complete=1 valid1=11 valid0=0 cycles=336692215 instr=205516841 cpi=1.64 simtime=1.35 s wall=7.2s
+mvt-llc-crossing-custom exit=0 complete=1 valid1=11 valid0=0 cycles=573621341 instr=350570942 cpi=1.64 simtime=2.29 s wall=12.1s
+sweep-v4096-r1 exit=0 complete=1 valid1=11 valid0=0 cycles=55942174 instr=36487636 cpi=1.53 simtime=223.77 ms wall=1.3s
+sweep-v4096-r16 exit=0 complete=1 valid1=11 valid0=0 cycles=89288669 instr=53733625 cpi=1.66 simtime=357.15 ms wall=1.8s
+sweep-v4096-r128 exit=0 complete=1 valid1=11 valid0=0 cycles=327577468 instr=175371459 cpi=1.87 simtime=1.31 s wall=5.7s

@@ -21,6 +21,7 @@ from polybench_suite import PreparedWorkload, discover_workloads, prepare_worklo
 
 ROOT = Path(__file__).resolve().parent.parent
 CPP_BACKEND = ROOT / "build" / "backend" / "yarda_cpp"
+CACHE_CONFIG = ROOT / "backend" / "config" / "cache.example.yaml"
 RESULTS = ROOT / "benchmark-results" / "cbana-polybench-supported"
 TOOLS = ("Cachegrind", "YARDA (Python)", "YARDA (C++)")
 CACHE_LINE_SIZE = 64
@@ -45,9 +46,9 @@ CASES = (
     Case("seidel_2d_mini", "seidel-2d", "MINI", 4.09),
 )
 EXCLUDED = (
-    ("durbin_mini", "dynamic loop bound is not represented by the current LAT"),
-    ("lu_mini", "dynamic loop bounds are not represented by the current LAT"),
-    ("trisolv_small", "dynamic loop bound is not represented by the current LAT"),
+    ("durbin_mini", "dynamic loop bound is not represented by the current MAP"),
+    ("lu_mini", "dynamic loop bounds are not represented by the current MAP"),
+    ("trisolv_small", "dynamic loop bound is not represented by the current MAP"),
 )
 
 
@@ -63,7 +64,7 @@ def run_quiet(command: list[str], timeout: int = 600) -> None:
     )
 
 
-def python_command(lat: Path) -> list[str]:
+def python_command(map: Path) -> list[str]:
     """Build Python YARDA's exact 64-byte cache-line command."""
     source = (
         "import json,sys;"
@@ -75,20 +76,20 @@ def python_command(lat: Path) -> list[str]:
         "block_trace_results(raw,'cache-line',64)];"
         "LRUProfiler.calculate(trace)"
     )
-    return [sys.executable, "-c", source, str(lat)]
+    return [sys.executable, "-c", source, str(map)]
 
 
-def cpp_command(lat: Path) -> list[str]:
+def cpp_command(map: Path) -> list[str]:
     """Build C++ YARDA's exact 64-byte cache-line command."""
     return [
         str(CPP_BACKEND),
-        str(lat),
+        str(map),
         "--mode",
         "unroll",
         "--granularity",
         "cache-line",
-        "--cache-line-size",
-        str(CACHE_LINE_SIZE),
+        "--cache",
+        str(CACHE_CONFIG),
     ]
 
 
@@ -116,13 +117,13 @@ def measure(command: list[str], repetitions: int) -> list[float]:
     return samples
 
 
-def python_profile(lat: Path) -> tuple[dict[int, int], int, int]:
+def python_profile(map: Path) -> tuple[dict[int, int], int, int]:
     """Return Python YARDA's reuse histogram, cold count, and trace length."""
     sys.path.insert(0, str(ROOT / "backend"))
     from block_trace import block_trace_results
     from lru_sim import LRUProfiler
 
-    raw = json.loads(lat.read_text())
+    raw = json.loads(map.read_text())
     trace: list[str] = []
     for _, _, block in block_trace_results(raw, "cache-line", CACHE_LINE_SIZE):
         trace.extend(block)
@@ -132,9 +133,9 @@ def python_profile(lat: Path) -> tuple[dict[int, int], int, int]:
 
 def verify_parity(case: Case, artifact: PreparedWorkload) -> tuple[int, int]:
     """Require exact Python/C++ reuse-distance parity before timing."""
-    histogram, cold, accesses = python_profile(artifact.lat)
-    export = artifact.lat.with_name(f"{case.label}_cpp.json")
-    run_quiet([*cpp_command(artifact.lat), "--export", str(export)])
+    histogram, cold, accesses = python_profile(artifact.map)
+    export = artifact.map.with_name(f"{case.label}_cpp.json")
+    run_quiet([*cpp_command(artifact.map), "--export", str(export)])
     program = json.loads(export.read_text())["program"]
     cpp_histogram = {
         int(distance): frequency
@@ -168,8 +169,8 @@ def benchmark(
         accesses, cold = verify_parity(case, artifact)
         commands = {
             "Cachegrind": cachegrind_command(case, artifact),
-            "YARDA (Python)": python_command(artifact.lat),
-            "YARDA (C++)": cpp_command(artifact.lat),
+            "YARDA (Python)": python_command(artifact.map),
+            "YARDA (C++)": cpp_command(artifact.map),
         }
         medians = {}
         for tool in TOOLS:
