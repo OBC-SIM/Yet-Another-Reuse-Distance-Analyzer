@@ -1,3 +1,5 @@
+cmake_policy(SET CMP0054 NEW)
+
 file(MAKE_DIRECTORY "${WORK_DIR}")
 file(WRITE "${WORK_DIR}/count.ll" [=[
 define void @kernel() {
@@ -76,6 +78,55 @@ foreach(mode mapping hierarchy-rd)
         string(JSON count GET "${combined}" ir_instructions total dynamic_instructions)
         if(NOT count EQUAL 16)
             message(FATAL_ERROR "Combined result lost IR counts: ${combined}")
+        endif()
+    endforeach()
+endforeach()
+
+# Optional IR failures must preserve the cache document in both combined modes.
+foreach(failure missing malformed unsupported overflow)
+    if(failure STREQUAL "missing")
+        string(JSON invalid REMOVE "${map}" functions 0 ir_instructions)
+    elseif(failure STREQUAL "malformed")
+        string(JSON invalid SET "${map}" functions 0 ir_instructions blocks 0 name "null")
+    elseif(failure STREQUAL "unsupported")
+        string(JSON invalid SET "${map}" functions 0 ir_instructions status "\"unsupported\"")
+        string(JSON invalid SET "${invalid}" functions 0 ir_instructions reason "\"unproved trip count\"")
+    else()
+        string(JSON invalid SET "${map}" functions 0 ir_instructions blocks 1 executions "18446744073709551615")
+    endif()
+    file(WRITE "${WORK_DIR}/invalid.json" "${invalid}")
+    execute_process(COMMAND "${CLI}" "${WORK_DIR}/invalid.json"
+        --analysis ir-instructions RESULT_VARIABLE status ERROR_VARIABLE error)
+    if(status EQUAL 0)
+        message(FATAL_ERROR "Standalone IR must reject ${failure}")
+    endif()
+    foreach(mode mapping hierarchy-rd)
+        execute_process(COMMAND "${CLI}" "${WORK_DIR}/invalid.json"
+            --analysis "${mode}" --elf "${ELF}" --cache "${CACHE}"
+            --export "${WORK_DIR}/cache.json" RESULT_VARIABLE status)
+        if(NOT status EQUAL 0)
+            message(FATAL_ERROR "Cache baseline failed")
+        endif()
+        file(READ "${WORK_DIR}/cache.json" baseline)
+        execute_process(COMMAND "${CLI}" "${WORK_DIR}/invalid.json"
+            --analysis "${mode}" --analysis ir-instructions
+            --elf "${ELF}" --cache "${CACHE}"
+            --export "${WORK_DIR}/partial.json"
+            RESULT_VARIABLE status ERROR_VARIABLE error)
+        if(NOT status EQUAL 0)
+            message(FATAL_ERROR "${mode} discarded cache results on ${failure}: ${error}")
+        endif()
+        file(READ "${WORK_DIR}/partial.json" partial)
+        string(JSON ir_status GET "${partial}" ir_instructions status)
+        string(JSON reason GET "${partial}" ir_instructions reason)
+        string(JSON total ERROR_VARIABLE no_total GET "${partial}" ir_instructions total)
+        if(NOT ir_status STREQUAL "error" OR reason STREQUAL "" OR NOT no_total)
+            message(FATAL_ERROR "Invalid failure report: ${partial}")
+        endif()
+        string(JSON partial REMOVE "${partial}" ir_instructions)
+        string(JSON baseline GET "${baseline}")
+        if(NOT partial STREQUAL baseline)
+            message(FATAL_ERROR "${mode} cache result changed on ${failure}")
         endif()
     endforeach()
 endforeach()

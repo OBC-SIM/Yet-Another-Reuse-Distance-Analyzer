@@ -175,14 +175,20 @@ TEST_F(HierarchyCommandTest, IncludesIrCountsWithoutChangingCacheResults)
   EXPECT_EQ(combined, cache_only);
 }
 
-TEST_F(HierarchyCommandTest, IrFailurePreservesAllExistingArtifacts)
+TEST_F(HierarchyCommandTest, IrFailureStillPublishesCacheAndDiagnosticArtifacts)
 {
   diagnostics();
   write(options.export_path, "previous result");
   options.ir_instructions = true;
-  EXPECT_THROW(run_hierarchy_command(options), std::invalid_argument);
-  EXPECT_EQ(read(options.export_path), "previous result");
-  EXPECT_FALSE(fs::exists(options.events_path));
-  EXPECT_FALSE(fs::exists(options.telemetry_path));
+  run_hierarchy_command(options);
+  const auto result = Json::parse(read(options.export_path));
+  EXPECT_EQ(result["tasks"].size(), 3U);
+  EXPECT_EQ(result["ir_instructions"]["status"], "error");
+  EXPECT_NE(result["ir_instructions"]["reason"].get<std::string>().find(
+              "regenerate MAP"),
+            std::string::npos);
+  EXPECT_FALSE(result["ir_instructions"].contains("total"));
+  EXPECT_TRUE(fs::exists(options.events_path));
+  EXPECT_TRUE(fs::exists(options.telemetry_path));
 }
 } // namespace

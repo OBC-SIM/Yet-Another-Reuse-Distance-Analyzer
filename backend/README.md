@@ -68,9 +68,11 @@ Combine IR counts with linked-address cache analysis by repeating `--analysis`:
 The order does not matter; repeated `ir-instructions` does not duplicate counts.
 The existing cache result gains an `ir_instructions` field containing the full
 IR report. `mapping` can also be combined with `ir-instructions`; `mapping` and
-`hierarchy-rd` are mutually exclusive. Combined analysis requires both analyses
-to succeed before publishing the result. IR counts retain their function scope;
-memory analysis may expand inline helpers or exclude opaque calls separately.
+`hierarchy-rd` are mutually exclusive. If IR counting fails in combined mode,
+the cache result is still saved and the command succeeds. Its `ir_instructions`
+field contains `status: error` and `reason`, with no instruction totals. Exact IR
+reports have `status: exact`. Check this status before computing miss/instruction
+ratios. Standalone IR failure and cache-analysis failure still fail the command.
 
 Region MAP is accepted by the task mapping and streaming hierarchy APIs. Its
 `analysis_scope` is validated before task delivery, and result/event IDs use

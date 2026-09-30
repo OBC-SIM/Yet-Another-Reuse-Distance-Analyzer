@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "hierarchy_command.hpp"
+#include "ir_report.hpp"
 #include "json_output.hpp"
 #include "options.hpp"
 
@@ -92,7 +93,7 @@ void map_elf_tasks(const Options & options, const Json & raw,
   metadata.geometry = geometry;
   auto document = yarda::task_mapping_json(metadata, resolved, mapped);
   if (options.ir_instructions)
-    document["ir_instructions"] = yarda::count_ir_instructions(raw);
+    document["ir_instructions"] = yarda::cli::optional_ir_report(raw);
   write_json_document(document.dump(2), options.export_path);
 }
 

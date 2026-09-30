@@ -6,13 +6,13 @@
 #include <utility>
 #include <vector>
 
+#include "ir_report.hpp"
 #include "artifact_output.hpp"
 #include "build_version.hpp"
 #include "yarda/cache/hierarchy_result_json.hpp"
 #include "yarda/cache/yaml_config_parser.hpp"
 #include "yarda/elf/data_regions.hpp"
 #include "yarda/elf/object_addresses.hpp"
-#include "yarda/trace/instruction_counts.hpp"
 
 namespace yarda::cli
 {
@@ -46,7 +46,7 @@ void run_hierarchy_command(const Options & options,
   metadata.map_schema_version = raw["schema_version"].get<std::uint32_t>();
   const auto ir_counts =
       options.ir_instructions
-          ? std::optional<nlohmann::json>(count_ir_instructions(raw))
+          ? std::optional<nlohmann::json>(optional_ir_report(raw))
           : std::nullopt;
   if (collector) collector->finish_stage(AnalysisStage::ParseMap, started);
 

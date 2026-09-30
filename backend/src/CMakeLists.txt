@@ -133,6 +133,7 @@ add_library(yarda_cli_support
     cli/artifact_output.cpp
     cli/options.cpp cli/json_output.cpp
     cli/hierarchy_command.cpp
+    cli/ir_report.cpp
 )
 add_dependencies(yarda_cli_support yarda_cli_version)
 target_include_directories(yarda_cli_support PRIVATE "${YARDA_CLI_GENERATED}")
