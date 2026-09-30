@@ -154,4 +154,35 @@ TEST_F(HierarchyCommandTest, AllowsZeroBudgetsForAnEmptyTask)
   EXPECT_TRUE(events["events"].empty());
   EXPECT_EQ(events["events_truncated"], false);
 }
+TEST_F(HierarchyCommandTest, IncludesIrCountsWithoutChangingCacheResults)
+{
+  auto input = raw();
+  for (auto & function : input["functions"])
+    function["ir_instructions"] = {
+      {"version", 1}, {"status", "exact"}, {"scope", "function-exclusive"},
+      {"basis", "map-extraction-ir"},
+      {"excluded", "debug-and-lifetime-intrinsics"},
+      {"blocks", Json::array({{{"id", 0}, {"name", "entry"},
+                              {"executions", 1}, {"opcodes", {{"ret", 1}}}}})}};
+  write(options.input, input.dump());
+  run_hierarchy_command(options);
+  const auto cache_only = Json::parse(read(options.export_path));
+  options.ir_instructions = true;
+  run_hierarchy_command(options);
+  auto combined = Json::parse(read(options.export_path));
+  EXPECT_EQ(combined["ir_instructions"]["total"]["dynamic_instructions"], 3);
+  combined.erase("ir_instructions");
+  EXPECT_EQ(combined, cache_only);
+}
+
+TEST_F(HierarchyCommandTest, IrFailurePreservesAllExistingArtifacts)
+{
+  diagnostics();
+  write(options.export_path, "previous result");
+  options.ir_instructions = true;
+  EXPECT_THROW(run_hierarchy_command(options), std::invalid_argument);
+  EXPECT_EQ(read(options.export_path), "previous result");
+  EXPECT_FALSE(fs::exists(options.events_path));
+  EXPECT_FALSE(fs::exists(options.telemetry_path));
+}
 } // namespace

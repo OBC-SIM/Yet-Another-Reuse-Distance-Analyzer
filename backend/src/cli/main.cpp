@@ -17,6 +17,7 @@
 #include "yarda/elf/data_regions.hpp"
 #include "yarda/elf/object_addresses.hpp"
 #include "yarda/reuse/profile.hpp"
+#include "yarda/trace/instruction_counts.hpp"
 #include "yarda/trace/mapped_trace.hpp"
 #include "yarda/trace/task_mapping_json.hpp"
 #include "yarda/trace/trace.hpp"
@@ -89,9 +90,10 @@ void map_elf_tasks(const Options & options, const Json & raw,
   metadata.elf_machine = image.machine;
   metadata.cache_name = cache.name;
   metadata.geometry = geometry;
-  write_json_document(
-    yarda::task_mapping_json(metadata, resolved, mapped).dump(2),
-    options.export_path);
+  auto document = yarda::task_mapping_json(metadata, resolved, mapped);
+  if (options.ir_instructions)
+    document["ir_instructions"] = yarda::count_ir_instructions(raw);
+  write_json_document(document.dump(2), options.export_path);
 }
 
 }  // namespace
@@ -113,6 +115,12 @@ int main(int argc, char ** argv)
     }
     Json raw;
     input >> raw;
+    if (options.analysis_mode == yarda::cli::AnalysisMode::IrInstructions)
+    {
+      write_json_document(yarda::count_ir_instructions(raw).dump(2),
+                          options.export_path);
+      return 0;
+    }
 
     std::size_t cache_line_size = 0;
     yarda::HierarchyConfig cache_config;

@@ -215,3 +215,14 @@ add_task_unroll_semantics_test(
     test_regular_block.c regular_block_element element)
 
 add_subdirectory(hierarchy)
+
+add_test(NAME yarda_cpp_ir_instructions
+    COMMAND ${CMAKE_COMMAND}
+        "-DOPT=${YARDA_OPT_EXECUTABLE}"
+        "-DPLUGIN=$<TARGET_FILE:MemoryAccessPatterns>"
+        "-DCLI=$<TARGET_FILE:yarda_cpp>"
+        "-DELF=${YARDA_ELF_EXEC_FIXTURE}"
+        "-DCACHE=${YARDA_CPP_CACHE_32B}"
+        "-DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/ir_instructions"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/instruction_counts.cmake"
+)

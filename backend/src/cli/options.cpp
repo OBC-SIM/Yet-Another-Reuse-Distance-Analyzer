@@ -35,9 +35,11 @@ void print_usage()
   std::cout << "Usage: yarda_cpp MAP.json [--mode unroll]"
             << " [--granularity element|cache-line]"
             << " [--cache FILE] [--elf FILE] [--export PATH]\n"
-            << "  --analysis mapping|hierarchy-rd (omitted: legacy dispatch)\n"
+            << "  --analysis mapping|hierarchy-rd|ir-instructions\n"
+            << "  ir-instructions counts one invocation per root, excluding callees\n"
+            << "  Repeat --analysis to add ir-instructions to mapping or hierarchy-rd\n"
             << "  hierarchy-rd requires --elf, --cache and --export FILE\n"
-            << "  Loop-work limits (all analysis modes):\n"
+            << "  Loop-work limits (memory analysis only):\n"
             << "  --max-single-loop-iterations N (default: 1000000)\n"
             << "  --max-cumulative-loop-iterations N (default: 1000000)\n"
             << "  Hierarchy-rd only:\n"
@@ -67,10 +69,23 @@ Options parse_options(int argc, char ** argv)
     if (argument == "--analysis")
     {
       const auto mode = next(argument);
-      if (mode == "mapping")
-        options.analysis_mode = AnalysisMode::Mapping;
-      else if (mode == "hierarchy-rd")
-        options.analysis_mode = AnalysisMode::HierarchyRd;
+      if (mode == "ir-instructions")
+      {
+        options.ir_instructions = true;
+        if (options.analysis_mode == AnalysisMode::Legacy)
+          options.analysis_mode = AnalysisMode::IrInstructions;
+      }
+      else if (mode == "mapping" || mode == "hierarchy-rd")
+      {
+        const auto selected = mode == "mapping" ? AnalysisMode::Mapping
+                                                : AnalysisMode::HierarchyRd;
+        if (options.analysis_mode != AnalysisMode::Legacy &&
+            options.analysis_mode != AnalysisMode::IrInstructions &&
+            options.analysis_mode != selected)
+          throw std::invalid_argument(
+              "mapping and hierarchy-rd are mutually exclusive");
+        options.analysis_mode = selected;
+      }
       else
         throw std::invalid_argument("unknown analysis mode: " + mode);
     }
@@ -167,6 +182,14 @@ Options parse_options(int argc, char ** argv)
   if (options.analysis_mode != AnalysisMode::HierarchyRd && hierarchy_options)
     throw std::invalid_argument(
         "diagnostic and emission-limit options require --analysis hierarchy-rd");
+  if (options.analysis_mode == AnalysisMode::IrInstructions)
+  {
+    if (!options.elf_path.empty() || !options.cache_path.empty() ||
+        options.granularity_explicit)
+      throw std::invalid_argument(
+          "ir-instructions does not accept --elf, --cache or --granularity");
+    return options;
+  }
   if (options.analysis_mode != AnalysisMode::Legacy && options.elf_path.empty())
     throw std::invalid_argument("--elf is required for explicit analysis");
   if (options.analysis_mode == AnalysisMode::HierarchyRd)

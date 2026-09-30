@@ -12,6 +12,7 @@
 #include "yarda/cache/yaml_config_parser.hpp"
 #include "yarda/elf/data_regions.hpp"
 #include "yarda/elf/object_addresses.hpp"
+#include "yarda/trace/instruction_counts.hpp"
 
 namespace yarda::cli
 {
@@ -43,6 +44,10 @@ void run_hierarchy_command(const Options & options,
       !raw["schema_version"].is_number_integer() || raw["schema_version"] != 2)
     throw std::invalid_argument("hierarchy-rd requires MAP schema_version 2");
   metadata.map_schema_version = raw["schema_version"].get<std::uint32_t>();
+  const auto ir_counts =
+      options.ir_instructions
+          ? std::optional<nlohmann::json>(count_ir_instructions(raw))
+          : std::nullopt;
   if (collector) collector->finish_stage(AnalysisStage::ParseMap, started);
 
   started = collector ? collector->now_ns() : 0;
@@ -78,7 +83,8 @@ void run_hierarchy_command(const Options & options,
   const auto result = analyze_streaming_hierarchy(
       raw, objects, metadata.hierarchy, analysis_options);
   started = collector ? collector->now_ns() : 0;
-  const auto document = hierarchy_result_json(metadata, result);
+  auto document = hierarchy_result_json(metadata, result);
+  if (ir_counts) document["ir_instructions"] = *ir_counts;
   auto result_text = document.dump(2);
   const auto analysis_id = document.at("analysis_id").get<std::string>();
   if (collector)

@@ -18,6 +18,53 @@ ctest --test-dir build --output-on-failure
 
 CTest runs the frontend and backend test suites together.
 
+## LLVM IR instruction counts
+
+Regenerate MAP with the current frontend to include `ir_instructions` metadata.
+The counter uses the IR at extraction time, so record the compiler options and
+pass pipeline when comparing results. For example:
+
+```bash
+opt-14 -load-pass-plugin=build/libMemoryAccessPatterns.so \
+  -passes='function(mem2reg),loop-simplify,loop-annotated-trace' \
+  kernel.ll -disable-output
+./build/backend/yarda_cpp kernel_ape.json \
+  --analysis ir-instructions --export instructions.json
+```
+
+The result contains static and dynamic instruction counts by function, basic
+block, and opcode. Dynamic counts describe **one invocation of each analyzed
+root**, or each non-inline definition if no root is annotated. All IR
+instructions, including PHIs, GEPs, loop conditions, branches, and returns, count
+once per execution; debug and lifetime intrinsics are excluded. Other intrinsics
+and calls count as one `call`; **callee bodies are excluded**, including helpers
+marked `ape.inline`. These are IR counts, not machine instructions or cycles.
+Static counts include unreachable blocks; their dynamic count is zero.
+
+Single-path control flow and natural loops with constant, provable backedge
+counts and one exit are supported, including nested loops, negative steps,
+zero-trip loops, and the final failed pretest. Counts are multiplied without
+unrolling. Data-dependent branches, unresolved trip counts, selected regions,
+and integer overflow are rejected rather than reported as exact counts. Old MAP
+files require regeneration. IR-only analysis needs no ELF/cache configuration
+and is independent of the trace-expansion limits.
+
+Combine IR counts with linked-address cache analysis by repeating `--analysis`:
+
+```bash
+./build/backend/yarda_cpp kernel_ape.json \
+  --analysis hierarchy-rd --analysis ir-instructions \
+  --elf kernel.elf --cache backend/config/cache.32b.yaml \
+  --export combined.json
+```
+
+The order does not matter; repeated `ir-instructions` does not duplicate counts.
+The existing cache result gains an `ir_instructions` field containing the full
+IR report. `mapping` can also be combined with `ir-instructions`; `mapping` and
+`hierarchy-rd` are mutually exclusive. Combined analysis requires both analyses
+to succeed before publishing the result. IR counts retain their function scope;
+memory analysis may expand inline helpers or exclude opaque calls separately.
+
 Region MAP is accepted by the task mapping and streaming hierarchy APIs. Its
 `analysis_scope` is validated before task delivery, and result/event IDs use
 `region:<UTF-8 byte length>:<original function>:APE_ANALYZE`. Original function

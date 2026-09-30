@@ -13,13 +13,16 @@ enum class AnalysisMode
 {
   Legacy,
   Mapping,
-  HierarchyRd
+  HierarchyRd,
+  IrInstructions
 };
 
 /** @brief Own the arguments for one CLI invocation. */
 struct Options
 {
   AnalysisMode analysis_mode = AnalysisMode::Legacy;
+  /** @brief Include the IR report when a memory analysis is also selected. */
+  bool ir_instructions = false;
   std::string input;
   yarda::Granularity granularity = yarda::Granularity::Element;
   bool granularity_explicit = false;
