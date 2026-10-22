@@ -17,6 +17,58 @@ ctest --test-dir build --output-on-failure
 ```
 
 CTest runs the frontend and backend test suites together.
+To include strict region frontend diagnostics and end-to-end region tests,
+configure with `-DYARDA_BUILD_REGION_FRONTEND=ON`. This also requires the Clang
+14 development headers and `libclang-cpp`; an OFF build does not cover those
+tests.
+
+The TACLeBench support replay lives in `experiments/tacle_support/`. It consumes
+the original prepared `tacle_hara.py` output directory (`tacle.json` and each
+case's `workload.ll`/`src/`), preserving entry selection and IR inlining:
+
+```bash
+python3 backend/experiments/tacle_support/run.py /path/to/prior/tacle \
+  benchmark-results/tacle-support/replay --build build \
+  --cache /path/to/original/cache.yaml
+env PYTHONPATH=backend:. python3 -m pytest -q backend/experiments/tacle_support
+```
+
+Use a fresh output directory. The runner does not execute benchmark binaries.
+It records commands, input/tool hashes, diagnostics and per-case results.
+Command success alone is not support: legacy extraction can omit calls or
+flatten conditional accesses, and MAP coverage cannot detect these omissions.
+The replay requires exact CFG-derived memory counts, complete ELF mapping,
+cache invariants and no residual calls except known memory-free arithmetic
+intrinsics. Four source-specific oracles additionally check object, offset,
+width, operation, ordinal and ELF address, independently of MAP expressions.
+Only those passing this comparison receive `trace_verified`; count agreement
+alone is `corroborated_counts`. Other successful commands remain `needs_review`.
+The four oracles are pinned to reviewed prepared-IR and source-tree hashes;
+changed input cannot inherit verification from its benchmark name.
+`oracle_failed` means that the source-trace comparison disagreed or that its
+mapping/symbol command failed; the per-case reason distinguishes these cases.
+Changed oracle inputs remain `needs_review`.
+
+The 2026-10-22 replay of all 54 prepared cases verified the complete selected
+access sequence for four kernels:
+
+| Kernel | Source accesses checked |
+| --- | ---: |
+| complex_updates | 256 |
+| iir | 49 |
+| jfdctint | 384 |
+| matrix1 | 4,100 |
+
+The other results were 41 frontend failures (including the existing crashes in
+`cjpeg_wrbmp`, `dijkstra`, `huff_dec`, `huff_enc`), two non-global storage failures
+(`lms`, `ludcmp`) and seven cases needing review. These are conservative
+measurement categories, not proofs of inherent analysis impossibility.
+The old five-success count is not comparable: for example, `countnegative`
+emitted both conditional branches, giving 1,204 accesses where the source has
+804. `st` has 12,017 accesses matching an independent count but fails the
+structural CFG gate; it is not classified as a proved incorrect memory trace.
+Local commands, hashes and diagnostics are in
+`benchmark-results/tacle-support/rereview-final/`.
 
 ## LLVM IR instruction counts
 
