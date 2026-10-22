@@ -187,6 +187,22 @@ its actual iteration count against the loop-work budget. Unbound or overflowing
 endpoint expressions fail at the reached loop. Existing numeric endpoints are unchanged.
 The legacy Python reader does not support string endpoints.
 
+The LLVM producer also supports proved constant-endpoint `!=` loops and affine
+pointer increments into homogeneous scalar storage. Some nonunit loops with
+secondary induction variables use a unit iteration counter in MAP; all indices
+are transformed together, preserving source access order. Inline scalar pointer
+accesses, including forwarded arguments, retain their actual global object and
+load/store width, even when a scalar pointer cast changes that width. Array
+bindings reject incompatible element sizes or row strides instead of replacing
+the callee's layout with the actual object's layout. ELF mapping still rejects
+unbound pointers and stack-local
+objects; these extensions do not invent their addresses. See the
+[affine contract](../docs/map-affine-indices-v1.md) for the exact boundaries.
+Older v2 MAP with Scalar nodes missing `elem_size` must be regenerated from
+C/IR before relying on inline Scalar address results: formal declaration
+metadata cannot reconstruct a cast load/store's actual width. Runtime-address
+placeholders have no object ID and remain unsupported by ELF analysis.
+
 Every MAP expansion path, including streaming hierarchy analysis, is limited to
 100,000 call-expansion node visits and an inline call depth of 256. All CLI
 analysis modes default to 1,000,000 iterations per loop and 1,000,000 cumulative
