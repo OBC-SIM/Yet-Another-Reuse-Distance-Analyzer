@@ -15,8 +15,11 @@ using CallMapping = std::unordered_map<std::string, std::string>;
  * @param node Owned node; array indices and path values use affine composition.
  * @param names Borrowed simultaneous formal-to-actual bindings.
  * @param object_ids Borrowed canonical formal-to-actual object identities.
- * @param objects Borrowed metadata for actual storage objects.
+ * @param objects Borrowed metadata for formal and actual storage objects.
  * @return Rebound node; invalid affine composition remains deferred text.
+ * @throws std::invalid_argument for incompatible Array element sizes, row
+ * dimensions, or structured root layouts. Validation is eager even for
+ * nodes inside zero-trip loops; diagnostics identify formal and actual objects.
  */
 nlohmann::json substitute_call_node(nlohmann::json node,
                                     const CallMapping & names,

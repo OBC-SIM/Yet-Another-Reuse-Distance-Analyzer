@@ -55,7 +55,7 @@ TEST(CallsTest, BindsParameterAccessToActualGlobalObject)
      {{"objects",
        {{"global::A", {{"shape", Json::array({16})}, {"elem_size", 4}}},
         {"function:touch::param:x",
-         {{"shape", Json::array({4})}, {"elem_size", 8}}}}}}},
+         {{"shape", Json::array({4})}, {"elem_size", 4}}}}}}},
     {"functions",
      Json::array({
        {

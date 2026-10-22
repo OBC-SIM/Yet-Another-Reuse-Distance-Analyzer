@@ -8,11 +8,17 @@ namespace yarda
 /**
  * @brief Expand known direct calls and retain legacy report roots.
  *
+ * Inline Array bindings are validated eagerly, including zero-trip loop
+ * bodies. Node access widths take precedence; absent widths fall back to
+ * formal object metadata, then actual object metadata. Modules without
+ * analyze/inline annotations retain the legacy all-functions fallback.
+ *
  * @param raw Legacy or APE v2 MAP module.
  * @return Normalized function entries without Call nodes.
  * @throws std::invalid_argument for empty or duplicate function identities,
  * unknown callees, recursion, argument count mismatches, more than 100,000
- * call-expansion node visits, or an inline call depth above 256.
+ * call-expansion node visits, an inline call depth above 256, or incompatible
+ * inline Array element sizes, row dimensions, or structured root layouts.
  */
 nlohmann::json expand_calls(const nlohmann::json & raw);
 
@@ -24,6 +30,9 @@ nlohmann::json expand_calls(const nlohmann::json & raw);
  * from the resolved access trace. Unknown targets are rejected. At least one
  * function must carry `ape.analyze` or `yard.analyze`; this API has no legacy
  * all-functions fallback.
+ * Inline Array bindings are validated eagerly, including zero-trip loop
+ * bodies. Node access widths take precedence; absent widths fall back to
+ * formal object metadata, then actual object metadata.
  *
  * @param raw APE v2 MAP module.
  * @return Analyzed root functions with eligible direct calls expanded. Opaque
@@ -32,7 +41,9 @@ nlohmann::json expand_calls(const nlohmann::json & raw);
  * @throws std::invalid_argument if no analyzed root exists, if one function
  * has both analyze and inline roles, or for empty or duplicate function
  * identities, unknown targets, recursion, argument count mismatches, more
- * than 100,000 call-expansion node visits, or an inline call depth above 256.
+ * than 100,000 call-expansion node visits, an inline call depth above 256, or
+ * incompatible inline Array element sizes, row dimensions, or structured
+ * root layouts.
  */
 nlohmann::json expand_task_calls(const nlohmann::json & raw);
 

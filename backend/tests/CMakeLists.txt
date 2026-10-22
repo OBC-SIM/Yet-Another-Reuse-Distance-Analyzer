@@ -22,6 +22,8 @@ add_executable(yarda_backend_tests
     cache/rd/batch_csrd_test.cpp
     cache/rd/batch_csrd_integration_test.cpp
     trace/module/calls_test.cpp
+    trace/module/array_binding_test.cpp
+    trace/module/scalar_calls_test.cpp
     reuse/profile_test.cpp
     trace/layout/access_layout_test.cpp
     trace/module/schema_test.cpp
@@ -75,6 +77,7 @@ gtest_discover_tests(yarda_backend_tests
 
 add_subdirectory(cache)
 include(trace/integration/affine_index_tests.cmake)
+include(trace/integration/static_access_tests.cmake)
 
 if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set_target_properties(
