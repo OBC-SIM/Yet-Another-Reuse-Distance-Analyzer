@@ -2,6 +2,8 @@
 
 #include <stdexcept>
 
+#include "object_metadata.hpp"
+
 namespace yarda
 {
 namespace
@@ -17,16 +19,7 @@ Json enrich_node(Json node, const Json & objects)
     const auto object_id = node.value("object", "");
     if (!object_id.empty() && objects.contains(object_id))
     {
-      const auto & metadata = objects.at(object_id);
-      if (type == "Array" && !node.contains("shape") &&
-          metadata.contains("shape"))
-      {
-        node["shape"] = metadata["shape"];
-      }
-      if (!node.contains("elem_size") && metadata.contains("elem_size"))
-      {
-        node["elem_size"] = metadata["elem_size"];
-      }
+      detail::apply_object_metadata(node, objects.at(object_id));
     }
   }
   else if (type == "Loop")

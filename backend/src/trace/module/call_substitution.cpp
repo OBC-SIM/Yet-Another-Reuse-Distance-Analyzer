@@ -1,9 +1,12 @@
 #include "call_substitution.hpp"
 
 #include <regex>
+#include <stdexcept>
 #include <string>
 
+#include "object_metadata.hpp"
 #include "trace/index/affine_expression.hpp"
+#include "trace/layout/access_layout.hpp"
 
 namespace yarda::detail
 {
@@ -86,21 +89,68 @@ std::string substitute_text(const std::string & text,
   return output + substitute_tokens(text.substr(position), mapping);
 }
 
-void apply_object_metadata(Json & node, const Json & objects)
+void validate_row_dimensions(const Json & formal, const Json & actual,
+                             std::size_t count)
 {
-  const auto object_id = node.value("object", "");
-  if (object_id.empty() || !objects.contains(object_id))
+  if (count == 0) return;
+  if (!formal.is_array() || !actual.is_array() || formal.size() < count ||
+      actual.size() < count)
   {
-    return;
+    throw std::invalid_argument("inline object binding lacks row dimensions");
   }
-  const auto & metadata = objects.at(object_id);
-  for (const auto * field : {"shape", "elem_size"})
+  for (std::size_t offset = 1; offset <= count; ++offset)
   {
-    if (metadata.contains(field))
+    if (formal[formal.size() - offset] != actual[actual.size() - offset])
     {
-      node[field] = metadata.at(field);
+      throw std::invalid_argument(
+        "inline object binding has incompatible row dimensions");
     }
   }
+}
+
+void validate_array_binding(const Json & node, const Json & actual,
+                            const Json & objects)
+{
+  const auto actual_shape = actual.value("shape", Json::array());
+  if (has_field_path(node))
+  {
+    const auto formal_id = node.value("object", "");
+    if (!objects.contains(formal_id)) return;
+    const auto & formal = objects.at(formal_id);
+    for (const auto * key : {"elem_type", "elem_size"})
+    {
+      if (formal.contains(key) && actual.contains(key) &&
+          formal.at(key) != actual.at(key))
+        throw std::invalid_argument(
+          "inline field binding has incompatible root layout");
+    }
+    const auto formal_shape = formal.value("shape", Json::array());
+    std::size_t root_indices = 0;
+    for (const auto & segment : node.at("access_path"))
+    {
+      if (segment.value("kind", "") != "index") break;
+      ++root_indices;
+    }
+    if (root_indices == 0)
+    {
+      if (formal_shape != actual_shape)
+        throw std::invalid_argument(
+          "inline field binding has incompatible root shape");
+    }
+    else
+      validate_row_dimensions(formal_shape, actual_shape, root_indices - 1);
+    return;
+  }
+  if (node.contains("elem_size") && actual.contains("elem_size") &&
+      node.at("elem_size") != actual.at("elem_size"))
+    throw std::invalid_argument(
+      "inline object binding has incompatible element size");
+  const auto indices = node.value("indices", Json::array());
+  // Missing shape on a known scalar pointer means rank zero. Only legacy
+  // nodes without formal object metadata may infer their layout from actuals.
+  if (node.contains("shape") || objects.contains(node.value("object", "")))
+    validate_row_dimensions(node.value("shape", Json::array()), actual_shape,
+                            indices.empty() ? 0 : indices.size() - 1);
 }
 
 }  // namespace
@@ -111,15 +161,35 @@ nlohmann::json substitute_call_node(nlohmann::json node,
                                     const nlohmann::json & objects)
 {
   const auto type = node.value("type", "");
-  if (type == "Array")
+  if (type == "Array" || type == "Scalar")
   {
-    node["name"] = substitute_text(node.value("name", ""), names);
     if (const auto object = object_ids.find(node.value("object", ""));
         object != object_ids.end())
     {
+      if (objects.contains(object->second))
+      {
+        const auto & metadata = objects.at(object->second);
+        if (type == "Array")
+        {
+          try
+          {
+            validate_array_binding(node, metadata, objects);
+          }
+          catch (const std::invalid_argument & error)
+          {
+            throw std::invalid_argument(
+              std::string(error.what()) + " (formal object '" + object->first +
+              "', actual object '" + object->second + "')");
+          }
+        }
+        apply_object_metadata(node, metadata, true);
+      }
       node["object"] = object->second;
-      apply_object_metadata(node, objects);
     }
+  }
+  if (type == "Array")
+  {
+    node["name"] = substitute_text(node.value("name", ""), names);
     for (auto & index : node["indices"])
     {
       index = substitute_name(index.get<std::string>(), names);

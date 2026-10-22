@@ -22,6 +22,8 @@ add_executable(yarda_backend_tests
     cache/rd/batch_csrd_test.cpp
     cache/rd/batch_csrd_integration_test.cpp
     trace/module/calls_test.cpp
+    trace/module/array_binding_test.cpp
+    trace/module/scalar_calls_test.cpp
     reuse/profile_test.cpp
     trace/layout/access_layout_test.cpp
     trace/module/schema_test.cpp
